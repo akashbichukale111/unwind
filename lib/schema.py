@@ -1,0 +1,425 @@
+"""Typed models for every Firestore collection UNWIND writes.
+
+Two things in here are load-bearing and were decided before any logic exists,
+because retrofitting them is painful:
+
+1. Temporal Truth (locked decision 1.1). A claim is never TRUE or FALSE. It is
+   a value, at a time, under a context, from a source, with a confidence.
+   `valid_from`, `invalidated_at` and `invalidation_reason` therefore exist on
+   every claim from the first commit. The system says "the world changed", not
+   "someone was wrong".
+
+2. Retraction authority (locked decision 1.4). The entire input surface is
+   attacker-controlled text. A forged retraction triggers a mass unwind of real
+   commitments, so it is a weapon. `Claim.authority_scope` and `Source.authority`
+   exist now even though Task 1 checks neither; Task 3 makes the check a
+   deterministic function node, never a prompt.
+
+Nothing in this module makes a model call or touches the network.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class _Base(BaseModel):
+    model_config = ConfigDict(extra="forbid", use_enum_values=False)
+
+    def to_firestore(self) -> dict[str, Any]:
+        """Plain dict for the Firestore client. Enums flatten to their values."""
+        return self.model_dump(mode="json", exclude_none=False)
+
+
+# ===========================================================================
+# claims/{claim_id}
+# ===========================================================================
+
+
+class ClaimType(str, Enum):
+    NUMERIC = "NUMERIC"
+    TEMPORAL = "TEMPORAL"
+    CONTRACTUAL = "CONTRACTUAL"
+    REGULATORY = "REGULATORY"
+    RELATIONAL = "RELATIONAL"
+
+
+class ClaimStatus(str, Enum):
+    LIVE = "live"
+    RETRACTED = "retracted"
+    TOMBSTONED = "tombstoned"
+
+
+class FalsificationPredicate(_Base):
+    """A machine-checkable statement of what would make this claim false.
+
+    T1 evaluates this arithmetically with no model call. `op` is deliberately a
+    tiny closed vocabulary: a predicate the arithmetic tier cannot evaluate is
+    an UNRESOLVED, not a guess.
+    """
+
+    op: str = Field(description="One of: eq, neq, gt, gte, lt, lte, changed, unparseable")
+    field: str = Field(description="Dotted path on the claim, usually 'value'")
+    threshold: float | str | None = None
+    unit: str | None = None
+    #: Set when the predicate is not machine-checkable. Anything carrying this
+    #: routes to UNRESOLVED rather than being defaulted to a safe answer (1.6).
+    unresolvable_reason: str | None = None
+
+    @property
+    def machine_checkable(self) -> bool:
+        return self.unresolvable_reason is None and self.op != "unparseable"
+
+
+class Claim(_Base):
+    claim_id: str
+    type: ClaimType
+    #: Normalised claim string, e.g. "supplier_K.lead_time_days".
+    canonical: str
+    value: float | str | bool | None
+    unit: str | None = None
+
+    source_id: str
+    confidence: float = Field(ge=0.0, le=1.0)
+
+    falsified_when: FalsificationPredicate
+
+    #: Which agent asserted this claim, and at which version. Task 5 drops the
+    #: reputation of agents whose extractions get overturned.
+    extracted_by: str
+    extracted_at: datetime
+
+    # --- Temporal Truth (1.1) -------------------------------------------
+    valid_from: datetime
+    invalidated_at: datetime | None = None
+    invalidation_reason: str | None = None
+
+    # --- Retraction authority (1.4) --------------------------------------
+    #: Source ids (or source kinds) with standing to retract this claim. A
+    #: supplier email may falsify supplier lead time and nothing else.
+    authority_scope: list[str] = Field(default_factory=list)
+
+    status: ClaimStatus = ClaimStatus.LIVE
+    #: Denormalised dependent count. Drives load-line thickness in the UI later.
+    load_weight: int = 0
+
+    @field_validator("authority_scope")
+    @classmethod
+    def _authority_scope_not_empty(cls, v: list[str]) -> list[str]:
+        # An empty scope would mean "anyone may retract this", which is the
+        # exact failure mode 1.4 exists to close.
+        if not v:
+            raise ValueError("authority_scope must name at least one source with standing")
+        return v
+
+
+# ===========================================================================
+# conclusions/{conclusion_id}
+# ===========================================================================
+
+
+class ConclusionKind(str, Enum):
+    QUOTE = "quote"
+    ORDER = "order"
+    PLAN = "plan"
+    PROMISE = "promise"
+    APPROVAL = "approval"
+    PRICE = "price"
+
+
+class ConclusionStatus(str, Enum):
+    LIVE = "live"
+    CORRECTED = "corrected"
+    OBLIGATED = "obligated"
+    SUPERSEDED = "superseded"
+    #: First-class (1.6). Never hidden, never defaulted to safe.
+    UNRESOLVED = "unresolved"
+
+
+class Reversibility(str, Enum):
+    """How an effect that already escaped can be undone.
+
+    IDEMPOTENT   re-issuing the corrected artifact converges; no residue.
+    COMPENSABLE  cannot be undone, but a synthesised compensation exists.
+    IRREVERSIBLE money or trust already left; only a correction obligation remains.
+    UNKNOWN      could not be determined -> UNRESOLVED, not assumed safe.
+    """
+
+    IDEMPOTENT = "idempotent"
+    COMPENSABLE = "compensable"
+    IRREVERSIBLE = "irreversible"
+    UNKNOWN = "unknown"
+
+
+class ExternalEffect(_Base):
+    """Something that already escaped into the world: sent, signed, shipped, paid."""
+
+    connector: str = Field(description="e.g. email, erp, ads, payments")
+    op: str = Field(description="e.g. send_quote, issue_po, launch_flight, pay_invoice")
+    ref: str = Field(description="External system reference id")
+    reversibility: Reversibility
+    occurred_at: datetime
+    #: Present only when reversibility is COMPENSABLE or IRREVERSIBLE.
+    amount_minor: int | None = Field(
+        default=None, description="Money at stake, in minor units (cents)"
+    )
+    currency: str | None = None
+
+
+class Conclusion(_Base):
+    conclusion_id: str
+    kind: ConclusionKind
+    body: str
+    #: Must be visibly OLD in the corpus. The point of UNWIND is that decisions
+    #: keep operating long after the premise under them died.
+    decided_at: datetime
+    owner_principal: str
+
+    #: The edge set. This is the thing no enterprise records today.
+    premise_ids: list[str] = Field(default_factory=list)
+
+    external_effects: list[ExternalEffect] = Field(default_factory=list)
+    status: ConclusionStatus = ConclusionStatus.LIVE
+
+    # --- fields the corpus needs so materiality is arithmetic, not vibes ----
+    #: Lead time in days this conclusion committed downstream. Slack against the
+    #: hub premise is `committed_lead_days - premise value`; T1 compares the
+    #: delta to the slack with no model call.
+    committed_lead_days: int | None = None
+    #: When the commitment closes out (delivery made, quote expires, flight ends).
+    #: A commitment that closed before the retraction cannot be harmed by it.
+    closes_at: datetime | None = None
+    #: Set when a conclusion is itself asserted as a premise for others.
+    emits_claim_id: str | None = None
+
+    @property
+    def escaped(self) -> bool:
+        return bool(self.external_effects)
+
+
+# ===========================================================================
+# reverse_index/{claim_id}/dependents/{conclusion_id}
+# ===========================================================================
+
+
+class ReverseEdge(_Base):
+    """The edge that points backwards from a claim to what was built on it.
+
+    T0 walks this and only this. No model, no arithmetic -- just traversal.
+    """
+
+    claim_id: str
+    conclusion_id: str
+    depth: int = Field(ge=1, description="Hops from the claim; 1 is a direct dependent")
+    #: Drives load-line thickness in the UI later.
+    weight: float = 1.0
+
+
+# ===========================================================================
+# obligations/{obligation_id}
+# ===========================================================================
+
+
+class ObligationStatus(str, Enum):
+    RAISED = "raised"
+    AWAITING_SIGNATURE = "awaiting_signature"
+    SIGNED = "signed"
+    DISCHARGED = "discharged"
+    DECLINED = "declined"
+
+
+class ResidualExposure(_Base):
+    """A range, never a point estimate, and it carries its own assumptions."""
+
+    low: int = Field(description="Minor units (cents)")
+    high: int = Field(description="Minor units (cents)")
+    currency: str = "USD"
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class Obligation(_Base):
+    obligation_id: str
+    conclusion_id: str
+    counterparties: list[str] = Field(default_factory=list)
+    reversible_actions: list[str] = Field(default_factory=list)
+    residual_exposure: ResidualExposure
+    approver: str | None = None
+    status: ObligationStatus = ObligationStatus.RAISED
+    ruling_id: str | None = None
+
+
+# ===========================================================================
+# repairs/{repair_id}
+# ===========================================================================
+
+
+class Plea(_Base):
+    """A commitment owner arguing for its own conclusion in the repair court."""
+
+    member_owner_id: str
+    conclusion_id: str
+    argument: str
+    claimed_materiality: float | None = None
+
+
+class Challenge(_Base):
+    challenger_owner_id: str
+    target_owner_id: str
+    argument: str
+
+
+class Ruling(_Base):
+    arbiter_id: str
+    decision: str
+    rationale: str
+    decided_at: datetime
+
+
+class Repair(_Base):
+    repair_id: str
+    claim_id: str
+    #: The repair team is composed at runtime from a blast radius that did not
+    #: exist a second earlier (ADK 2 dynamic pattern, locked decision 1.3).
+    member_owner_ids: list[str] = Field(default_factory=list)
+    pleas: list[Plea] = Field(default_factory=list)
+    challenges: list[Challenge] = Field(default_factory=list)
+    ruling: Ruling | None = None
+    dissent: list[str] = Field(default_factory=list)
+
+
+# ===========================================================================
+# sources/{source_id}
+# ===========================================================================
+
+
+class SourceKind(str, Enum):
+    SUPPLIER_EMAIL = "supplier_email"
+    VENDOR_PDF = "vendor_pdf"
+    ERP_FEED = "erp_feed"
+    CONTRACT = "contract"
+    REGULATORY_BULLETIN = "regulatory_bulletin"
+    INTERNAL_SYSTEM = "internal_system"
+    BROKER_EMAIL = "broker_email"
+
+
+class FalsificationEvent(_Base):
+    claim_id: str
+    at: datetime
+    note: str
+
+
+class Source(_Base):
+    source_id: str
+    name: str
+    kind: SourceKind
+    #: 0..1. Task 5 drops this when a source is caught lying.
+    load_rating: float = Field(ge=0.0, le=1.0, default=0.5)
+    falsification_history: list[FalsificationEvent] = Field(default_factory=list)
+    #: Canonical claim prefixes this source has standing over (1.4). A supplier
+    #: email carries authority over its own lead time and nothing else.
+    authority: list[str] = Field(default_factory=list)
+
+
+# ===========================================================================
+# agent_trust/{agent_id}
+# ===========================================================================
+
+
+class AutonomyTier(str, Enum):
+    OBSERVE = "observe"
+    PROPOSE = "propose"
+    ACT_WITH_REVIEW = "act_with_review"
+    ACT = "act"
+
+
+class OverturnEvent(_Base):
+    conclusion_id: str
+    at: datetime
+    overturned_by: str
+    note: str
+
+
+class AgentTrust(_Base):
+    agent_id: str
+    reputation: float = Field(ge=0.0, le=1.0, default=0.5)
+    reliability: float = Field(ge=0.0, le=1.0, default=0.5)
+    autonomy_tier: AutonomyTier = AutonomyTier.PROPOSE
+    overturn_events: list[OverturnEvent] = Field(default_factory=list)
+
+
+# ===========================================================================
+# The five-state decision (locked decision 1.5). Schema-ready; Task 3 builds it.
+# ===========================================================================
+
+
+class DecisionState(str, Enum):
+    EXECUTE = "execute"
+    ASK_HUMAN = "ask_human"
+    RETRY = "retry"
+    DEFER = "defer"
+    REFUSE = "refuse"
+
+
+class StatedDecision(_Base):
+    """Every state carries a WHY. A false retraction is worse than a missed one."""
+
+    state: DecisionState
+    why: str
+    tier: str = Field(description="T0 | T1 | T2 -- which tier produced this")
+    decided_at: datetime
+
+
+# ===========================================================================
+# The four regimes (locked decision, brief section 0). A ROUTER, not a prompt.
+# ===========================================================================
+
+
+class Regime(str, Enum):
+    """materiality x escapement. Exactly one cell is an alert.
+
+    IMMATERIAL_CONTAINED  dies silently, logged
+    IMMATERIAL_ESCAPED    dies silently, logged
+    MATERIAL_CONTAINED    corrected in place
+    MATERIAL_ESCAPED      -> CORRECTION OBLIGATION
+    """
+
+    IMMATERIAL_CONTAINED = "immaterial_contained"
+    IMMATERIAL_ESCAPED = "immaterial_escaped"
+    MATERIAL_CONTAINED = "material_contained"
+    MATERIAL_ESCAPED = "material_escaped"
+    #: Could not be determined. Displayed, never hidden (1.6).
+    UNRESOLVED = "unresolved"
+
+
+__all__ = [
+    "AgentTrust",
+    "AutonomyTier",
+    "Challenge",
+    "Claim",
+    "ClaimStatus",
+    "ClaimType",
+    "Conclusion",
+    "ConclusionKind",
+    "ConclusionStatus",
+    "DecisionState",
+    "ExternalEffect",
+    "FalsificationEvent",
+    "FalsificationPredicate",
+    "Obligation",
+    "ObligationStatus",
+    "OverturnEvent",
+    "Plea",
+    "Regime",
+    "Repair",
+    "ResidualExposure",
+    "ReverseEdge",
+    "Reversibility",
+    "Ruling",
+    "Source",
+    "SourceKind",
+    "StatedDecision",
+]

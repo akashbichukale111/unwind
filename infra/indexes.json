@@ -1,0 +1,82 @@
+{
+  "//": [
+    "Firestore composite indexes for UNWIND.",
+    "",
+    "The reverse-index traversal is the query T0 exists to serve: given a claim,",
+    "read its dependents ordered by depth then weight, so the UI can draw the",
+    "radius filling in from the centre. That is a collection-group query over the",
+    "`dependents` subcollection and it needs a composite index; without it the",
+    "first cascade over the hub claim's 704 direct dependents fails at runtime.",
+    "",
+    "[UNVERIFIED] Not deployed. No GCP credentials were available at build time.",
+    "Deploy with: gcloud firestore indexes create --index-file=infra/indexes.json"
+  ],
+  "indexes": [
+    {
+      "//": "T0: dependents of one claim, shallowest and heaviest first.",
+      "collectionGroup": "dependents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "depth", "order": "ASCENDING" },
+        { "fieldPath": "weight", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "T0 across all claims: 'what depends on anything at depth <= n'.",
+      "collectionGroup": "dependents",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "claim_id", "order": "ASCENDING" },
+        { "fieldPath": "depth", "order": "ASCENDING" },
+        { "fieldPath": "weight", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Watchers: live claims from one source, oldest first, for the silence sentinel.",
+      "collectionGroup": "claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "source_id", "order": "ASCENDING" },
+        { "fieldPath": "valid_from", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Load lines: heaviest live claims first, for the fragility pass.",
+      "collectionGroup": "claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "load_weight", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Conclusions still open at a given instant, per status. Drives the live-material gate.",
+      "collectionGroup": "conclusions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "closes_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "The UNRESOLVED queue. First-class, so it gets its own index rather than a scan.",
+      "collectionGroup": "conclusions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "decided_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Obligations awaiting a human signature, oldest first.",
+      "collectionGroup": "obligations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "conclusion_id", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

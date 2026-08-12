@@ -1,0 +1,52 @@
+[project]
+name = "unwind"
+version = "0.1.0"
+description = "Retractable decisions: when a premise dies, everything built on it raises its hand."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "google-adk==2.6.3",
+    "google-cloud-firestore>=2.19.0",
+    "google-cloud-pubsub>=2.27.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sse-starlette>=2.1.3",
+    "pydantic>=2.9.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-api>=1.27.0",
+]
+
+[project.optional-dependencies]
+# Cloud Trace export is only reachable with credentials; kept out of the default
+# install so a cold clone with no GCP account still resolves.
+cloud = ["opentelemetry-exporter-gcp-trace>=1.7.0"]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.7.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lib", "agents", "services", "corpus", "evals"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# E501: line length is handled by the formatter.
+# UP042: `str, Enum` is kept over `StrEnum` deliberately. StrEnum changes what
+#        `str(member)` returns, and these enums are serialised into Firestore
+#        documents and Pub/Sub payloads where a silent change of wire format
+#        would be expensive to notice.
+ignore = ["E501", "UP042"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]

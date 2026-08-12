@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python 3.12
+        run: uv venv --python 3.12 .venv
+
+      - name: Install
+        run: uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Lint
+        run: |
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+
+      # Java is needed for the Firestore emulator jar. ubuntu-latest ships a JDK,
+      # but pinning it means a runner image change cannot silently skip the only
+      # test that touches a database.
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Start Firestore emulator
+        run: |
+          ./infra/emulator.sh &
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/ >/dev/null 2>&1; then
+              echo "emulator up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "emulator did not start in time" >&2
+          exit 1
+
+      - name: Test
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+        run: .venv/bin/python -m pytest -q
+
+      # The committed corpus must be reproducible from the committed generator.
+      # If this fails, corpus/README.md is stating properties the data no longer has.
+      - name: Corpus is deterministic
+        run: .venv/bin/python -m corpus.generate --verify --out corpus/data
+
+      - name: Eval harness runs
+        run: .venv/bin/python -m evals.harness --scenarios evals/scenarios --out evals/results
+
+      # `make demo` and `make golden` are unbuilt and MUST fail. A green CI that
+      # let them pass silently would be the exact dishonesty they exist to prevent.
+      - name: Unbuilt targets fail loudly
+        run: |
+          if make demo >/dev/null 2>&1; then
+            echo "make demo exited 0; it is not built and must fail" >&2; exit 1
+          fi
+          if make golden >/dev/null 2>&1; then
+            echo "make golden exited 0; it is not built and must fail" >&2; exit 1
+          fi
+          echo "both unbuilt targets failed as required"

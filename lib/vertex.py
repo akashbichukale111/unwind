@@ -1,0 +1,128 @@
+"""The single Vertex AI client.
+
+One module owns model access so that "T0 and T1 survive a total Vertex outage"
+is enforceable rather than aspirational: there is exactly one place a model call
+can originate, and `UNWIND_VERTEX_DISABLED=1` closes it. Task 2 runs the whole
+cascade with that flag set, and any code path that reaches for a model raises
+`VertexDisabledError` loudly instead of degrading quietly.
+
+The model string is not defined here. It lives in lib/config.py and nowhere else.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from typing import Any
+
+from lib.config import Config, get_config
+from lib.telemetry import model_call_span
+
+
+def configure_vertex_backend() -> dict[str, str]:
+    """Pin the google-genai backend to Vertex AI, from config, before any client.
+
+    WITHOUT THIS, ADK SILENTLY USES THE BARE GEMINI API. `Agent(model="gemini-...")`
+    resolves its backend from the environment, and with nothing set it falls
+    through to the developer API and asks for an API key. Vertex is a hard
+    requirement, so it is set from `lib.config` rather than left to whatever the
+    shell happens to export.
+
+    The flag is `GOOGLE_GENAI_USE_ENTERPRISE`. `GOOGLE_GENAI_USE_VERTEXAI` is the
+    older name and is deprecated in google-adk 2.6.3 / google-genai 2.17.0 --
+    setting it still works but emits a DeprecationWarning, so it is not set here.
+
+    Returns the environment it applied, so callers can report it rather than
+    assume it.
+    """
+    cfg = get_config()
+    applied = {
+        "GOOGLE_GENAI_USE_ENTERPRISE": "true",
+        "GOOGLE_CLOUD_PROJECT": cfg.project_id,
+        "GOOGLE_CLOUD_LOCATION": cfg.vertex_location,
+    }
+    for key, value in applied.items():
+        os.environ[key] = value
+    return applied
+
+
+class VertexDisabledError(RuntimeError):
+    """Raised when a model call is attempted while Vertex is disabled.
+
+    This is the failure mode we WANT: a T0/T1 path that quietly acquired a model
+    dependency fails the outage test instead of passing it by accident.
+    """
+
+
+class VertexUnavailableError(RuntimeError):
+    """Raised when credentials or the endpoint are genuinely unreachable."""
+
+
+@dataclass
+class VertexClient:
+    """Wraps google-genai in Vertex mode.
+
+    `google-genai` is already a transitive dependency of ADK 2.6.3, so this adds
+    no new service to the stack -- it is the same client ADK itself uses.
+    """
+
+    config: Config
+
+    def __post_init__(self) -> None:
+        if self.config.vertex_disabled:
+            raise VertexDisabledError(
+                "UNWIND_VERTEX_DISABLED=1: a model call was attempted on a path "
+                "that must be model-free. This is the tiered-degradation guard, "
+                "not a misconfiguration."
+            )
+        self._client: Any | None = None
+
+    def _ensure_client(self) -> Any:
+        if self._client is None:
+            try:
+                from google import genai  # noqa: PLC0415
+            except ImportError as exc:  # pragma: no cover
+                raise VertexUnavailableError("google-genai is not installed") from exc
+            configure_vertex_backend()
+            self._client = genai.Client(
+                enterprise=True,  # Vertex AI, not the developer Gemini API.
+                project=self.config.project_id,
+                location=self.config.vertex_location,
+            )
+        return self._client
+
+    def generate_text(self, prompt: str, **kwargs: Any) -> str:
+        """Single-shot generation. T2 only, and traced as such.
+
+        [UNVERIFIED] Not executed in this environment: no GCP credentials were
+        available at build time. See README "What has actually been run".
+        """
+        model = self.config.gemini_model
+        with model_call_span(model, prompt_chars=len(prompt)) as span:
+            client = self._ensure_client()
+            response = client.models.generate_content(model=model, contents=prompt, **kwargs)
+            text = getattr(response, "text", "") or ""
+            span.set_attribute("unwind.response_chars", len(text))
+            return text
+
+
+_CLIENT: VertexClient | None = None
+
+
+def get_vertex_client() -> VertexClient:
+    """Process-wide Vertex client. Raises if Vertex is disabled."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = VertexClient(config=get_config())
+    return _CLIENT
+
+
+def reset_vertex_client() -> None:
+    """Test hook."""
+    global _CLIENT
+    _CLIENT = None
+
+
+def vertex_available() -> bool:
+    """Whether a model call is permitted right now. Never guesses about network."""
+    return not get_config().vertex_disabled

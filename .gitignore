@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Firestore emulator jar, fetched on demand by infra/emulator.sh
+.cache/
+
+# Node (web/ has its own .gitignore too)
+node_modules/
+.next/
+
+# Local secrets. `adk create` writes .env files; none belongs in this repo.
+.env
+.env.*
+*.pem
+*-key.json
+
+# corpus/data/ IS COMMITTED ON PURPOSE. A cold clone must not need a generation
+# step, and the manifest is how the committed bytes are proven reproducible.
+!corpus/data/

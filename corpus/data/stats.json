@@ -1,0 +1,75 @@
+{
+  "adversarial": {
+    "note": "stored under corpus/data/adversarial/, absent from claims.jsonl and reverse_index.jsonl",
+    "present": true,
+    "processed": false
+  },
+  "counts": {
+    "claims": 1083,
+    "conclusions": 4004,
+    "derived_claims": 128,
+    "reverse_index_edges": 9989,
+    "sources": 10
+  },
+  "demonstrative_reversibility": {
+    "compensable": "cnc_001211",
+    "idempotent": "cnc_000079",
+    "irreversible": "cnc_001983"
+  },
+  "depth": {
+    "by_depth": {
+      "1": 704,
+      "2": 700,
+      "3": 400,
+      "4": 150,
+      "5": 50
+    },
+    "max_premise_chain_depth": 5
+  },
+  "die_back": {
+    "die_back_pct": 95.3,
+    "immaterial_by_arithmetic": 1906,
+    "material_by_arithmetic": 94,
+    "radius": 2004,
+    "rule": "material <=> shock_days > (committed_lead_days - hub_value)",
+    "scoreable": 2000,
+    "unscoreable_unresolved": 4
+  },
+  "generated_window": {
+    "days": 182,
+    "retraction_at": "2026-07-06T09:00:00Z",
+    "start": "2026-01-05T09:00:00Z"
+  },
+  "hub_claim": {
+    "canonical": "supplier_K.lead_time_days",
+    "claim_id": "clm_000000",
+    "direct_dependents": 704,
+    "shock_days": 9,
+    "transitive_dependents": 2004,
+    "value_after": 20,
+    "value_before": 11
+  },
+  "seed": 20260831,
+  "survivors": {
+    "already_closed_material": 39,
+    "escaped": 25,
+    "live_material": 55,
+    "not_escaped": 30
+  },
+  "timing": {
+    "max_escape_to_retraction_days": 117,
+    "median_decision_to_retraction_days": 91.5,
+    "median_escape_to_retraction_days": 34.0,
+    "min_escape_to_retraction_days": 3
+  },
+  "unresolved": {
+    "conclusions": [
+      "cnc_002000",
+      "cnc_002001",
+      "cnc_002002",
+      "cnc_002003"
+    ],
+    "count": 4,
+    "reason": "premise clause carries no machine-checkable value"
+  }
+}

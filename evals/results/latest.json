@@ -1,0 +1,32 @@
+{
+  "empty_scenario_classes": [
+    "clean",
+    "ambiguous",
+    "adversarial",
+    "tool_failure",
+    "multi_premise"
+  ],
+  "harness_version": "0.1.0",
+  "metrics_computed": [],
+  "metrics_defined": [
+    "blast_radius_recall",
+    "blast_radius_precision",
+    "materiality_accuracy",
+    "false_retraction_rate",
+    "escapement_accuracy",
+    "human_escalation_precision",
+    "unresolved_rate",
+    "cost_per_cascade",
+    "time_to_obligation"
+  ],
+  "missing_scenario_classes": [],
+  "note": "NOTHING WAS EVALUATED. Task 1 defines the metrics and ships the runner; the scenarios and the cascade they exercise are Task 2 onward. No metric value in this repository has been measured.",
+  "outcomes": [],
+  "python": "3.12.3",
+  "run_at": "2026-08-12T02:58:16.892661+00:00",
+  "scenarios_discovered": 0,
+  "scenarios_failed": 0,
+  "scenarios_passed": 0,
+  "scenarios_skipped": 0,
+  "stage": "task-1-scaffolding"
+}
