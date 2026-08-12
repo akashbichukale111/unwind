@@ -41,15 +41,24 @@ from lib.schema import (
     CascadeStatus,
     Claim,
     Conclusion,
+    DecisionState,
     Regime,
     ReverseEdge,
     Source,
+    StatedDecision,
 )
 from lib.telemetry import agent_decision_span, tool_call_span
-from spine.authority import check_authority
 from spine.budget import RadiusSeverity, decide_budget
 from spine.cartography import ExposureScore, rank, score_exposure
+from spine.decision import (
+    DecisionContext,
+    RetractionRequest,
+    decide_admissibility,
+    decide_authorisation,
+    find_contesting_claims,
+)
 from spine.escapement import lookup_escapement
+from spine.gate import echo_back
 from spine.materiality import MaterialityOutcome, score_materiality
 from spine.regimes import route_regime
 from spine.temporal import Retraction, retract
@@ -212,8 +221,18 @@ class CascadeResult:
     retraction: Retraction | None = None
     traversal: TraversalResult | None = None
     triggered_at: datetime | None = None
+    #: The five-state verdict. One vocabulary for every way this can end.
+    decision: StatedDecision | None = None
+    #: Live claims disagreeing with this one. Non-empty implies DEFER.
+    contesting_claims: list[str] = field(default_factory=list)
+    #: Rendered understanding, shown before anything is acted on.
+    echo: Any = None
     #: Counted, not assumed. The eval asserts this is zero.
     model_calls: int = 0
+
+    @property
+    def decision_state(self) -> str:
+        return self.decision.state.value if self.decision else "unknown"
 
     @property
     def tier_reached(self) -> str:
@@ -273,6 +292,8 @@ def run_cascade(
     reason: str = "",
     triggered_at: datetime | None = None,
     max_depth: int | None = None,
+    confidence: float = 1.0,
+    corroborating_sources: list[str] | None = None,
 ) -> CascadeResult:
     """Run a full cascade. No model call is made or possible from this path."""
     now = triggered_at or datetime.now(UTC)
@@ -281,20 +302,37 @@ def run_cascade(
     with agent_decision_span(CASCADE_AGENT_ID, Tier.T0, claim_id=claim_id) as span:
         span.set_attribute("unwind.cascade_id", cascade_id)
 
-        # --- 1. Authority, before anything expensive ----------------------
+        # --- 1. Admissibility: standing, contest, transient ----------------
+        # Before a single edge is walked. A forged or contested retraction that
+        # reached the traversal would already have cost the work the traversal
+        # exists to protect.
         claim = store.get_claim(claim_id)
         source = store.get_source(source_id)
-        authority = check_authority(source, claim, source_id, claim_id, now=now)
 
-        if not authority.allowed or claim is None:
-            # A refusal is a RECORDED EVENT. The radius stays empty because the
-            # traversal never ran -- that is the point of gating first.
+        contesting = find_contesting_claims(claim, _all_claims(store))
+        request = RetractionRequest(
+            claim_id=claim_id,
+            source_id=source_id,
+            new_value=new_value,
+            reason=reason,
+            confidence=confidence,
+            corroborating_sources=list(corroborating_sources or [source_id]),
+        )
+        blocked, authority = decide_admissibility(request, source, claim, contesting, now)
+
+        if blocked is not None or claim is None:
+            # A refusal or a deferral is a RECORDED EVENT, not an exception. The
+            # radius stays empty because the traversal never ran.
+            decision = blocked or _refuse_missing_claim(claim_id, now)
             span.set_attribute("unwind.status", CascadeStatus.REFUSED.value)
+            span.set_attribute("unwind.decision_state", decision.state.value)
             return CascadeResult(
                 cascade_id=cascade_id,
                 claim_id=claim_id,
                 authority=authority,
                 status=CascadeStatus.REFUSED,
+                decision=decision,
+                contesting_claims=[c.claim_id for c in contesting],
                 triggered_at=now,
             )
 
@@ -386,7 +424,44 @@ def run_cascade(
         )
         budget = decide_budget(severity)
 
+        # --- 6. Authorisation: the half of the gate that needed the radius --
+        authorisation = decide_authorisation(
+            request,
+            claim,
+            DecisionContext(
+                blast_radius=len(radius),
+                contesting_claims=[],
+                exposure_minor=severity.total_money_minor,
+            ),
+            now,
+        )
+
+        # --- 7. Echo back what was understood, whatever the verdict ---------
+        rendered = echo_back(
+            claim=claim,
+            source=source,
+            new_value=new_value,
+            decision=authorisation,
+            blast_radius=len(radius),
+            confidence=confidence,
+            unresolved=[
+                f"{count} node(s) the arithmetic tier could not decide"
+                for count in [severity.unresolved_count]
+                if count
+            ],
+        )
+
+        # A cascade whose authorisation did not reach EXECUTE has still done all
+        # its analysis -- the radius is mapped and scored -- but nothing about it
+        # may leave the building. The status records that distinction.
+        status = (
+            CascadeStatus.COMPLETED
+            if authorisation.state is DecisionState.EXECUTE
+            else CascadeStatus.AWAITING_AUTHORISATION
+        )
+
         span.set_attribute("unwind.radius_size", len(radius))
+        span.set_attribute("unwind.decision_state", authorisation.state.value)
         span.set_attribute("unwind.alert_count", len(alerts))
         span.set_attribute("unwind.policy_tier", budget.policy_tier.value)
 
@@ -394,7 +469,9 @@ def run_cascade(
             cascade_id=cascade_id,
             claim_id=claim_id,
             authority=authority,
-            status=CascadeStatus.COMPLETED,
+            status=status,
+            decision=authorisation,
+            echo=rendered,
             radius=radius,
             ranked=ranked,
             budget=budget,
@@ -403,6 +480,26 @@ def run_cascade(
             triggered_at=now,
             model_calls=0,
         )
+
+
+def _all_claims(store: Any) -> list[Claim]:
+    """Every claim the store can enumerate, for contest detection.
+
+    Stores that cannot enumerate (Firestore, where a full scan would be absurd)
+    return nothing, and contest detection is skipped rather than faked. Task 4
+    replaces this with an indexed query on `canonical`.
+    """
+    claims = getattr(store, "claims", None)
+    return list(claims.values()) if isinstance(claims, dict) else []
+
+
+def _refuse_missing_claim(claim_id: str, now: datetime) -> StatedDecision:
+    return StatedDecision(
+        state=DecisionState.REFUSE,
+        why=f"No claim {claim_id!r} exists to retract.",
+        tier=Tier.T0.value,
+        decided_at=now,
+    )
 
 
 def _as_number(value: Any) -> float | None:

@@ -334,8 +334,13 @@ def test_the_boundary_is_strict_greater_than() -> None:
     )
 
 
-def test_a_commitment_that_already_closed_out_is_immaterial() -> None:
-    """A delivery completed in March cannot be harmed by a premise moving in July."""
+def test_a_commitment_that_already_closed_out_gets_its_own_outcome() -> None:
+    """A delivery completed in March cannot be harmed by a premise moving in July.
+
+    CLOSED-OUT rather than IMMATERIAL: it still reports `material is False`, so
+    nothing downstream over-alerts, but the reason an operator sees is the true
+    one -- the shock never applied, rather than a buffer absorbed it.
+    """
     verdict = score_materiality(
         make_conclusion(committed=12, closes_at=NOW - timedelta(days=30)),
         make_claim(),
@@ -343,8 +348,9 @@ def test_a_commitment_that_already_closed_out_is_immaterial() -> None:
         20.0,
         as_of=NOW,
     )
-    assert verdict.outcome is MaterialityOutcome.IMMATERIAL
+    assert verdict.outcome is MaterialityOutcome.CLOSED_OUT
     assert verdict.reason_code == "already_closed_out"
+    assert verdict.material is False
 
 
 def test_a_favourable_move_is_immaterial() -> None:

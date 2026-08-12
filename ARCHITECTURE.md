@@ -123,6 +123,55 @@ Puts the seen-set in Firestore behind a conditional `create()`, because Cloud Ru
 instances are replaced without warning and raising the same correction
 obligation twice means apologising to a real customer twice.
 
+### `spine/extract.py`
+Parses numeric and temporal premises deterministically, because a regex has no
+instruction-following surface for an injected instruction to attack, and because
+its recall is a number that can be measured rather than asserted.
+
+### `spine/decision.py`
+Routes every proposed retraction to exactly one of EXECUTE / ASK_HUMAN / RETRY /
+DEFER / REFUSE, in two halves — standing and contest before the traversal,
+confidence and corroboration after it, because only the second half needs to
+know how big the blast radius is.
+
+### `spine/defence.py`
+Sets the evidence bar from what acting would cost — floor rising with blast
+radius, a second source required above real exposure — and quarantines
+extraction so attacker text cannot name a claim its source has no standing over.
+
+### `spine/gate.py`
+Renders what the system understood before it acts, so a misparse arrives as a
+question somebody answers rather than as a correction somebody receives.
+
+### `judgment/`
+Holds everything that may be wrong: the tier where being wrong is expected, so
+every module in it degrades to UNRESOLVED rather than to a guess.
+
+### `judgment/rederive.py`
+Recomputes a commitment from premises alone behind a type, a store and a static
+check that between them make the original decision unreachable — because a
+re-deriver that can see the answer will echo it, and the resulting "nothing
+changed" is invisible when wrong.
+
+### `judgment/assessor.py`
+Grades the re-derivation as a different principal from the one that produced it,
+because marking your own homework makes "nothing changed" the cheapest
+self-consistent answer.
+
+### `judgment/reconcile.py`
+Decides whether two differently-worded claims are one claim, reversibly and with
+a logged record, and refuses to decide at all in the margin where guessing
+either fragments the graph or invalidates unrelated commitments.
+
+### `judgment/watch.py`
+Arms one dormant watcher per live claim and sweeps for silence — the signal
+nobody notices — while being structurally unable to retract on an absence of
+information.
+
+### `judgment/coverage.py`
+Measures extraction against a labelled corpus and publishes the class it is
+worst at, and has no code path that can call an under-covered decision safe.
+
 ### `corpus/`
 Is a deliverable, not a fixture: the die-back is **measured** off a stated model
 of commercial behaviour, so the demo's central number is computed rather than

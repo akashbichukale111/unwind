@@ -192,6 +192,14 @@ def run_scenario(scenario_class: str, path: Path) -> ScenarioOutcome:
             metrics=unavailable([m.key for m in METRICS], "cascade not implemented"),
         )
 
+    # Scenarios come in two shapes. GROUND-TRUTH scenarios are marked against
+    # radius_truth.jsonl and measure recall/precision/materiality. OUTCOME
+    # scenarios assert which of the five states the system reaches and why --
+    # that is the whole question for an adversarial or ambiguous case, where
+    # "what did it decide" matters far more than "how big was the radius".
+    if "ground_truth" not in spec:
+        return _run_outcome_scenario(scenario_class, name, spec)
+
     retraction = spec["retraction"]
     truth = _load_ground_truth(spec["ground_truth"])
     triggered_at = (
@@ -257,6 +265,130 @@ def run_scenario(scenario_class: str, path: Path) -> ScenarioOutcome:
     )
 
 
+#: What each expected outcome means, so a scenario file stays readable.
+_OUTCOME_CHECKS = {
+    "refuse": "the five-state router must REFUSE",
+    "defer": "the premise is contested; the router must DEFER",
+    "ask_human": "the radius or exposure requires a signature",
+    "execute": "all gates pass and the cascade completes",
+    "unresolved-dominant": "most of the radius must render UNRESOLVED, not be decided",
+}
+
+
+def _run_outcome_scenario(scenario_class: str, name: str, spec: dict[str, Any]) -> ScenarioOutcome:
+    """Assert which of the five states the system reaches, and why."""
+    import os
+
+    from lib.config import reset_config_cache
+    from lib.schema import Regime
+    from spine.cascade import CorpusStore, run_cascade
+
+    retraction = spec["retraction"]
+    expect = spec.get("expect", {})
+
+    # `vertex_disabled` scenarios prove the tiering guarantee inside the eval
+    # rather than only in CI: T2 must render UNRESOLVED, never silently resolve.
+    previous = os.environ.get("UNWIND_VERTEX_DISABLED")
+    if spec.get("vertex_disabled"):
+        os.environ["UNWIND_VERTEX_DISABLED"] = "1"
+        reset_config_cache()
+
+    started = time.perf_counter()
+    try:
+        result = run_cascade(
+            store=CorpusStore.from_repo(REPO),
+            claim_id=retraction["claim_id"],
+            source_id=retraction["source_id"],
+            new_value=retraction["new_value"],
+            reason=retraction.get("reason", ""),
+            triggered_at=datetime.fromisoformat(retraction["triggered_at"].replace("Z", "+00:00")),
+            confidence=float(retraction.get("confidence", 1.0)),
+            corroborating_sources=retraction.get("corroborating_sources"),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return ScenarioOutcome(
+            scenario_class, name, "failed", f"cascade raised {type(exc).__name__}: {exc}"
+        )
+    finally:
+        if spec.get("vertex_disabled"):
+            if previous is None:
+                os.environ.pop("UNWIND_VERTEX_DISABLED", None)
+            else:
+                os.environ["UNWIND_VERTEX_DISABLED"] = previous
+            reset_config_cache()
+    elapsed = time.perf_counter() - started
+
+    state = result.decision.state.value if result.decision else "unknown"
+    counts = result.regime_counts()
+    unresolved = counts.get(Regime.UNRESOLVED.value, 0)
+    radius = len(result.radius)
+
+    failures: list[str] = []
+    wanted = expect.get("outcome")
+    if wanted == "unresolved-dominant":
+        # The claim is that the system DECLINED to decide, not that it decided
+        # correctly -- so the bar is that unresolved dominates the radius.
+        if radius == 0 or unresolved / radius < 0.5:
+            failures.append(f"expected most of the radius UNRESOLVED, got {unresolved}/{radius}")
+    elif wanted and wanted != state:
+        failures.append(f"outcome: expected {wanted}, got {state}")
+
+    if "authority_reason_code" in expect:
+        actual = result.authority.reason_code.value
+        if actual != expect["authority_reason_code"]:
+            failures.append(
+                f"authority reason: expected {expect['authority_reason_code']}, got {actual}"
+            )
+    if "radius_size" in expect and radius != expect["radius_size"]:
+        failures.append(f"radius_size: expected {expect['radius_size']}, got {radius}")
+    if "model_calls" in expect and result.model_calls != expect["model_calls"]:
+        failures.append(f"model_calls: expected {expect['model_calls']}, got {result.model_calls}")
+
+    # A refusal that still walked the graph is the worst failure available here.
+    acted = state == "execute"
+    false_retraction = 1.0 if (wanted in {"refuse", "defer"} and acted) else 0.0
+
+    metrics = [
+        MetricResult(
+            "false_retraction_rate",
+            false_retraction,
+            detail={"expected_outcome": wanted, "actual_state": state},
+        ),
+        MetricResult(
+            "unresolved_rate",
+            round(unresolved / radius, 6) if radius else 0.0,
+            detail={"unresolved": unresolved, "radius": radius},
+        ),
+        MetricResult("cost_per_cascade", 0.0, detail={"model_calls": result.model_calls}),
+        MetricResult(
+            "human_escalation_precision",
+            1.0 if state == "ask_human" and wanted == "ask_human" else None,
+            unavailable_reason=None if state == "ask_human" else "no escalation in this scenario",
+        ),
+    ]
+
+    return ScenarioOutcome(
+        scenario_class,
+        name,
+        "failed" if failures else "passed",
+        "; ".join(failures) if failures else None,
+        metrics=metrics,
+        detail={
+            "cascade_id": result.cascade_id,
+            "decision_state": state,
+            "decision_why": (result.decision.why[:220] if result.decision else None),
+            "authority_reason": result.authority.reason_code.value,
+            "radius_size": radius,
+            "regime_counts": counts,
+            "model_calls": result.model_calls,
+            "contesting_claims": result.contesting_claims,
+            "vertex_disabled": bool(spec.get("vertex_disabled")),
+            "elapsed_seconds": round(elapsed, 4),
+            "check": _OUTCOME_CHECKS.get(wanted, wanted),
+        },
+    )
+
+
 def run(scenarios_dir: Path, out_dir: Path) -> dict[str, Any]:
     discovered = discover(scenarios_dir)
     outcomes = [run_scenario(cls, path) for cls, path in discovered]
@@ -282,6 +414,26 @@ def run(scenarios_dir: Path, out_dir: Path) -> dict[str, Any]:
         "missing_scenario_classes": missing_classes,
         "metrics_defined": [m.key for m in METRICS],
         "metrics_computed": computed,
+        "by_class": {
+            cls: {
+                "total": sum(1 for o in outcomes if o.scenario_class == cls),
+                "passed": sum(
+                    1 for o in outcomes if o.scenario_class == cls and o.status == "passed"
+                ),
+                "failed": sum(
+                    1 for o in outcomes if o.scenario_class == cls and o.status == "failed"
+                ),
+                "routed_to_human": sum(
+                    1
+                    for o in outcomes
+                    if o.scenario_class == cls
+                    and o.detail.get("decision_state") in {"ask_human", "defer"}
+                ),
+            }
+            for cls in SCENARIO_CLASSES
+            if any(o.scenario_class == cls for o in outcomes)
+        },
+        "false_retraction_rate": _aggregate_false_retraction(outcomes),
         "total_model_calls": sum(o.detail.get("model_calls", 0) for o in outcomes if o.detail),
         "note": (
             "NOTHING WAS EVALUATED. No scenarios were discovered."
@@ -309,6 +461,17 @@ def run(scenarios_dir: Path, out_dir: Path) -> dict[str, Any]:
     return report
 
 
+def _aggregate_false_retraction(outcomes: list[ScenarioOutcome]) -> float | None:
+    """THE METRIC THAT MATTERS, across every scenario that produced one."""
+    values = [
+        m.value
+        for o in outcomes
+        for m in o.metrics
+        if m.key == "false_retraction_rate" and m.value is not None
+    ]
+    return round(sum(values) / len(values), 6) if values else None
+
+
 def _deterministic_summary(report: dict[str, Any]) -> dict[str, Any]:
     """Everything in the report that is reproducible from the committed inputs."""
     return {
@@ -319,6 +482,8 @@ def _deterministic_summary(report: dict[str, Any]) -> dict[str, Any]:
         "scenarios_failed": report["scenarios_failed"],
         "scenarios_skipped": report["scenarios_skipped"],
         "total_model_calls": report["total_model_calls"],
+        "false_retraction_rate": report.get("false_retraction_rate"),
+        "by_class": report.get("by_class", {}),
         "metrics_computed": report["metrics_computed"],
         "outcomes": [
             {
@@ -330,6 +495,8 @@ def _deterministic_summary(report: dict[str, Any]) -> dict[str, Any]:
                 "radius_size": outcome["detail"].get("radius_size"),
                 "ground_truth_size": outcome["detail"].get("ground_truth_size"),
                 "regime_counts": outcome["detail"].get("regime_counts"),
+                "decision_state": outcome["detail"].get("decision_state"),
+                "authority_reason": outcome["detail"].get("authority_reason"),
                 "tier_reached": outcome["detail"].get("tier_reached"),
                 "model_calls": outcome["detail"].get("model_calls"),
                 "metrics": {

@@ -137,6 +137,13 @@ def test_escaped_is_derived_from_external_effects() -> None:
 
 
 def test_four_regimes_exist_and_exactly_one_is_the_alert() -> None:
-    operational = {r for r in Regime if r is not Regime.UNRESOLVED}
+    """The matrix is still 2x2. UNRESOLVED and CLOSED_OUT sit outside it.
+
+    UNRESOLVED means the system could not decide; CLOSED_OUT means the question
+    did not apply because the commitment had already discharged. Neither is a
+    cell of materiality x escapement, so neither is counted as one.
+    """
+    outside_the_matrix = {Regime.UNRESOLVED, Regime.CLOSED_OUT}
+    operational = {r for r in Regime if r not in outside_the_matrix}
     assert len(operational) == 4
     assert Regime.MATERIAL_ESCAPED in operational

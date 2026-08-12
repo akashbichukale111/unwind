@@ -86,6 +86,34 @@ jobs:
             exit 1
           fi
 
+      # docs/COVERAGE.md is the honesty instrument. If it drifts from what the
+      # extractor actually does, the committed recall numbers are false.
+      - name: Coverage report still matches the extractor
+        run: |
+          .venv/bin/python -m judgment.cli coverage >/dev/null
+          if ! git diff --quiet -- docs/COVERAGE.md; then
+            echo "docs/COVERAGE.md is stale:" >&2
+            git --no-pager diff -- docs/COVERAGE.md >&2
+            echo "Run 'make coverage' and commit the result." >&2
+            exit 1
+          fi
+
+      # Both attacks must be refused, by reason code, on every push.
+      - name: Adversarial retractions are refused
+        env:
+          UNWIND_VERTEX_DISABLED: "1"
+          UNWIND_OTEL_CONSOLE: "0"
+        run: |
+          for src in src_broker_Z src_msa_K; do
+            out=$(.venv/bin/python -m spine.cli cascade --source "$src" --new-value 45)
+            state=$(echo "$out" | .venv/bin/python -c "import json,sys; print(json.load(sys.stdin)['decision']['state'])")
+            code=$(echo "$out" | .venv/bin/python -c "import json,sys; print(json.load(sys.stdin)['authority']['reason_code'])")
+            echo "$src -> $state ($code)"
+            if [ "$state" != "refuse" ] || [ "$code" != "source_outside_claim_scope" ]; then
+              echo "$src was NOT refused with a scope reason" >&2; exit 1
+            fi
+          done
+
       # summary.json is the deterministic slice of the report -- no timestamps,
       # no wall-clock. If it drifts, the committed numbers no longer describe
       # the committed code, which is the one failure this project cannot afford.

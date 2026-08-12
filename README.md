@@ -22,66 +22,70 @@ Google "All Things Agentic" Hackathon
 
 ---
 
-## ⚠ Status: Task 2 of 5 — the deterministic spine
+## ⚠ Status: Task 3 of 5 — judgment and adversarial defence
 
-**The cascade runs end to end with Vertex switched off.** A retraction is gated
-for authority, the blast radius is traversed structurally, every dependent is
-scored arithmetically, and the result is split into the four regimes — **2,424
-dependents in, 50 correction obligations out, zero model calls.**
+**The model enters the system, and every place it enters is a place where being
+wrong is safe.** A retraction is now routed to one of five states with a stated
+reason; a legitimate source reaching one step outside its authority is refused by
+name; the re-deriver structurally cannot see the decision it is re-deriving; and
+with Vertex switched off the whole thing still runs, rendering judgement nodes
+UNRESOLVED rather than resolving them silently.
 
-Still not built: extraction, watchers, T2 judgement, the five-state decision
-router, the repair court, obligations, compensation, and any UI.
+⚠ **No real Vertex AI call has ever been made in this repository.** There were no
+GCP credentials in the build environment. Extraction is fully deterministic and
+needs no model, so its numbers are real; anything reported about the T2 judgement
+path came from a scripted stub and is labelled as such wherever it appears.
+
+Still not built: the court, obligations, compensation, load rating, and any UI.
 
 ### The honesty map
 
 | | Component | Evidence |
 | --- | --- | --- |
-| **[BUILT]** | Repo skeleton, `pyproject`, Makefile, CI | `make test` → 121 passed |
-| **[BUILT]** | `lib/schema.py` — typed models for all 9 collections | `tests/test_schema.py` |
-| **[BUILT]** | `lib/config.py` — the only two model strings, pinned region | `tests/test_config_singleton.py` greps the tree |
-| **[BUILT]** | `lib/pubsub.py` — 6 topics, local shim | `tests/test_pubsub.py` |
-| **[BUILT]** | `lib/idempotency.py` — **Firestore-backed** seen-set | `tests/test_cascade_firestore.py` survives a new client |
-| **[BUILT]** | `lib/firestore.py` — typed accessors + `cascades/` collection | `tests/test_cascade_firestore.py` |
-| **[BUILT]** | `lib/telemetry.py` — OTel spans carrying `unwind.tier` | `make cascade --trace` |
-| **[BUILT]** | `lib/vertex.py` — single model door, Vertex backend pinned | `tests/test_zero_model.py` |
-| **[BUILT]** | **Authority gate** — deterministic, refusal is a recorded event | `make cascade-forged` → `source_outside_claim_scope`, radius 0 |
-| **[BUILT]** | **T0 traversal** — transitive closure, cycle detection | recall 1.0 / precision 1.0 over 2,424 nodes |
-| **[BUILT]** | **T1 arithmetic materiality** — no model, `pending_judgment` for the rest | materiality accuracy 1.0 |
-| **[BUILT]** | **Escapement lookup** — fails safe to ESCAPED | `tests/test_spine.py` |
-| **[BUILT]** | **Four-regime router** — a rule, exhaustively tested | `tests/test_regimes.py`, all 8 cells |
-| **[BUILT]** | **Temporal Truth propagation** — prior value stays readable | `tests/test_spine.py` |
-| **[BUILT]** | **Impact cartographer + cascade budgeter** | policy tiers LOW→CRITICAL, LOW path complete |
-| **[BUILT]** | **Causal debt scorer** — attributable to named premises | `make debt`, `tests/test_debt.py` |
-| **[BUILT]** | ADK 2 `Workflow` of `FunctionNode`s, route-driven | `agents/cascade/workflow.py`, no `LlmAgent` in the graph |
-| **[BUILT]** | The corpus — 4,004 conclusions, 1,083 claims | `corpus/data/stats.json`, `make corpus-verify` |
-| **[BUILT]** | `evals/` — 9 metrics, 1 scenario, committed results | `make eval` → 1 passed, 0 model calls |
+| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 173 passed |
+| **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
+| **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
+| **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
+| **[BUILT]** | Numeric + temporal extractors, relative dates tracked apart | `docs/COVERAGE.md`, recall measured not asserted |
+| **[BUILT]** | **Coverage auditor** — may mark unresolved, never safe | `make coverage`; guard + vacuity test |
+| **[BUILT]** | Claim reconciler — reversible, logged, low-margin → human | `tests/test_judgment.py` |
+| **[BUILT]** | Watchers (1,146 dormant) + drift sentinel | `make sentinel`; sentinel may not retract, tested |
+| **[BUILT]** | **Blind re-deriver** — blindness enforced in 3 layers | `tests/test_blindness.py` incl. vacuity fixture |
+| **[BUILT]** | **T2 assessor as a separate principal** | refuses to grade its own work, tested |
+| **[BUILT]** | Quarantined extraction principal | cannot name an out-of-scope claim, tested |
+| **[BUILT]** | Confidence floor scaled by blast radius | tested at both ends |
+| **[BUILT]** | Two-source rule above exposure | tested; duplicate ids do not count as two |
+| **[BUILT]** | **Confidence gate with echo-back** | rendered before acting, in every state |
+| **[BUILT]** | Both adversarial cases refused by reason code | `make adversarial`; enforced in CI |
+| **[BUILT]** | 31 eval scenarios across 4 classes | `make eval` → 31 passed, 0 model calls |
+| **[DESIGNED]** | Vertex T2 path (`judgment/model.py`) | Written, **never executed** — no credentials |
+| **[DESIGNED]** | Model Armor on the extraction path | **[UNVERIFIED]** — see below |
+| **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
 | **[DESIGNED]** | Firestore rules + composite indexes | Written, **never deployed** |
 | **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written, **never run** |
-| **[FUTURE]** | Extraction, watchers, falsification parser | Task 3 |
-| **[FUTURE]** | T2 materiality, five-state decision router | Task 3 |
-| **[FUTURE]** | Repair court, obligations, compensation synthesis | Task 4 |
+| **[FUTURE]** | The court: owners, arbiter, negotiation | Task 4 |
+| **[FUTURE]** | Obligations, compensation, irreversibility triage | Task 4 |
 | **[FUTURE]** | Load rating, the operator UI, the demo | Task 5 |
 
 ### What has actually been run
 
-Run in this environment, output observed:
-
-- `make test` → **121 passed** (110 in-process, 11 against a live Firestore
-  emulator). `ruff check` and `ruff format --check` clean over 53 files.
-- `make eval` → **1 scenario passed, 0 model calls.**
-- `UNWIND_VERTEX_DISABLED=1 make eval` → same result. The cascade does not need
-  Vertex, and CI enforces that on every push.
-- `make cascade` → 2,424 dependents, four regimes, `model_calls: 0`.
-- `make cascade-forged` → refused, `source_outside_claim_scope`, radius 0.
-- `make debt` → total attributed across 15,739 named contributions.
-- `make corpus-verify` → *"corpus is deterministic: regenerated manifest is
-  byte-identical"*.
-- ADK workflow through `InMemoryRunner` with Vertex disabled → completed,
-  `policy_tier: CRITICAL`, `tier_reached: T1`.
+- `make test` → **173 passed** (162 in-process, 11 against a live Firestore
+  emulator). `ruff check` and `ruff format --check` clean.
+- `make eval` → **31 scenarios passed, 0 failed, 0 model calls.**
+  False-retraction rate **0.0**.
+- `UNWIND_VERTEX_DISABLED=1 make eval` → identical. Enforced in CI.
+- `make adversarial` → both attacks refused with `source_outside_claim_scope`
+  and a radius of 0. Enforced in CI by reason code.
+- `make coverage` → overall extraction recall **81.8%**; worst class
+  `temporal:absolute-duration` at **66.7%**.
+- `make sentinel` → 1,146 watchers armed, 440 silence signals, quietest premise
+  unaffirmed for 251 days.
+- `make t2` → 174-node queue, all rendering UNRESOLVED under the scripted model.
+- `make corpus-verify` → byte-identical.
 
 **Never run:** any Vertex AI call, any Cloud Run deploy, any real Pub/Sub topic,
-any Firestore rules or index deployment, `npm install` in `web/`. There were no
-GCP credentials in the build environment. **There is no deployed URL.**
+any Firestore rules or index deployment, Model Armor, `npm install` in `web/`.
+**There is no deployed URL.**
 
 ### Numbers
 

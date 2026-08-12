@@ -141,7 +141,12 @@ def test_full_cascade_completes_with_vertex_disabled(monkeypatch: pytest.MonkeyP
         triggered_at=datetime(2026, 7, 6, 9, 0, tzinfo=UTC),
     )
 
-    assert result.status.value == "completed"
+    # The radius is mapped and scored with no model. The AUTHORISATION half of
+    # the gate then withholds permission, because a 2,594-node unwind on a single
+    # uncorroborated source needs a signature -- which is a decision, not a
+    # failure, and it is reached without Vertex either.
+    assert result.status.value == "awaiting_authorisation"
+    assert result.decision_state == "ask_human"
     assert result.model_calls == 0
     assert len(result.radius) > 2000
     assert result.tier_reached == "T1"

@@ -41,6 +41,8 @@ def cmd_cascade(args: argparse.Namespace) -> int:
         new_value=args.new_value,
         reason=args.reason,
         triggered_at=_when(args.at),
+        confidence=args.confidence,
+        corroborating_sources=[s for s in args.corroborating.split(",") if s] or None,
     )
 
     report: dict[str, Any] = {
@@ -49,6 +51,16 @@ def cmd_cascade(args: argparse.Namespace) -> int:
         "authority": result.authority.to_json(),
         "model_calls": result.model_calls,
     }
+
+    report["decision"] = (
+        {"state": result.decision.state.value, "why": result.decision.why}
+        if result.decision
+        else None
+    )
+    if result.contesting_claims:
+        report["contesting_claims"] = result.contesting_claims
+    if result.echo is not None:
+        report["echo_back"] = result.echo.to_json()
 
     if result.status.value == "refused":
         report["note"] = (
@@ -150,6 +162,12 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--reason", default="Supplier notified a revised standard lead time.")
     c.add_argument("--at", default=CORPUS_RETRACTION_AT)
     c.add_argument("--top", type=int, default=5)
+    c.add_argument("--confidence", type=float, default=1.0)
+    c.add_argument(
+        "--corroborating",
+        default="",
+        help="Comma-separated source ids corroborating the change.",
+    )
     c.add_argument(
         "--persist",
         action="store_true",

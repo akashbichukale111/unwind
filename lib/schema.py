@@ -154,6 +154,13 @@ class ConclusionStatus(str, Enum):
     SUPERSEDED = "superseded"
     #: First-class (1.6). Never hidden, never defaulted to safe.
     UNRESOLVED = "unresolved"
+    #: CLOSED-OUT. The commitment already discharged -- delivery made, quote
+    #: expired, flight ended -- BEFORE the premise moved. It was fulfilled under
+    #: the old value, and a later change does not reach back to it. This is not
+    #: a variant of "immaterial": immaterial means the buffer absorbed the shock,
+    #: closed-out means the shock never applied. Conflating them would hide the
+    #: reason 39 nodes in the demo corpus need no attention.
+    CLOSED_OUT = "closed_out"
 
 
 class Reversibility(str, Enum):
@@ -385,6 +392,10 @@ class AgentTrust(_Base):
 
 class CascadeStatus(str, Enum):
     REFUSED = "refused"  # authority gate said no. Recorded, not raised.
+    #: The radius was mapped and scored, but the authorisation half of the gate
+    #: withheld permission -- too large, too expensive, or uncorroborated. The
+    #: analysis is complete and correct; nothing may leave the building.
+    AWAITING_AUTHORISATION = "awaiting_authorisation"
     COMPLETED = "completed"
     BUDGET_EXHAUSTED = "budget_exhausted"
     FAILED = "failed"
@@ -571,6 +582,10 @@ class Regime(str, Enum):
     MATERIAL_ESCAPED = "material_escaped"
     #: Could not be determined. Displayed, never hidden (1.6).
     UNRESOLVED = "unresolved"
+    #: Already discharged before the premise moved. Reported separately from the
+    #: immaterial cells because the reason is different and an operator asking
+    #: "why is this not on my list" deserves the real answer.
+    CLOSED_OUT = "closed_out"
 
 
 __all__ = [

@@ -1,10 +1,34 @@
 {
+  "by_class": {
+    "adversarial": {
+      "failed": 0,
+      "passed": 10,
+      "routed_to_human": 0,
+      "total": 10
+    },
+    "ambiguous": {
+      "failed": 0,
+      "passed": 10,
+      "routed_to_human": 3,
+      "total": 10
+    },
+    "clean": {
+      "failed": 0,
+      "passed": 1,
+      "routed_to_human": 0,
+      "total": 1
+    },
+    "tool_failure": {
+      "failed": 0,
+      "passed": 10,
+      "routed_to_human": 3,
+      "total": 10
+    }
+  },
   "empty_scenario_classes": [
-    "ambiguous",
-    "adversarial",
-    "tool_failure",
     "multi_premise"
   ],
+  "false_retraction_rate": 0.0,
   "harness_version": "0.2.0",
   "metrics_computed": [
     "blast_radius_precision",
@@ -12,6 +36,7 @@
     "cost_per_cascade",
     "escapement_accuracy",
     "false_retraction_rate",
+    "human_escalation_precision",
     "materiality_accuracy",
     "unresolved_rate"
   ],
@@ -36,8 +61,7 @@
           "allowed": true,
           "checked_at": "2026-07-06T09:00:00Z",
           "claim_authority_scope": [
-            "src_supplier_K",
-            "src_msa_K"
+            "src_supplier_K"
           ],
           "claim_id": "clm_000000",
           "reason": "'src_supplier_K' is named directly in the authority scope of 'supplier_K.lead_time_days'.",
@@ -48,24 +72,25 @@
           "source_id": "src_supplier_K"
         },
         "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
-        "elapsed_seconds": 0.8149,
-        "ground_truth_size": 2424,
+        "elapsed_seconds": 0.9053,
+        "ground_truth_size": 2594,
         "model_calls": 0,
-        "radius_size": 2424,
+        "radius_size": 2594,
         "regime_counts": {
-          "immaterial_contained": 902,
-          "immaterial_escaped": 1440,
-          "material_contained": 28,
-          "material_escaped": 50,
-          "unresolved": 4
+          "closed_out": 874,
+          "immaterial_contained": 534,
+          "immaterial_escaped": 934,
+          "material_contained": 30,
+          "material_escaped": 48,
+          "unresolved": 174
         },
         "tier_reached": "T1"
       },
       "metrics": [
         {
           "detail": {
-            "expected": 2424,
-            "found": 2424
+            "expected": 2594,
+            "found": 2594
           },
           "direction": "higher_is_better",
           "key": "blast_radius_recall",
@@ -77,7 +102,7 @@
         },
         {
           "detail": {
-            "hits": 2424
+            "hits": 2594
           },
           "direction": "higher_is_better",
           "key": "blast_radius_precision",
@@ -135,7 +160,7 @@
         },
         {
           "detail": {
-            "unresolved": 4
+            "unresolved": 174
           },
           "direction": "lower_is_better",
           "key": "unresolved_rate",
@@ -143,7 +168,7 @@
           "tier": "T1/T2",
           "unavailable_reason": null,
           "unit": "ratio",
-          "value": 0.0016501650165016502
+          "value": 0.06707787201233616
         },
         {
           "detail": {
@@ -164,7 +189,7 @@
           "key": "time_to_obligation",
           "name": "Time to obligation",
           "tier": "T0/T1/T2",
-          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.815s.",
+          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.905s.",
           "unit": "seconds",
           "value": null
         }
@@ -172,13 +197,2299 @@
       "name": "hub-retraction-clean",
       "reason": null,
       "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "e6e35fac2b0956168de3f2f970e8cafb",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
+        "elapsed_seconds": 0.1758,
+        "model_calls": 0,
+        "radius_size": 8,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 8
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 8,
+            "unresolved": 8
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "clause-retraction-contractual",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "f2be082c58b15e2db12add44cbdb14da",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
+        "elapsed_seconds": 0.1819,
+        "model_calls": 0,
+        "radius_size": 8,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 8
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 8,
+            "unresolved": 8
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "clause-retraction-second",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "484ed79b857657ff964c5cacb72c404e",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_002, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
+        "elapsed_seconds": 0.2123,
+        "model_calls": 0,
+        "radius_size": 8,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 8
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 8,
+            "unresolved": 8
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "clause-third",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "d0a34df275d750fb8ca1212b0dfe2c84",
+        "check": "the premise is contested; the router must DEFER",
+        "contesting_claims": [
+          "clm_001145"
+        ],
+        "decision_state": "defer",
+        "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
+        "elapsed_seconds": 0.1997,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "defer",
+            "expected_outcome": "defer"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "contested-premise-defer",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "e00817e882b25f4eafafb3c8cc4f40a0",
+        "check": "the premise is contested; the router must DEFER",
+        "contesting_claims": [
+          "clm_001144"
+        ],
+        "decision_state": "defer",
+        "decision_why": "supplier_M.expedite_window_days is contested: clm_001144 says 9.0 (from src_supplier_M). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a si",
+        "elapsed_seconds": 0.2313,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "defer",
+            "expected_outcome": "defer"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "contested-premise-other-side",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "Confidence 0.40 is below the floor of 0.86 required to retract something carrying 2594 dependent commitments. The bar is set by what it would cost to be wrong, and at this radius being wrong is expensive.",
+        "elapsed_seconds": 0.809,
+        "model_calls": 0,
+        "radius_size": 2594,
+        "regime_counts": {
+          "closed_out": 874,
+          "immaterial_contained": 534,
+          "immaterial_escaped": 934,
+          "material_contained": 30,
+          "material_escaped": 48,
+          "unresolved": 174
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 2594,
+            "unresolved": 174
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.067078
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "hub-low-confidence",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+        "check": "the radius or exposure requires a signature",
+        "contesting_claims": [],
+        "decision_state": "ask_human",
+        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.8341,
+        "model_calls": 0,
+        "radius_size": 2594,
+        "regime_counts": {
+          "closed_out": 874,
+          "immaterial_contained": 534,
+          "immaterial_escaped": 934,
+          "material_contained": 30,
+          "material_escaped": 48,
+          "unresolved": 174
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "ask_human",
+            "expected_outcome": "ask_human"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 2594,
+            "unresolved": 174
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.067078
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "hub-needs-human",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "46600ffb561d59a098a632c3fb16ac7a",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
+        "elapsed_seconds": 0.1739,
+        "model_calls": 0,
+        "radius_size": 72,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 72
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 72,
+            "unresolved": 72
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "regulatory-provision",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "d1fca5b7b4ba5a488bde4052c161ca8e",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#001, no live claim contests it, and confidence 1.00 clears the floor of 0.66 for a radius of 18.",
+        "elapsed_seconds": 0.1636,
+        "model_calls": 0,
+        "radius_size": 18,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 18
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 18,
+            "unresolved": 18
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "regulatory-provision-second",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "ambiguous",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "3a3faf6a6de257b19ec80a70247e730c",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#002, no live claim contests it, and confidence 1.00 clears the floor of 0.62 for a radius of 6.",
+        "elapsed_seconds": 0.1744,
+        "model_calls": 0,
+        "radius_size": 6,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 6
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 6,
+            "unresolved": 6
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "regulatory-third",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "aa67d4de1e13512dac294e910fd15b36",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1671,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "broker-reaching-for-clause",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "7835269e53ea5832a93f351fc552f084",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_erp_internal' holds authority over ['capacity.', 'internal.', 'inventory.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1708,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "erp-reaching-for-supplier-fact",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "eb628fc5347c5351af5adb30560b012a",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1624,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "forged-retraction-broker",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "3a5535731e5b57c48c7d4df7e34236ea",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_fx_desk' holds authority over ['fx.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1635,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "fx-desk-out-of-lane",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "b97d120b50e859cab07e49895f873a22",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_logistics_ops' holds authority over ['dock.', 'freight.transit.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1627,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "logistics-reaching-for-lead-time",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "9e8450192d855babb94102b88afd23a5",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_msa_L' holds authority over ['contract.supplier_L.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.16,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "msa-L-reaching-for-K-clause",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "7b74eb7cc9b85c098c467208fb4bf8d8",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_msa_K' holds authority over ['contract.supplier_K.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1816,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "partial-authority-msa",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "ddec9d9a2817588eafbfe27ead00d629",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_supplier_L' holds authority over ['supplier_L.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.168,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "supplier-L-reaching-for-K",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "no_such_claim",
+        "cascade_id": "ce75ba77f66a5616beb9a8c630c5cbf6",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "No claim 'clm_999999' exists to retract.",
+        "elapsed_seconds": 0.1673,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "unknown-claim",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "adversarial",
+      "detail": {
+        "authority_reason": "no_such_source",
+        "cascade_id": "ba5a5148bdc3559aab3cb48edd0961fe",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "No source 'src_does_not_exist' is known, so it holds no authority over anything.",
+        "elapsed_seconds": 0.1583,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "unknown-source",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "f2be082c58b15e2db12add44cbdb14da",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
+        "elapsed_seconds": 0.1793,
+        "model_calls": 0,
+        "radius_size": 8,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 8
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 8,
+            "unresolved": 8
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "clause-second-vertex-down",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "e6e35fac2b0956168de3f2f970e8cafb",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
+        "elapsed_seconds": 0.1705,
+        "model_calls": 0,
+        "radius_size": 8,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 8
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 8,
+            "unresolved": 8
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "clause-with-vertex-down",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "d0a34df275d750fb8ca1212b0dfe2c84",
+        "check": "the premise is contested; the router must DEFER",
+        "contesting_claims": [
+          "clm_001145"
+        ],
+        "decision_state": "defer",
+        "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
+        "elapsed_seconds": 0.1673,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "defer",
+            "expected_outcome": "defer"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "contested-under-outage",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_outside_claim_scope",
+        "cascade_id": "eb628fc5347c5351af5adb30560b012a",
+        "check": "the five-state router must REFUSE",
+        "contesting_claims": [],
+        "decision_state": "refuse",
+        "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
+        "elapsed_seconds": 0.1811,
+        "model_calls": 0,
+        "radius_size": 0,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "refuse",
+            "expected_outcome": "refuse"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 0,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "forged-under-outage",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+        "check": "the radius or exposure requires a signature",
+        "contesting_claims": [],
+        "decision_state": "ask_human",
+        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.9267,
+        "model_calls": 0,
+        "radius_size": 2594,
+        "regime_counts": {
+          "closed_out": 874,
+          "immaterial_contained": 534,
+          "immaterial_escaped": 934,
+          "material_contained": 30,
+          "material_escaped": 48,
+          "unresolved": 174
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "ask_human",
+            "expected_outcome": "ask_human"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 2594,
+            "unresolved": 174
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.067078
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "hub-single-source-outage",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "2bda182438335a6dbcc551dda7813d01",
+        "check": "all gates pass and the cascade completes",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
+        "elapsed_seconds": 0.1702,
+        "model_calls": 0,
+        "radius_size": 14,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 14,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "execute"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 14,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "low-severity-completes",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "2bda182438335a6dbcc551dda7813d01",
+        "check": "all gates pass and the cascade completes",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
+        "elapsed_seconds": 0.1661,
+        "model_calls": 0,
+        "radius_size": 14,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 14,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": false
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "execute"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 14,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "low-severity-larger-move",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "46600ffb561d59a098a632c3fb16ac7a",
+        "check": "most of the radius must render UNRESOLVED, not be decided",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
+        "elapsed_seconds": 0.1717,
+        "model_calls": 0,
+        "radius_size": 72,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 0,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 72
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "unresolved-dominant"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 72,
+            "unresolved": 72
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "regulatory-vertex-down",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+        "check": "the radius or exposure requires a signature",
+        "contesting_claims": [],
+        "decision_state": "ask_human",
+        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.7452,
+        "model_calls": 0,
+        "radius_size": 2594,
+        "regime_counts": {
+          "closed_out": 874,
+          "immaterial_contained": 534,
+          "immaterial_escaped": 934,
+          "material_contained": 30,
+          "material_escaped": 48,
+          "unresolved": 174
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "ask_human",
+            "expected_outcome": "ask_human"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 2594,
+            "unresolved": 174
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.067078
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "vertex-unavailable-hub",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "tool_failure",
+      "detail": {
+        "authority_reason": "source_in_claim_scope",
+        "cascade_id": "2bda182438335a6dbcc551dda7813d01",
+        "check": "all gates pass and the cascade completes",
+        "contesting_claims": [],
+        "decision_state": "execute",
+        "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
+        "elapsed_seconds": 0.1826,
+        "model_calls": 0,
+        "radius_size": 14,
+        "regime_counts": {
+          "closed_out": 0,
+          "immaterial_contained": 14,
+          "immaterial_escaped": 0,
+          "material_contained": 0,
+          "material_escaped": 0,
+          "unresolved": 0
+        },
+        "vertex_disabled": true
+      },
+      "metrics": [
+        {
+          "detail": {
+            "actual_state": "execute",
+            "expected_outcome": "execute"
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "radius": 14,
+            "unresolved": 0
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model_calls": 0
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "no escalation in this scenario",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "vertex-unavailable-mid-cascade",
+      "reason": null,
+      "status": "passed"
     }
   ],
   "python": "3.12.3",
-  "run_at": "2026-08-12T10:46:54.650865+00:00",
-  "scenarios_discovered": 1,
+  "run_at": "2026-08-12T15:48:22.467606+00:00",
+  "scenarios_discovered": 31,
   "scenarios_failed": 0,
-  "scenarios_passed": 1,
+  "scenarios_passed": 31,
   "scenarios_skipped": 0,
   "stage": "task-2-deterministic-spine",
   "total_model_calls": 0

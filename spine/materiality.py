@@ -51,6 +51,12 @@ ARITHMETIC_CLAIM_TYPES: frozenset[ClaimType] = frozenset({ClaimType.NUMERIC, Cla
 class MaterialityOutcome(str, Enum):
     MATERIAL = "material"
     IMMATERIAL = "immaterial"
+    #: CLOSED-OUT: the commitment discharged before the premise moved, so the
+    #: shock never applied to it. Reported separately from IMMATERIAL because
+    #: the reason is different -- immaterial means the buffer absorbed the move,
+    #: closed-out means there was nothing left to absorb it. An operator asking
+    #: "why is this not on my list" gets the true answer either way.
+    CLOSED_OUT = "closed_out"
     #: Needs a reading, not a computation. T2's problem. Not a guess.
     PENDING_JUDGMENT = "pending_judgment"
     #: Could not be determined by anything. Displayed as-is.
@@ -71,7 +77,7 @@ class MaterialityVerdict:
         """True, False, or None. None is never coerced -- that is the point."""
         if self.outcome is MaterialityOutcome.MATERIAL:
             return True
-        if self.outcome is MaterialityOutcome.IMMATERIAL:
+        if self.outcome in {MaterialityOutcome.IMMATERIAL, MaterialityOutcome.CLOSED_OUT}:
             return False
         return None
 
@@ -149,7 +155,7 @@ def _score(
     # arithmetic because no amount of consumed slack matters to a closed order.
     if as_of is not None and conclusion.closes_at is not None and conclusion.closes_at <= as_of:
         return MaterialityVerdict(
-            MaterialityOutcome.IMMATERIAL,
+            MaterialityOutcome.CLOSED_OUT,
             "already_closed_out",
             f"This commitment closed on {conclusion.closes_at.date().isoformat()}, "
             f"before the premise moved. It was fulfilled under the "

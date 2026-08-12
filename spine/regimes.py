@@ -34,6 +34,7 @@ REGIME_ACTION: dict[Regime, str] = {
     Regime.MATERIAL_CONTAINED: "corrected in place",
     Regime.MATERIAL_ESCAPED: "CORRECTION OBLIGATION",
     Regime.UNRESOLVED: "displayed as UNRESOLVED, never defaulted to safe",
+    Regime.CLOSED_OUT: "already discharged before the premise moved; nothing to do",
 }
 
 #: The only cell that reaches a human or a counterparty.
@@ -89,6 +90,17 @@ def _route(
             REGIME_ACTION[Regime.UNRESOLVED],
             "unresolved",
             unresolved_reason or "Materiality could not be determined and was not assumed.",
+        )
+
+    if materiality is MaterialityOutcome.CLOSED_OUT:
+        return RegimeRouting(
+            Regime.CLOSED_OUT,
+            REGIME_ACTION[Regime.CLOSED_OUT],
+            "already_closed_out",
+            unresolved_reason
+            or "This commitment discharged before the premise moved. It was "
+            "fulfilled under the old value and the new one does not reach back "
+            "to it -- so it is not unharmed, it is out of scope.",
         )
 
     if materiality is MaterialityOutcome.MATERIAL:

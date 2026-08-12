@@ -20,6 +20,12 @@ from spine.regimes import ALERT_REGIMES, REGIME_ACTION, route_regime
 ALL_INPUTS = list(itertools.product(list(MaterialityOutcome), [False, True]))
 
 EXPECTED: dict[tuple[MaterialityOutcome, bool], Regime] = {
+    # CLOSED-OUT is its own cell, in both escapement states. It is NOT a variant
+    # of immaterial: immaterial means the buffer absorbed the shock, closed-out
+    # means the shock never applied. An operator asking "why is this not on my
+    # list" deserves the real answer, and they are different answers.
+    (MaterialityOutcome.CLOSED_OUT, False): Regime.CLOSED_OUT,
+    (MaterialityOutcome.CLOSED_OUT, True): Regime.CLOSED_OUT,
     (MaterialityOutcome.IMMATERIAL, False): Regime.IMMATERIAL_CONTAINED,
     (MaterialityOutcome.IMMATERIAL, True): Regime.IMMATERIAL_ESCAPED,
     (MaterialityOutcome.MATERIAL, False): Regime.MATERIAL_CONTAINED,
@@ -33,7 +39,7 @@ EXPECTED: dict[tuple[MaterialityOutcome, bool], Regime] = {
 
 
 def test_the_input_space_is_fully_enumerated() -> None:
-    assert len(ALL_INPUTS) == 8
+    assert len(ALL_INPUTS) == 10  # 5 materiality outcomes x 2 escapement values
     assert set(ALL_INPUTS) == set(EXPECTED)
 
 
@@ -82,6 +88,16 @@ def test_router_is_pure_and_repeatable() -> None:
             again = route_regime(outcome, escaped)
             assert again.regime is first.regime
             assert again.reason_code == first.reason_code
+
+
+def test_closed_out_is_never_collapsed_into_immaterial() -> None:
+    """Ruling 1.2: CLOSED-OUT is a named concept with its own reason code."""
+    for escaped in (False, True):
+        routing = route_regime(MaterialityOutcome.CLOSED_OUT, escaped)
+        assert routing.regime is Regime.CLOSED_OUT
+        assert routing.reason_code == "already_closed_out"
+        assert not routing.is_alert
+        assert "out of scope" in routing.reason
 
 
 def test_unresolved_is_never_silently_treated_as_immaterial() -> None:

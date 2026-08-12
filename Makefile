@@ -61,6 +61,29 @@ cascade-forged: ## Run the forged retraction. The authority gate must refuse it.
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli cascade \
 		--source src_broker_Z --new-value 34 --reason "broker notice"
 
+.PHONY: coverage
+coverage: ## Audit extraction recall; rewrite docs/COVERAGE.md
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m judgment.cli coverage
+
+.PHONY: sentinel
+sentinel: ## Sweep for premises nobody has reaffirmed (silence, not change)
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m judgment.cli sentinel
+
+.PHONY: t2
+t2: ## Run the T2 queue over what T1 refused (scripted model unless --vertex)
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m judgment.cli t2
+
+.PHONY: adversarial
+adversarial: ## Both attacks: the obvious forgery and the partial-authority overreach
+	@echo "=== 1. OBVIOUS FORGERY: a freight broker retracting a supplier fact ==="
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli cascade \
+		--source src_broker_Z --new-value 34 --reason "broker notice"
+	@echo ""
+	@echo "=== 2. PARTIAL AUTHORITY: a legitimate source reaching one step outside ==="
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli cascade \
+		--source src_msa_K --new-value 45 \
+		--reason "Executed amendment No.4 to the master supply agreement"
+
 .PHONY: debt
 debt: ## Score standing causal debt -- what UNWIND shows on a normal day
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli debt

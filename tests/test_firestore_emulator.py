@@ -92,7 +92,10 @@ def test_claim_round_trips_with_its_temporal_truth_fields(loaded) -> None:
     assert claim.valid_from is not None
     assert claim.invalidated_at is None
     assert claim.invalidation_reason is None
-    assert claim.authority_scope == ["src_supplier_K", "src_msa_K"]
+    # Narrowed in Task 3: the master supply agreement governs the CLAUSES, not
+    # how long the supplier actually takes to ship. That distinction is what
+    # makes the partial-authority attack refusable.
+    assert claim.authority_scope == ["src_supplier_K"]
 
 
 def test_reverse_index_traversal_returns_every_dependent(loaded) -> None:
