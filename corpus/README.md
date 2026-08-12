@@ -76,45 +76,73 @@ here is read out of `data/stats.json`, which the generator wrote.
 | --- | --- |
 | Claims | 1,083 |
 | Conclusions | 4,004 |
-| Reverse-index edges | 9,989 |
+| Reverse-index edges | 10,192 |
 | Sources | 10 |
-| Hub claim direct dependents | 704 |
-| Hub claim **transitive** dependents (the blast radius) | 2,004 |
+| Hub claim direct dependents | 712 |
+| Hub claim **transitive** dependents (the blast radius) | 2,424 |
 | Max premise-chain depth | 5 |
-| Radius scoreable arithmetically | 2,000 (4 are unresolvable) |
-| Material by arithmetic | 94 |
-| **Die-back** | **95.3 %** |
-| Live material survivors | 55 |
-| — not escaped | 30 |
-| — escaped | 25 |
+| Radius scoreable arithmetically | 2,420 (4 are unresolvable) |
+| Material by buffer arithmetic | 117 |
+| **Die-back** | **95.165 %** |
+| Live material survivors (also still open at the retraction) | 78 |
+| — not escaped | 28 |
+| — escaped | 50 |
 | Material but already closed out | 39 |
-| Median decision → retraction gap | 91.5 days |
-| Median escape → retraction gap | 34 days (range 3–117) |
+| Median decision → retraction gap, whole radius | 91 days |
+| Median escape → retraction gap | 63.5 days (range 0–181) |
+| **Escaped survivors decided ≥120 days before the retraction** | **12** |
 | Deliberately UNRESOLVED conclusions | 4 |
 | Adversarial artifacts | 1, unprocessed |
 
-Depth histogram: 704 at depth 1, 700 at 2, 400 at 3, 150 at 4, 50 at 5.
+Depth histogram: 712 at depth 1, 1,088 at 2, 424 at 3, 150 at 4, 50 at 5.
+
+### The temporal gap
+
+This is what the long-dated instruments were added for. Of the 50 escaped
+survivors, the distribution of how long each had been standing before its
+premise moved:
+
+| Decision → retraction | Escaped survivors |
+| --- | --- |
+| 0–30 days | 13 |
+| 30–60 | 10 |
+| 60–90 | 9 |
+| 90–120 | 6 |
+| 120–150 | 2 |
+| 150–183 | 10 |
+
+**12 escaped survivors had been standing for 120 days or more**, the oldest for
+182 days — decided on the first day of the window, still governing on the last.
+11 of those 12 are long-dated instruments, which is the amendment doing exactly
+the work it was added for.
+
+### What the long-dated instruments contributed
+
+| | Count |
+| --- | --- |
+| `standing_price` | 130 |
+| `framework_promise` | 150 |
+| `long_lead_order` | 140 |
+| — of which materially harmed | 23 |
+| — of which escaped survivors | 21 |
+| — of which escaped survivors at ≥120 days | 11 |
 
 ### Where the measurements differ from the specification
 
 Stated plainly rather than tuned away:
 
-- **Die-back 95.3 % against a ≈96 % target.** Within "roughly", and it fell out
-  of the mixture on the first run. Not adjusted.
-- **55 live material survivors against a ~31 target.** Nearly double. The cause
-  is that commercial validity windows (45–180 days) are long relative to the
-  six-month corpus, so more commitments are still open at the retraction than
-  the target assumes.
-- **Escaped/not-escaped is 25/30, against a ~19/~12 target — the ratio is
-  inverted.** The cause is the kind mix: internal `plan` and `approval`
-  decisions rarely produce an external effect, and they are a sixth of the
-  corpus each. Raising their escape probability would flip the ratio, but it
-  would also be a fiction about how internal approvals behave.
-- **Median escape → retraction is 34 days, not "months".** This is structural,
-  not a parameter choice: a commitment can only be a live survivor if it is
-  still open at the retraction, which biases survivors toward recent decisions.
-  The tail does reach 117 days. "Escaped months ago *and* still open now"
-  requires long horizons, and the two constraints pull against each other.
+- **Die-back 95.165 % against a ≈96 % target.** It moved by 0.135 points when
+  the long-dated instruments were added, because those instruments draw from the
+  same 0.05 tight/loose mixture as everything else. The new number stands; it was
+  not tuned back.
+- **78 live material survivors against an original ~31 target.** That target was
+  withdrawn as arithmetically inconsistent with a ≈96 % die-back over a ~2,000
+  radius. 2,424 → 78 is a 96.8 % cull.
+- **Escaped/not-escaped is 50/28.** In the first corpus this ratio was inverted
+  (25 escaped / 30 not). The long-dated instruments corrected it as a side
+  effect rather than by design: a published price list or a countersigned
+  framework agreement has left the building almost by definition, so their high
+  escape probability is a property of the instrument, not a thumb on the scale.
 
 ### What is assigned rather than emergent
 
@@ -125,8 +153,8 @@ rather than depending on a lucky draw:
 | Conclusion | Reversibility | Effect |
 | --- | --- | --- |
 | `cnc_000079` | idempotent | re-issuing the corrected quote converges |
-| `cnc_001211` | compensable | ad flight, USD 41,800.00 partially creditable |
-| `cnc_001983` | irreversible | expedite premium paid, USD 12,650.00, non-refundable |
+| `cnc_001762` | compensable | ad flight, USD 41,800.00 partially creditable |
+| `cnc_002416` | irreversible | expedite premium paid, USD 12,650.00, non-refundable |
 
 Those two money figures are invented parameters of the synthetic scenario. They
 are not estimates of anything.
@@ -137,10 +165,12 @@ are not estimates of anything.
 Brokerage asserting that Kestrel's lead time is now 34 days. Zenith holds
 authority over `freight_broker_Z.` and nothing else; the hub claim's
 `authority_scope` names only `src_supplier_K` and `src_msa_K`. It therefore has
-no standing, and accepting it would cascade a mass unwind of 2,004 real
+no standing, and accepting it would cascade a mass unwind of 2,424 real
 commitments off a forged input.
 
-**It is stored and not processed.** It appears in no `.jsonl` file — not in
+**It is stored and not processed by the generator.** Task 2's authority gate now refuses it deterministically — see `make cascade-forged`.
+
+**It leaks into nothing.** It appears in no `.jsonl` file — not in
 `claims.jsonl`, not in `conclusions.jsonl`, not in `reverse_index.jsonl`. Task 3
 feeds it to the authority gate, which must refuse it deterministically.
 

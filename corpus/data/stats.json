@@ -8,31 +8,31 @@
     "claims": 1083,
     "conclusions": 4004,
     "derived_claims": 128,
-    "reverse_index_edges": 9989,
+    "reverse_index_edges": 10192,
     "sources": 10
   },
   "demonstrative_reversibility": {
-    "compensable": "cnc_001211",
+    "compensable": "cnc_001762",
     "idempotent": "cnc_000079",
-    "irreversible": "cnc_001983"
+    "irreversible": "cnc_002416"
   },
   "depth": {
     "by_depth": {
-      "1": 704,
-      "2": 700,
-      "3": 400,
+      "1": 712,
+      "2": 1088,
+      "3": 424,
       "4": 150,
       "5": 50
     },
     "max_premise_chain_depth": 5
   },
   "die_back": {
-    "die_back_pct": 95.3,
-    "immaterial_by_arithmetic": 1906,
-    "material_by_arithmetic": 94,
-    "radius": 2004,
+    "die_back_pct": 95.165,
+    "immaterial_by_arithmetic": 2303,
+    "material_by_arithmetic": 117,
+    "radius": 2424,
     "rule": "material <=> shock_days > (committed_lead_days - hub_value)",
-    "scoreable": 2000,
+    "scoreable": 2420,
     "unscoreable_unresolved": 4
   },
   "generated_window": {
@@ -43,31 +43,83 @@
   "hub_claim": {
     "canonical": "supplier_K.lead_time_days",
     "claim_id": "clm_000000",
-    "direct_dependents": 704,
+    "direct_dependents": 712,
     "shock_days": 9,
-    "transitive_dependents": 2004,
+    "transitive_dependents": 2424,
     "value_after": 20,
     "value_before": 11
+  },
+  "long_dated": {
+    "counts": {
+      "framework_promise": 150,
+      "long_lead_order": 140,
+      "standing_price": 130
+    },
+    "escaped_survivors": 21,
+    "escaped_survivors_120d_or_more": 11,
+    "in_radius": 420,
+    "live_material": 23,
+    "material": 23,
+    "total": 420
   },
   "seed": 20260831,
   "survivors": {
     "already_closed_material": 39,
-    "escaped": 25,
-    "live_material": 55,
-    "not_escaped": 30
+    "escaped": 50,
+    "live_material": 78,
+    "not_escaped": 28
+  },
+  "temporal_gap": {
+    "decision_gap_histogram_days": {
+      "0-30": 13,
+      "120-150": 2,
+      "150-183": 10,
+      "183+": 0,
+      "30-60": 10,
+      "60-90": 9,
+      "90-120": 6
+    },
+    "escape_gap_histogram_days": {
+      "0-30": 14,
+      "120-150": 2,
+      "150-183": 10,
+      "183+": 0,
+      "30-60": 10,
+      "60-90": 11,
+      "90-120": 3
+    },
+    "escaped_survivors": 50,
+    "max_decision_to_retraction_days": 182,
+    "median_decision_to_retraction_days": 65.0,
+    "min_decision_to_retraction_days": 3,
+    "survivors_decided_120d_or_more_before": 12,
+    "survivors_decided_120d_or_more_ids": [
+      "cnc_000341",
+      "cnc_002034",
+      "cnc_002084",
+      "cnc_002086",
+      "cnc_002124",
+      "cnc_002178",
+      "cnc_002208",
+      "cnc_002222",
+      "cnc_002240",
+      "cnc_002310",
+      "cnc_002362",
+      "cnc_002371"
+    ]
   },
   "timing": {
-    "max_escape_to_retraction_days": 117,
-    "median_decision_to_retraction_days": 91.5,
-    "median_escape_to_retraction_days": 34.0,
-    "min_escape_to_retraction_days": 3
+    "max_escape_to_retraction_days": 181,
+    "median_decision_to_retraction_days": 91.0,
+    "median_escape_to_retraction_days": 63.5,
+    "min_escape_to_retraction_days": 0
   },
   "unresolved": {
     "conclusions": [
-      "cnc_002000",
-      "cnc_002001",
-      "cnc_002002",
-      "cnc_002003"
+      "cnc_002420",
+      "cnc_002421",
+      "cnc_002422",
+      "cnc_002423"
     ],
     "count": 4,
     "reason": "premise clause carries no machine-checkable value"

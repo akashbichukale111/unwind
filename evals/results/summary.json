@@ -1,0 +1,47 @@
+{
+  "harness_version": "0.2.0",
+  "metrics_computed": [
+    "blast_radius_precision",
+    "blast_radius_recall",
+    "cost_per_cascade",
+    "escapement_accuracy",
+    "false_retraction_rate",
+    "materiality_accuracy",
+    "unresolved_rate"
+  ],
+  "outcomes": [
+    {
+      "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+      "class": "clean",
+      "ground_truth_size": 2424,
+      "metrics": {
+        "blast_radius_precision": 1.0,
+        "blast_radius_recall": 1.0,
+        "cost_per_cascade": 0.0,
+        "escapement_accuracy": 1.0,
+        "false_retraction_rate": 0.0,
+        "materiality_accuracy": 1.0,
+        "unresolved_rate": 0.0016501650165016502
+      },
+      "model_calls": 0,
+      "name": "hub-retraction-clean",
+      "radius_size": 2424,
+      "reason": null,
+      "regime_counts": {
+        "immaterial_contained": 902,
+        "immaterial_escaped": 1440,
+        "material_contained": 28,
+        "material_escaped": 50,
+        "unresolved": 4
+      },
+      "status": "passed",
+      "tier_reached": "T1"
+    }
+  ],
+  "scenarios_discovered": 1,
+  "scenarios_failed": 0,
+  "scenarios_passed": 1,
+  "scenarios_skipped": 0,
+  "stage": "task-2-deterministic-spine",
+  "total_model_calls": 0
+}

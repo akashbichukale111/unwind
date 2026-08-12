@@ -200,33 +200,10 @@ def _wire_name(topic: str) -> str:
 # ---------------------------------------------------------------------------
 # Idempotent consumption
 # ---------------------------------------------------------------------------
-
-
-class IdempotentConsumer:
-    """Wraps a handler so a redelivered message is dropped, not re-executed.
-
-    The in-memory seen-set is correct for a single process and is NOT the
-    production story: Task 2 moves the seen-set into Firestore so it survives a
-    Cloud Run instance restart. Marked here rather than left implicit.
-    """
-
-    def __init__(self, handler: Handler, name: str) -> None:
-        self._handler = handler
-        self.name = name
-        self._seen: set[str] = set()
-        self._lock = threading.RLock()
-        self.delivered = 0
-        self.suppressed = 0
-
-    def __call__(self, message: Message) -> None:
-        with self._lock:
-            if message.dedup_key in self._seen:
-                self.suppressed += 1
-                return
-            self._seen.add(message.dedup_key)
-            self.delivered += 1
-        self._handler(message)
-
+# Lives in lib/idempotency.py, because the seen-set is now Firestore-backed and
+# a durable store is a different concern from a transport. Re-exported here so
+# existing call sites keep working.
+from lib.idempotency import IdempotentConsumer  # noqa: E402, F401
 
 # ---------------------------------------------------------------------------
 

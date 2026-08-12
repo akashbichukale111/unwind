@@ -69,6 +69,42 @@
       ]
     },
     {
+      "//": "One cascade's nodes, shallowest first. The operator surface reads this.",
+      "collectionGroup": "nodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "depth", "order": "ASCENDING" },
+        { "fieldPath": "conclusion_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "The alert queue: correction obligations from one cascade. Not a scan.",
+      "collectionGroup": "nodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "regime", "order": "ASCENDING" },
+        { "fieldPath": "depth", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "//": "Cascades for one claim, most recent first -- the retraction history.",
+      "collectionGroup": "cascades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "claim_id", "order": "ASCENDING" },
+        { "fieldPath": "triggered_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "//": "Refused retractions, most recent first. Task 3 puts these on screen.",
+      "collectionGroup": "cascades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "triggered_at", "order": "DESCENDING" }
+      ]
+    },
+    {
       "//": "Obligations awaiting a human signature, oldest first.",
       "collectionGroup": "obligations",
       "queryScope": "COLLECTION",

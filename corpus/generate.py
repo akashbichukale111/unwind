@@ -112,8 +112,47 @@ RADIUS_LEVELS: tuple[tuple[int, int], ...] = (
     (150, 8),
     (50, 0),
 )
-UNRELATED_CONCLUSIONS = 2000
+UNRELATED_CONCLUSIONS = 1580
 UNRELATED_CLAIM_TARGET = 950
+
+# ---------------------------------------------------------------------------
+# LONG-DATED INSTRUMENTS
+# ---------------------------------------------------------------------------
+# Added because the first corpus produced survivors whose external effects had
+# escaped a median of 34 days before the retraction, not months. That was
+# structural, not a parameter: a commitment only survives if it is still open at
+# the retraction, which biases survivors toward recent decisions when every
+# instrument has a 45-180 day validity window.
+#
+# The fix is a distinct class of instrument that is genuinely long-dated in the
+# real world, rather than a widened horizon on everything:
+#
+#   standing_price     an annual price list, valid 300-400 days
+#   framework_promise  a service level under a framework agreement, 240-365 days
+#   long_lead_order    a purchase order with a long delivery horizon, 180-300
+#
+# [ASSUMPTION] Price lists and framework agreements are set at PERIOD
+# BOUNDARIES, not uniformly through the year -- an annual list is issued in
+# January, a framework renewed on its anniversary. They are therefore dated to
+# quarter starts within the window. This is the assumption that produces the
+# long decision-to-retraction gaps, and it is a real feature of how these
+# instruments are issued, not a knob.
+#
+# [ASSUMPTION] Their tight/loose buffer mixture is UNCHANGED at 0.05. It would
+# have been easy to argue that a negotiated framework service level is set from
+# the actual lead time rather than a padded default, which would have made these
+# instruments materially exposed far more often and produced a much better demo.
+# That argument is plausible but not clearly true, so it is not used. Long-dated
+# instruments here are distinguished by their DURATION only.
+LONG_DATED_KINDS = ("standing_price", "framework_promise", "long_lead_order")
+LONG_DATED_COUNTS: dict[str, int] = {
+    "standing_price": 130,
+    "framework_promise": 150,
+    "long_lead_order": 140,
+}
+#: Quarter starts, as day offsets into the window. Price lists and framework
+#: agreements land on these; long-lead orders are placed whenever they are needed.
+PERIOD_BOUNDARY_DAYS = (0, 91)
 
 EXTRACTOR_AGENT = "premise-extractor@0.1.0"
 
@@ -125,6 +164,9 @@ KIND_HORIZON_DAYS: dict[str, tuple[int, int]] = {
     "promise": (60, 180),
     "approval": (60, 180),
     "price": (30, 120),
+    "standing_price": (300, 400),
+    "framework_promise": (240, 365),
+    "long_lead_order": (180, 300),
 }
 KIND_ESCAPE_PROB: dict[str, float] = {
     # Whether the decision produced an effect outside the company at all.
@@ -134,6 +176,11 @@ KIND_ESCAPE_PROB: dict[str, float] = {
     "price": 0.55,
     "plan": 0.15,
     "approval": 0.10,
+    # Long-dated instruments are published or countersigned almost by definition:
+    # a price list nobody received is not a price list.
+    "standing_price": 0.92,
+    "framework_promise": 0.90,
+    "long_lead_order": 0.95,
 }
 RADIUS_KINDS = ("quote", "order", "plan", "promise", "approval", "price")
 
@@ -512,6 +559,55 @@ def build(seed: int = SEED) -> dict[str, Any]:
             break
         parent_claim_ids = next_parents
 
+    # -- long-dated instruments -------------------------------------------
+    # These hang off the hub claim and off derived claims, so they are inside the
+    # radius. Their point is the TEMPORAL GAP: a price list published in January
+    # on an 11-day replenishment assumption is still governing in July, months
+    # after it was decided and long after its effect left the building.
+    long_dated_ids: list[str] = []
+    hub_and_derived = [hub_id, *emitted_claim_ids[:64]]
+    for kind in LONG_DATED_KINDS:
+        for i in range(LONG_DATED_COUNTS[kind]):
+            cid = next_conclusion_id()
+            if kind == "long_lead_order":
+                # Placed when they are needed, so dated uniformly.
+                decided_at = WINDOW_START + timedelta(
+                    days=rng.randrange(0, WINDOW_DAYS), hours=rng.randrange(0, 9)
+                )
+            else:
+                # Issued at a period boundary, which is what makes the gap long.
+                boundary = PERIOD_BOUNDARY_DAYS[i % len(PERIOD_BOUNDARY_DAYS)]
+                decided_at = WINDOW_START + timedelta(days=boundary, hours=rng.randrange(0, 9))
+            committed, tier = g.committed_lead_days()
+            horizon_low, horizon_high = KIND_HORIZON_DAYS[kind]
+            closes_at = decided_at + timedelta(days=rng.randrange(horizon_low, horizon_high))
+
+            premise_ids = [hub_and_derived[i % len(hub_and_derived)]]
+            for _ in range(rng.randrange(1, 3)):
+                premise_ids.append(ambient_ids[rng.randrange(len(ambient_ids))])
+
+            conclusions.append(
+                {
+                    "conclusion_id": cid,
+                    "kind": kind,
+                    "body": _body(kind, committed, decided_at),
+                    "decided_at": _iso(decided_at),
+                    "owner_principal": f"principal_{rng.randrange(1, 24):02d}",
+                    "premise_ids": sorted(set(premise_ids)),
+                    "external_effects": [],
+                    "status": "live",
+                    "committed_lead_days": committed,
+                    "closes_at": _iso(closes_at),
+                    "emits_claim_id": None,
+                    "_tier": tier,
+                    "_depth": 1,
+                    "_decided_at": decided_at,
+                    "_closes_at": closes_at,
+                }
+            )
+            radius_conclusion_ids.append(cid)
+            long_dated_ids.append(cid)
+
     # -- the deliberately unresolvable conclusions ------------------------
     # Each sits inside the radius (it cites the hub) AND cites a clause with no
     # machine-checkable value, so the cascade will reach it and then be unable
@@ -761,6 +857,16 @@ def build(seed: int = SEED) -> dict[str, Any]:
         (RETRACTION_AT - by_id[cid]["_decided_at"]).days for cid in sorted(radius_depth)
     )
 
+    # The gap that carries the product's argument: how long a decision had been
+    # standing, and its effect had been out in the world, before the premise died.
+    survivor_decision_gaps = sorted(
+        (RETRACTION_AT - by_id[cid]["_decided_at"]).days for cid in escaped_live
+    )
+    long_dated_set = set(long_dated_ids)
+    stale_survivors = [
+        cid for cid in escaped_live if (RETRACTION_AT - by_id[cid]["_decided_at"]).days >= 120
+    ]
+
     stats = {
         "seed": seed,
         "generated_window": {
@@ -804,6 +910,35 @@ def build(seed: int = SEED) -> dict[str, Any]:
             "median_escape_to_retraction_days": _median(escape_gaps_days),
             "min_escape_to_retraction_days": escape_gaps_days[0] if escape_gaps_days else None,
             "max_escape_to_retraction_days": escape_gaps_days[-1] if escape_gaps_days else None,
+        },
+        # The temporal gap, measured over the escaped survivors only -- the
+        # population the demo actually shows.
+        "temporal_gap": {
+            "escaped_survivors": len(escaped_live),
+            "median_decision_to_retraction_days": _median(survivor_decision_gaps),
+            "min_decision_to_retraction_days": (
+                survivor_decision_gaps[0] if survivor_decision_gaps else None
+            ),
+            "max_decision_to_retraction_days": (
+                survivor_decision_gaps[-1] if survivor_decision_gaps else None
+            ),
+            "survivors_decided_120d_or_more_before": len(stale_survivors),
+            "survivors_decided_120d_or_more_ids": sorted(stale_survivors),
+            "decision_gap_histogram_days": _bucket(
+                survivor_decision_gaps, (0, 30, 60, 90, 120, 150, 183)
+            ),
+            "escape_gap_histogram_days": _bucket(escape_gaps_days, (0, 30, 60, 90, 120, 150, 183)),
+        },
+        "long_dated": {
+            "counts": dict(sorted(LONG_DATED_COUNTS.items())),
+            "total": len(long_dated_ids),
+            "in_radius": sum(1 for cid in long_dated_ids if cid in radius_depth),
+            "material": sum(1 for cid in long_dated_ids if cid in set(material_ids)),
+            "live_material": sum(1 for cid in long_dated_ids if cid in set(live_material_ids)),
+            "escaped_survivors": sum(1 for cid in escaped_live if cid in long_dated_set),
+            "escaped_survivors_120d_or_more": sum(
+                1 for cid in stale_survivors if cid in long_dated_set
+            ),
         },
         "depth": {
             "max_premise_chain_depth": max(radius_depth.values()) if radius_depth else 0,
@@ -860,6 +995,15 @@ def _body(kind: str, committed: int, decided_at: datetime) -> str:
         "promise": f"Committed to the customer at {committed} days from order",
         "approval": f"Approved release on a {committed}-day inbound assumption",
         "price": f"Price set on a {committed}-day carrying assumption",
+        "standing_price": (
+            f"Annual price list published on a {committed}-day replenishment assumption"
+        ),
+        "framework_promise": (
+            f"Framework agreement service level: delivery within {committed} days of call-off"
+        ),
+        "long_lead_order": (
+            f"Long-lead purchase order scheduled against a {committed}-day dock date"
+        ),
     }[kind] + f", decided {decided_at.date().isoformat()}"
 
 
@@ -871,6 +1015,9 @@ def _effect_for_kind(kind: str) -> tuple[str, str]:
         "price": ("erp", "publish_price"),
         "plan": ("erp", "publish_plan"),
         "approval": ("erp", "record_approval"),
+        "standing_price": ("erp", "publish_price_list"),
+        "framework_promise": ("email", "countersign_framework"),
+        "long_lead_order": ("erp", "issue_po"),
     }[kind]
 
 
@@ -922,6 +1069,15 @@ def _median(values: list[int]) -> float | None:
     if len(ordered) % 2:
         return float(ordered[mid])
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _bucket(values: list[int], edges: tuple[int, ...]) -> dict[str, int]:
+    """Count values into half-open [lo, hi) buckets. Deterministic and readable."""
+    counts: dict[str, int] = {}
+    for lo, hi in zip(edges, edges[1:], strict=False):
+        counts[f"{lo}-{hi}"] = sum(1 for v in values if lo <= v < hi)
+    counts[f"{edges[-1]}+"] = sum(1 for v in values if v >= edges[-1])
+    return counts
 
 
 def _histogram(values: Any) -> dict[str, int]:

@@ -44,8 +44,26 @@ corpus-verify: ## Prove the generator is deterministic (regenerate + diff manife
 	$(PY) -m corpus.generate --verify --out corpus/data
 
 .PHONY: eval
-eval: ## Run the eval harness over evals/scenarios (zero scenarios is a valid run)
+eval: ## Run the eval harness over evals/scenarios
 	$(PY) -m evals.harness --scenarios evals/scenarios --out evals/results
+
+.PHONY: eval-vertex-off
+eval-vertex-off: ## THE GUARANTEE: full cascade with Vertex disabled. Required in CI.
+	UNWIND_VERTEX_DISABLED=1 $(PY) -m evals.harness \
+		--scenarios evals/scenarios --out evals/results --quiet
+
+.PHONY: cascade
+cascade: ## Run one cascade from the committed corpus and print the four regimes
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli cascade
+
+.PHONY: cascade-forged
+cascade-forged: ## Run the forged retraction. The authority gate must refuse it.
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli cascade \
+		--source src_broker_Z --new-value 34 --reason "broker notice"
+
+.PHONY: debt
+debt: ## Score standing causal debt -- what UNWIND shows on a normal day
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli debt
 
 .PHONY: smoke
 smoke: ## Run the throwaway ADK smoke agent (requires Vertex credentials)
@@ -54,6 +72,9 @@ smoke: ## Run the throwaway ADK smoke agent (requires Vertex credentials)
 .PHONY: web-ui
 web-ui: ## Launch `adk web` for local tracing during development
 	.venv/bin/adk web agents
+
+# The three targets above emit JSON on stdout and are silenced with @ so the
+# output pipes into jq without make's own recipe echo corrupting it.
 
 # ---------------------------------------------------------------------------
 # Task 1 has not built these. They fail loudly rather than printing a fake pass.

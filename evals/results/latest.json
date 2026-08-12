@@ -1,13 +1,20 @@
 {
   "empty_scenario_classes": [
-    "clean",
     "ambiguous",
     "adversarial",
     "tool_failure",
     "multi_premise"
   ],
-  "harness_version": "0.1.0",
-  "metrics_computed": [],
+  "harness_version": "0.2.0",
+  "metrics_computed": [
+    "blast_radius_precision",
+    "blast_radius_recall",
+    "cost_per_cascade",
+    "escapement_accuracy",
+    "false_retraction_rate",
+    "materiality_accuracy",
+    "unresolved_rate"
+  ],
   "metrics_defined": [
     "blast_radius_recall",
     "blast_radius_precision",
@@ -20,13 +27,159 @@
     "time_to_obligation"
   ],
   "missing_scenario_classes": [],
-  "note": "NOTHING WAS EVALUATED. Task 1 defines the metrics and ships the runner; the scenarios and the cascade they exercise are Task 2 onward. No metric value in this repository has been measured.",
-  "outcomes": [],
+  "note": "Metric values below were computed by this harness from the cascade output and corpus/data/radius_truth.jsonl.",
+  "outcomes": [
+    {
+      "class": "clean",
+      "detail": {
+        "authority": {
+          "allowed": true,
+          "checked_at": "2026-07-06T09:00:00Z",
+          "claim_authority_scope": [
+            "src_supplier_K",
+            "src_msa_K"
+          ],
+          "claim_id": "clm_000000",
+          "reason": "'src_supplier_K' is named directly in the authority scope of 'supplier_K.lead_time_days'.",
+          "reason_code": "source_in_claim_scope",
+          "source_authority": [
+            "supplier_K."
+          ],
+          "source_id": "src_supplier_K"
+        },
+        "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
+        "elapsed_seconds": 0.8149,
+        "ground_truth_size": 2424,
+        "model_calls": 0,
+        "radius_size": 2424,
+        "regime_counts": {
+          "immaterial_contained": 902,
+          "immaterial_escaped": 1440,
+          "material_contained": 28,
+          "material_escaped": 50,
+          "unresolved": 4
+        },
+        "tier_reached": "T1"
+      },
+      "metrics": [
+        {
+          "detail": {
+            "expected": 2424,
+            "found": 2424
+          },
+          "direction": "higher_is_better",
+          "key": "blast_radius_recall",
+          "name": "Blast-radius recall",
+          "tier": "T0",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "hits": 2424
+          },
+          "direction": "higher_is_better",
+          "key": "blast_radius_precision",
+          "name": "Blast-radius precision",
+          "tier": "T0",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "disagreements": [],
+            "scored": 2420
+          },
+          "direction": "higher_is_better",
+          "key": "materiality_accuracy",
+          "name": "Materiality accuracy",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {
+            "acted_on": 78,
+            "false": []
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "escapement_accuracy",
+          "name": "Escapement accuracy",
+          "tier": "T0",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "No escalation path exists yet; ASK_HUMAN is Task 3.",
+          "unit": "ratio",
+          "value": null
+        },
+        {
+          "detail": {
+            "unresolved": 4
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0016501650165016502
+        },
+        {
+          "detail": {
+            "model_calls": 0,
+            "note": "Zero by construction: this cascade is T0+T1 and makes no model call."
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "lower_is_better",
+          "key": "time_to_obligation",
+          "name": "Time to obligation",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.815s.",
+          "unit": "seconds",
+          "value": null
+        }
+      ],
+      "name": "hub-retraction-clean",
+      "reason": null,
+      "status": "passed"
+    }
+  ],
   "python": "3.12.3",
-  "run_at": "2026-08-12T02:58:16.892661+00:00",
-  "scenarios_discovered": 0,
+  "run_at": "2026-08-12T10:46:54.650865+00:00",
+  "scenarios_discovered": 1,
   "scenarios_failed": 0,
-  "scenarios_passed": 0,
+  "scenarios_passed": 1,
   "scenarios_skipped": 0,
-  "stage": "task-1-scaffolding"
+  "stage": "task-2-deterministic-spine",
+  "total_model_calls": 0
 }

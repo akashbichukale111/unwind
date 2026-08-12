@@ -13,13 +13,38 @@ from enum import Enum
 from functools import lru_cache
 
 # ---------------------------------------------------------------------------
-# Model + region. The ONLY model string in the repo.
+# Models + region. THE ONLY MODEL STRINGS IN THE REPO.
 # ---------------------------------------------------------------------------
-# Verified 2026-08-12 against Google Cloud / Google AI model documentation:
-# gemini-3.6-flash reached general availability on Vertex AI on 2026-07-21.
-# The brief asked for "Gemini 3.5 or newer"; 3.6 Flash is the current GA Flash
-# model and supersedes 3.5 Flash. See README "Model + version verification".
-GEMINI_MODEL = "gemini-3.6-flash"
+# Two models, because the workload genuinely has two shapes and the split is a
+# cost and reliability decision rather than a preference:
+#
+#   MODEL_FAST  high-volume, low-stakes. Whatever survives T1 and still needs
+#               reading -- parsing, the ambiguous-materiality cull. May touch
+#               hundreds of nodes in one cascade.
+#   MODEL_DEEP  low-volume, high-stakes. Re-derivation on survivors,
+#               arbitration, and drafting a correction that reaches a
+#               counterparty. Touches dozens.
+#
+# GA STATUS, re-verified 2026-08-12 against Google Cloud / Google AI model
+# documentation:
+#   gemini-3.5-flash-lite  GA. Positioned for low-latency, high-volume agentic
+#                          subagent work.
+#   gemini-3.6-flash       GA since 2026-07-21. Currently the strongest GA
+#                          Gemini on Vertex AI.
+#
+# ⚠ MODEL_DEEP IS NOT A PRO MODEL, AND THAT IS DELIBERATE. As of 2026-08-12 no
+# Gemini 3.x Pro is generally available on Vertex AI -- gemini-3.1-pro is
+# PREVIEW. The instruction was that both strings be verified GA, and a GA-only
+# constraint currently excludes the entire Pro line. When 3.1 Pro reaches GA,
+# promoting MODEL_DEEP to it is a one-line change here and nowhere else.
+#
+# ⚠ RE-VERIFY BOTH STRINGS ARE STILL GA BEFORE SUBMISSION.
+MODEL_FAST = "gemini-3.5-flash-lite"
+MODEL_DEEP = "gemini-3.6-flash"
+
+#: Default when a caller has no opinion. Deliberately the cheap one: a code path
+#: that silently wanted the expensive model should have to say so.
+GEMINI_MODEL = MODEL_FAST
 
 # Vertex AI region. Pinned, not inferred from ambient environment, so a cascade
 # cannot silently move jurisdictions between runs.
@@ -57,6 +82,8 @@ class Config:
     project_id: str
     vertex_location: str
     gemini_model: str
+    model_fast: str
+    model_deep: str
 
     firestore_emulator_host: str | None
     firestore_database: str
@@ -116,9 +143,13 @@ COLLECTION_OBLIGATIONS = "obligations"
 COLLECTION_REPAIRS = "repairs"
 COLLECTION_SOURCES = "sources"
 COLLECTION_AGENT_TRUST = "agent_trust"
+#: Runtime cascade records. Never mutates reverse_index (ruling 1.9).
+COLLECTION_CASCADES = "cascades"
 
 #: Subcollection under reverse_index/{claim_id}
 SUBCOLLECTION_DEPENDENTS = "dependents"
+#: Subcollection under cascades/{cascade_id}
+SUBCOLLECTION_NODES = "nodes"
 
 ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_CLAIMS,
@@ -128,6 +159,7 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_REPAIRS,
     COLLECTION_SOURCES,
     COLLECTION_AGENT_TRUST,
+    COLLECTION_CASCADES,
 )
 
 
@@ -148,6 +180,8 @@ def get_config() -> Config:
         project_id=project_id,
         vertex_location=os.environ.get("UNWIND_VERTEX_LOCATION", VERTEX_LOCATION),
         gemini_model=GEMINI_MODEL,
+        model_fast=MODEL_FAST,
+        model_deep=MODEL_DEEP,
         firestore_emulator_host=emulator_host,
         firestore_database=os.environ.get("UNWIND_FIRESTORE_DATABASE", "(default)"),
         vertex_disabled=_env_flag("UNWIND_VERTEX_DISABLED", default=False),

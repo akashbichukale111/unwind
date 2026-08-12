@@ -129,6 +129,22 @@ class ConclusionKind(str, Enum):
     PROMISE = "promise"
     APPROVAL = "approval"
     PRICE = "price"
+    # Long-dated instruments. Their validity runs 180-365 days, which is what
+    # lets a decision still be governing months after its premise was set and
+    # its effect left the building.
+    STANDING_PRICE = "standing_price"
+    FRAMEWORK_PROMISE = "framework_promise"
+    LONG_LEAD_ORDER = "long_lead_order"
+
+
+#: Kinds whose commercial validity is measured in quarters rather than weeks.
+LONG_DATED_KINDS: frozenset[ConclusionKind] = frozenset(
+    {
+        ConclusionKind.STANDING_PRICE,
+        ConclusionKind.FRAMEWORK_PROMISE,
+        ConclusionKind.LONG_LEAD_ORDER,
+    }
+)
 
 
 class ConclusionStatus(str, Enum):
@@ -183,6 +199,12 @@ class Conclusion(_Base):
     premise_ids: list[str] = Field(default_factory=list)
 
     external_effects: list[ExternalEffect] = Field(default_factory=list)
+    #: Whether the effect record is trustworthy. An empty `external_effects` with
+    #: this True is a positive assertion that nothing left the building. With it
+    #: False -- a connector that failed to sync, a system with no outbound log --
+    #: escapement is UNKNOWABLE, and the lookup fails safe to ESCAPED. Treating an
+    #: unescaped item as escaped costs a wasted check; the reverse costs a customer.
+    effects_recorded: bool = True
     status: ConclusionStatus = ConclusionStatus.LIVE
 
     # --- fields the corpus needs so materiality is arithmetic, not vibes ----
@@ -352,6 +374,162 @@ class AgentTrust(_Base):
 
 
 # ===========================================================================
+# cascades/{cascade_id} and cascades/{cascade_id}/nodes/{conclusion_id}
+#
+# A cascade is a runtime EVENT with its own lifetime; the reverse index is a
+# stable structural fact. Traversal depth is therefore written here and the
+# reverse index is never mutated by a cascade -- otherwise the graph becomes
+# unauditable and a later query cannot ask about one specific traversal.
+# ===========================================================================
+
+
+class CascadeStatus(str, Enum):
+    REFUSED = "refused"  # authority gate said no. Recorded, not raised.
+    COMPLETED = "completed"
+    BUDGET_EXHAUSTED = "budget_exhausted"
+    FAILED = "failed"
+
+
+class AuthorityReason(str, Enum):
+    """Why the gate allowed or refused. A closed vocabulary, not free text."""
+
+    SOURCE_HAS_STANDING = "source_has_standing"
+    SOURCE_IN_CLAIM_SCOPE = "source_in_claim_scope"
+    NO_SUCH_SOURCE = "no_such_source"
+    NO_SUCH_CLAIM = "no_such_claim"
+    SOURCE_OUTSIDE_CLAIM_SCOPE = "source_outside_claim_scope"
+    CLAIM_NOT_LIVE = "claim_not_live"
+
+
+class AuthorityDecision(_Base):
+    """The gate's verdict. A refusal is a RECORDED EVENT, never an exception.
+
+    Task 3 puts one of these on screen, which it cannot do if the refusal path
+    is a stack trace.
+    """
+
+    allowed: bool
+    reason_code: AuthorityReason
+    reason: str
+    source_id: str
+    claim_id: str
+    checked_at: datetime
+    #: The authority prefixes the source actually holds, recorded so a refusal
+    #: can be read months later without re-resolving the source.
+    source_authority: list[str] = Field(default_factory=list)
+    claim_authority_scope: list[str] = Field(default_factory=list)
+
+    def to_json(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class BudgetTier(str, Enum):
+    """How deep an investigation the blast radius earns.
+
+    LOW       T0 + T1 only, zero model calls
+    MEDIUM    + re-derivation on the top-N by exposure      [T2, Task 3]
+    HIGH      + full court arbitration                      [Task 4]
+    CRITICAL  + mandatory human sign-off                    [Task 4]
+    """
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class Budget(_Base):
+    cost_cap_usd: float
+    time_cap_seconds: float
+    max_model_calls: int
+    #: What the policy says the radius warrants, given what T0/T1 found.
+    policy_tier: BudgetTier
+    #: What actually ran. Diverges from policy_tier whenever the warranted tier
+    #: is not built yet, and the divergence carries a stated reason.
+    tier_reached: str
+    stopped_reason: str | None = None
+    rationale: list[str] = Field(default_factory=list)
+
+
+class Cascade(_Base):
+    cascade_id: str
+    claim_id: str
+    triggered_at: datetime
+    triggered_by: str
+    status: CascadeStatus
+    budget: Budget | None = None
+    tier_reached: str = "T0"
+    authority: AuthorityDecision | None = None
+    #: Denormalised so the collection is readable without walking the subcollection.
+    radius_size: int = 0
+    regime_counts: dict[str, int] = Field(default_factory=dict)
+    model_calls: int = 0
+
+
+class CascadeNode(_Base):
+    """One conclusion, as this cascade found and scored it."""
+
+    cascade_id: str
+    conclusion_id: str
+    depth: int
+    #: Claim -> conclusion -> claim -> ... back to the retracted claim. Makes a
+    #: verdict explainable without re-running the traversal.
+    path: list[str] = Field(default_factory=list)
+    regime: Regime
+    #: None means the cascade declined to decide. Never coerced to False.
+    materiality: bool | None = None
+    escapement: bool = True
+    reason_code: str = ""
+    scored_by: str = ""
+    scored_at: datetime | None = None
+    unresolved_reason: str | None = None
+    #: What the arithmetic actually used, kept so the verdict can be checked.
+    slack_days: int | None = None
+    shock_days: int | None = None
+
+
+# ===========================================================================
+# Causal debt -- the measure that exists on a normal day, when nothing broke
+# ===========================================================================
+
+
+class DebtFactor(str, Enum):
+    UNCERTAIN = "uncertain"  # low-confidence premise
+    STALE = "stale"  # premise has not been reaffirmed in a long time
+    CONFLICTING = "conflicting"  # two live claims disagree about the same fact
+    FRAGILE = "fragile"  # premise carries a lot of load
+
+
+class DebtContribution(_Base):
+    """One premise's contribution to one conclusion's debt.
+
+    Every contribution names its premise. A debt figure nobody can attribute is
+    a number on a dashboard, not a measure.
+    """
+
+    conclusion_id: str
+    claim_id: str
+    claim_canonical: str
+    factor: DebtFactor
+    factor_value: float
+    exposure: float
+    irreversibility: float
+    contribution: float
+    explanation: str
+
+
+class CausalDebtScore(_Base):
+    as_of: datetime
+    total: float
+    conclusions_scored: int
+    claims_implicated: int
+    by_factor: dict[str, float] = Field(default_factory=dict)
+    #: Heaviest premises first -- the fragility ranking, before anything breaks.
+    top_claims: list[dict[str, Any]] = Field(default_factory=list)
+    top_conclusions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ===========================================================================
 # The five-state decision (locked decision 1.5). Schema-ready; Task 3 builds it.
 # ===========================================================================
 
@@ -396,9 +574,20 @@ class Regime(str, Enum):
 
 
 __all__ = [
+    "LONG_DATED_KINDS",
     "AgentTrust",
+    "AuthorityDecision",
+    "AuthorityReason",
     "AutonomyTier",
+    "Budget",
+    "BudgetTier",
+    "Cascade",
+    "CascadeNode",
+    "CascadeStatus",
+    "CausalDebtScore",
     "Challenge",
+    "DebtContribution",
+    "DebtFactor",
     "Claim",
     "ClaimStatus",
     "ClaimType",

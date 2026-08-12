@@ -16,6 +16,7 @@ from typing import Any
 
 from lib.config import (
     COLLECTION_AGENT_TRUST,
+    COLLECTION_CASCADES,
     COLLECTION_CLAIMS,
     COLLECTION_CONCLUSIONS,
     COLLECTION_OBLIGATIONS,
@@ -23,10 +24,13 @@ from lib.config import (
     COLLECTION_REVERSE_INDEX,
     COLLECTION_SOURCES,
     SUBCOLLECTION_DEPENDENTS,
+    SUBCOLLECTION_NODES,
     get_config,
 )
 from lib.schema import (
     AgentTrust,
+    Cascade,
+    CascadeNode,
     Claim,
     Conclusion,
     Obligation,
@@ -244,3 +248,62 @@ def _batched_set(
     if pending:
         batch.commit()
     return written
+
+
+# ---------------------------------------------------------------------------
+# Cascades -- runtime events, written per cascade
+# ---------------------------------------------------------------------------
+# The reverse index is a stable structural fact and a cascade is a runtime event
+# with its own lifetime, so traversal depth is written HERE and the reverse index
+# is never mutated by a cascade. Mutating it would make the graph unauditable and
+# would leave Task 4's court unable to query one specific traversal rather than
+# the union of every traversal that ever ran.
+
+
+def put_cascade(cascade: Cascade) -> None:
+    get_client().collection(COLLECTION_CASCADES).document(cascade.cascade_id).set(
+        cascade.to_firestore()
+    )
+
+
+def get_cascade(cascade_id: str) -> Cascade | None:
+    snap = get_client().collection(COLLECTION_CASCADES).document(cascade_id).get()
+    return Cascade(**snap.to_dict()) if snap.exists else None
+
+
+def put_cascade_nodes(cascade_id: str, nodes: Iterable[CascadeNode], batch_size: int = 400) -> int:
+    client = get_client()
+    parent = client.collection(COLLECTION_CASCADES).document(cascade_id)
+    written = 0
+    batch = client.batch()
+    pending = 0
+    for node in nodes:
+        ref = parent.collection(SUBCOLLECTION_NODES).document(node.conclusion_id)
+        batch.set(ref, node.to_firestore())
+        pending += 1
+        written += 1
+        if pending >= batch_size:
+            batch.commit()
+            batch = client.batch()
+            pending = 0
+    if pending:
+        batch.commit()
+    return written
+
+
+def iter_cascade_nodes(cascade_id: str, regime: str | None = None) -> Iterator[CascadeNode]:
+    """Nodes of one cascade, shallowest first. Optionally one regime only.
+
+    The regime filter is the query the operator surface will live on: "show me
+    the correction obligations from this cascade" must not be a scan.
+    """
+    query = (
+        get_client()
+        .collection(COLLECTION_CASCADES)
+        .document(cascade_id)
+        .collection(SUBCOLLECTION_NODES)
+    )
+    if regime is not None:
+        query = query.where("regime", "==", regime)
+    for snap in query.order_by("depth").stream():
+        yield CascadeNode(**snap.to_dict())

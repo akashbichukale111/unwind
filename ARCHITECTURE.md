@@ -13,19 +13,20 @@ ordering.
 
 | Tier | What runs there | Model? | Why it is a tier and not a convention |
 | --- | --- | --- | --- |
-| T0 | Blast-radius traversal over the reverse index | No | A cascade over 2,004 dependents must not cost 2,004 model calls, and must still run when Vertex is down. |
+| T0 | Blast-radius traversal over the reverse index | No | A cascade over 2,424 dependents must not cost 2,424 model calls, and must still run when Vertex is down. |
 | T1 | Arithmetic materiality on numeric/temporal claims | No | `shock > slack` is subtraction; asking a model to do subtraction is how you get a confidently wrong unwind. |
 | T2 | Ambiguous materiality, arbitration, drafting | Yes | Judgement, argument and prose are the only places a model earns its latency. |
 
-`UNWIND_VERTEX_DISABLED=1` closes the single door to a model
-(`lib/vertex.py`), so "T0/T1 survive a Vertex outage" is testable rather than
-asserted. Task 2 runs the full cascade with it set.
+`UNWIND_VERTEX_DISABLED=1` closes the single door to a model (`lib/vertex.py`),
+so "T0/T1 survive a Vertex outage" is testable rather than asserted. The full
+cascade runs with it set, **on every CI push**, and the job fails if a single
+model call is made.
 
 ## Components
 
 ### `lib/config.py`
-Holds the only Gemini model string and the only pinned region in the repository,
-so a second model can never enter the system by accident (enforced by
+Holds the only two Gemini model strings and the only pinned region in the
+repository, so a third model can never enter the system by accident (enforced by
 `tests/test_config_singleton.py`, which greps the tree).
 
 ### `lib/schema.py`
@@ -61,6 +62,67 @@ delete-ready so it cannot quietly become load-bearing.
 Serves the blast radius over SSE because a radius is discovered incrementally and
 an operator needs to watch it fill in rather than wait for a total.
 
+### `spine/` — the deterministic package boundary
+Holds every T0/T1 step as plain functions with no ADK and no model client, so
+"T0 and T1 survive a Vertex outage" is enforced by an import graph a test can
+walk rather than by a convention someone remembers.
+
+### `spine/authority.py`
+Compares a source's authority prefixes to a claim's authority scope before a
+single edge is walked, because a forged retraction is a weapon and a gate that
+can be argued with is not a gate.
+
+### `spine/traversal.py`
+Walks the reverse index breadth-first to the transitive closure, keeping each
+node's path so a verdict can be explained back to the retracted claim, and
+recording cycles instead of silently surviving them.
+
+### `spine/materiality.py`
+Decides harm by subtracting a buffer from a shock, and routes contractual and
+unparseable premises out to judgement rather than guessing at them.
+
+### `spine/escapement.py`
+Reads what already left the building, and defaults to ESCAPED whenever the
+record is missing — a wasted check costs one person five minutes, an untold
+customer costs the relationship.
+
+### `spine/regimes.py`
+Maps materiality × escapement onto exactly one of four regimes as a total
+function, so the core novelty of the product is incapable of hallucinating.
+
+### `spine/cartography.py`
+Orders the radius by exposure deterministically, because a later tier that can
+only afford fifty nodes needs the right fifty and ties must not break on luck.
+
+### `spine/budget.py`
+Decides how deep an investigation the radius has earned — and runs *after* the
+free tiers, because severity is not knowable until the free work is done.
+
+### `spine/temporal.py`
+Closes a claim's validity interval and opens its successor's without destroying
+the prior value, because a conclusion is only defensible if you can still see
+the number it actually stood on.
+
+### `spine/debt.py`
+Scores standing consequence on a normal day, attributing every contribution to a
+named premise, so UNWIND has an answer to "what does this show me when nothing
+has broken".
+
+### `spine/cascade.py`
+Composes the above in the one order that is safe — gate, then propagate, then
+traverse, then score, then budget — behind a store protocol that has no method
+capable of returning the eval marking scheme.
+
+### `agents/cascade/`
+Expresses the cascade as an ADK 2 `Workflow` of `FunctionNode`s whose branch is
+chosen by `ctx.route`, which is what makes the four-regime split a routing
+decision in the framework rather than a paragraph in a prompt.
+
+### `lib/idempotency.py`
+Puts the seen-set in Firestore behind a conditional `create()`, because Cloud Run
+instances are replaced without warning and raising the same correction
+obligation twice means apologising to a real customer twice.
+
 ### `corpus/`
 Is a deliverable, not a fixture: the die-back is **measured** off a stated model
 of commercial behaviour, so the demo's central number is computed rather than
@@ -71,7 +133,7 @@ Defines the metrics before any scenario exists, because a metric invented after
 seeing results is a metric chosen to flatter them.
 
 ### `web/`
-Reserves the operator surface and pins Next.js 15; Task 1 builds no UI and the
+Reserves the operator surface and pins Next.js 15; no UI is built yet and the
 one page in it says so.
 
 ### `infra/`
@@ -86,7 +148,7 @@ Four, each justified in one sentence. Nothing else is used.
 
 | Service | One sentence |
 | --- | --- |
-| **Firestore** | Document-shaped decisions with a subcollection reverse index, and a local emulator so the deterministic tier needs no cloud account. |
+| **Firestore** | Document-shaped decisions with a subcollection reverse index, per-cascade node records, durable idempotency keys, and a local emulator so the deterministic tier needs no cloud account. |
 | **Pub/Sub** | The cascade is a fan-out from one dead claim to thousands of independent re-derivations, which is exactly what a topic is for. |
 | **Cloud Run** | `adk deploy cloud_run` is the framework's own path, and a cascade is bursty work that should scale to zero between retractions. |
 | **Vertex AI** | The only T2 dependency: ambiguous materiality, the repair court, and drafting the correction that goes to a counterparty. |
@@ -94,7 +156,7 @@ Four, each justified in one sentence. Nothing else is used.
 Deliberately **NOT USED**: GKE (Cloud Run already runs the container, and
 `adk deploy gke` would add a cluster nobody needs), Cloud SQL and Spanner
 (the data is documents with a subcollection index, not relations), BigQuery
-(2,004 rows per cascade is not an analytics workload), Dataflow (Pub/Sub plus
+(2,424 rows per cascade is not an analytics workload), Dataflow (Pub/Sub plus
 Cloud Run is the whole pipeline), Redis and Memorystore (Firestore holds the
 idempotency keys, and a second datastore is a second thing to be inconsistent).
 
@@ -104,8 +166,8 @@ Verified present in `google-adk` 2.6.3 (`google.adk.workflow`, `google.adk.tools
 
 | ADK 2 feature | Where UNWIND needs it |
 | --- | --- |
-| `FunctionNode` | T0 traversal and T1 materiality: deterministic nodes with no model call. |
-| `Workflow` + `Edge` / `DEFAULT_ROUTE` | The four-regime split is a **router**, not a prompt — the core novelty must not be able to hallucinate. |
+| `FunctionNode` | **In use.** The cascade graph is nothing but function nodes — T0 traversal and T1 materiality, no model call. |
+| `Workflow` + `Edge` / `DEFAULT_ROUTE` | **In use.** `agents/cascade/workflow.py` branches on `ctx.route`; the regime split is a routing decision, not a prompt. |
 | `AgentTool` (agent-as-tool) | The repair court: a parent runs a subset of sub-agents in parallel and keeps control. |
 | Dynamic node scheduling | The repair team is composed at runtime from a blast radius that did not exist a second earlier. |
 | `LongRunningFunctionTool` | Durable pause/resume: a human may sign a correction obligation on Tuesday. |
