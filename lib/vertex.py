@@ -19,6 +19,50 @@ from lib.config import Config, get_config
 from lib.telemetry import model_call_span
 
 
+def materialise_credentials() -> str | None:
+    """Turn a credential SECRET into something google.auth can actually read.
+
+    A secret store holds values, but `google.auth` looks for a FILE PATH in
+    `GOOGLE_APPLICATION_CREDENTIALS`. That mismatch is the whole reason a
+    correctly-configured secret can still produce `DefaultCredentialsError`.
+
+    So: if `GOOGLE_APPLICATION_CREDENTIALS_JSON` holds a service-account key,
+    write it to a file with owner-only permissions and point the standard
+    variable at it. The file lives in the container's temp directory, never in
+    the repository, and dies with the container.
+
+    Returns the path written, or None when there was nothing to materialise.
+    """
+    raw = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    if not raw or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        return None
+
+    import json  # noqa: PLC0415
+    import tempfile  # noqa: PLC0415
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise VertexUnavailableError(
+            "GOOGLE_APPLICATION_CREDENTIALS_JSON is set but is not valid JSON "
+            f"({exc}). It should hold the full contents of a service-account "
+            "key file."
+        ) from exc
+
+    path = os.path.join(tempfile.gettempdir(), "unwind-gcp-key.json")
+    # Owner-only: a credential readable by anything else on the box is not a
+    # credential, it is a published secret.
+    handle = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(handle, "w", encoding="utf-8") as fh:
+        json.dump(parsed, fh)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = path
+
+    # A key file names its own project, so the caller need not set it twice.
+    if parsed.get("project_id") and not os.environ.get("UNWIND_PROJECT_ID"):
+        os.environ["UNWIND_PROJECT_ID"] = parsed["project_id"]
+    return path
+
+
 def configure_vertex_backend() -> dict[str, str]:
     """Pin the google-genai backend to Vertex AI, from config, before any client.
 
@@ -35,6 +79,7 @@ def configure_vertex_backend() -> dict[str, str]:
     Returns the environment it applied, so callers can report it rather than
     assume it.
     """
+    materialise_credentials()
     cfg = get_config()
     applied = {
         "GOOGLE_GENAI_USE_ENTERPRISE": "true",
