@@ -88,6 +88,10 @@ adversarial: ## Both attacks: the obvious forgery and the partial-authority over
 debt: ## Score standing causal debt -- what UNWIND shows on a normal day
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli debt
 
+.PHONY: vertex-check
+vertex-check: ## ONE real Vertex call. Prints the raw response or the exact failure.
+	@$(PY) scripts/vertex_check.py
+
 .PHONY: smoke
 smoke: ## Run the throwaway ADK smoke agent (requires Vertex credentials)
 	$(PY) -m agents.smoke.run

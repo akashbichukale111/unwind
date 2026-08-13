@@ -84,11 +84,28 @@ class VertexClient:
             except ImportError as exc:  # pragma: no cover
                 raise VertexUnavailableError("google-genai is not installed") from exc
             configure_vertex_backend()
-            self._client = genai.Client(
-                enterprise=True,  # Vertex AI, not the developer Gemini API.
-                project=self.config.project_id,
-                location=self.config.vertex_location,
-            )
+
+            kwargs: dict[str, Any] = {
+                # Vertex AI, not the developer Gemini API.
+                "enterprise": True,
+                "project": self.config.project_id,
+                "location": self.config.vertex_location,
+            }
+
+            # A short-lived OAuth token is the cheapest way to reach Vertex from
+            # a machine that has no gcloud install and no ADC file -- which is
+            # the normal situation for a remote build container. Authenticating
+            # on a laptop does not carry credentials onto a different host, so
+            # this accepts a token minted there and pasted here. It expires in
+            # about an hour, which makes it far safer to move around than a
+            # service-account key.
+            token = os.environ.get("UNWIND_VERTEX_ACCESS_TOKEN")
+            if token:
+                from google.oauth2.credentials import Credentials  # noqa: PLC0415
+
+                kwargs["credentials"] = Credentials(token=token)
+
+            self._client = genai.Client(**kwargs)
         return self._client
 
     def generate_text(self, prompt: str, **kwargs: Any) -> str:
