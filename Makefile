@@ -105,6 +105,19 @@ multi-premise: ## Two premises failing at once: radii merge, arbiter allocates
 golden: ## Deterministic court transcript; CI fails if it drifts from the committed copy
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli golden --out evals/golden/court.txt
 
+.PHONY: ui
+ui: ## Serve the operator field at http://127.0.0.1:8000 (no credentials needed)
+	@UNWIND_VERTEX_DISABLED=1 UNWIND_OTEL_CONSOLE=0 \
+		.venv/bin/uvicorn services.api.main:app --host 127.0.0.1 --port 8000
+
+.PHONY: ui-check
+ui-check: ## Drive the UI in a real browser: measure fps, capture screens, assert
+	@$(PY) scripts/measure_ui.py
+
+.PHONY: contrast
+contrast: ## Recompute every colour pair; fail below 4.5:1
+	@$(PY) scripts/check_contrast.py
+
 .PHONY: verify-live
 verify-live: ## ⚠ NEEDS CREDENTIALS. Real Vertex call + recall comparison + T2. Writes docs/LIVE-VERIFICATION.md
 	@$(PY) scripts/verify_live.py

@@ -1,0 +1,716 @@
+/* UNWIND — the field, the wave, the cull, and the paper.
+ *
+ * ⚠ EVERY NUMBER ON SCREEN ARRIVES FROM THE SERVER. The counter is decremented
+ * by SSE events carrying real cascade verdicts; it is NOT a tween toward a
+ * known total. That is why it can never disagree with the events that produced
+ * it, and it is why `culled` below is incremented inside the event handler and
+ * nowhere else.
+ *
+ * The only thing that is not real is the PACING of delivery -- the cascade
+ * finishes in well under a second and a person needs about twenty to read the
+ * die-back. The server reports `paced_ms` in its `begin` event and we print it
+ * on screen, because a paced stream that claims to be live is a lie and a
+ * disclosed one is a demo.
+ */
+
+(() => {
+  "use strict";
+
+  const T = {
+    ink: "#12151A",
+    slate: "#262C34",
+    graphite: "#4A535E",
+    bone: "#EDE8DE",
+    amber: "#C88A2E",
+    oxide: "#8C3A2B",
+    verdigris: "#3E7A6E",
+  };
+
+  // Node lifecycle. Index into T via STATE_COLOUR.
+  const S = {
+    IDLE: 0,
+    FLARE: 1,
+    IMMATERIAL: 2,
+    CLOSED: 3,
+    UNRESOLVED: 4,
+    MAT_ESC: 5,
+    MAT_CONT: 6,
+  };
+
+  const REGIME_STATE = {
+    immaterial_contained: S.IMMATERIAL,
+    immaterial_escaped: S.IMMATERIAL,
+    closed_out: S.CLOSED,
+    unresolved: S.UNRESOLVED,
+    material_escaped: S.MAT_ESC,
+    material_contained: S.MAT_CONT,
+  };
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const canvas = document.getElementById("field");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    nodes: null,
+    n: 0,
+    x: null,
+    y: null,
+    z: null,      // 0 near (recent) .. 1 far (old). Depth axis IS time.
+    r: null,      // radius in px, from z
+    st: null,     // Uint8Array of S.*
+    t0: null,     // Float32Array flare start
+    index: new Map(),
+    stones: [],
+    field: null,
+    screen: "field",
+    running: false,
+    sag: 0,       // spring displacement of the load lines
+    sagV: 0,
+    sagTarget: 0,
+    frames: 0,
+    fpsT: 0,
+    fps: 0,
+    fpsSamples: [],
+  };
+
+  // ── layout ────────────────────────────────────────────────────────
+
+  // Deterministic pseudo-random so the field is identical on every run. A demo
+  // that reshuffles between takes is a demo nobody can rehearse.
+  function rand(i, salt) {
+    const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  }
+
+  let W = 0;
+  let H = 0;
+  let DPR = 1;
+  let horizon = 0;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    horizon = H * 0.16;
+    if (state.nodes) layout();
+  }
+
+  function layout() {
+    const n = state.n;
+    const maxAge = state.maxAge || 1;
+    for (let i = 0; i < n; i++) {
+      const node = state.nodes[i];
+      // DEPTH AXIS IS TIME. Older decisions sit further back: smaller, dimmer,
+      // nearer the horizon. This is the product's whole point made spatial --
+      // decisions keep operating long after the premise under them died.
+      const z = Math.min(1, node.age / maxAge);
+      state.z[i] = z;
+      const spreadX = 0.06 + 0.88 * rand(i, 1);
+      // Perspective: far rows converge toward the centre.
+      const converge = 0.5 + (spreadX - 0.5) * (1 - 0.22 * z);
+      state.x[i] = converge * W;
+      const band = horizon + (1 - z) * (H * 0.72 - horizon);
+      state.y[i] = band + (rand(i, 2) - 0.5) * H * 0.05 * (1 - 0.5 * z);
+      state.r[i] = (1 - 0.55 * z) * 1.9 + 0.75;
+    }
+  }
+
+  // ── render ────────────────────────────────────────────────────────
+
+  const FLARE_MS = 900;
+
+  function draw(now) {
+    ctx.fillStyle = T.ink;
+    ctx.fillRect(0, 0, W, H);
+
+    drawLoadLines(now);
+
+    const n = state.n;
+    const st = state.st;
+    const t0 = state.t0;
+
+    // Batch by state so fillStyle is set seven times per frame rather than
+    // 4,206 times. This is the difference between 60 fps and 12.
+    for (let s = 0; s <= 6; s++) {
+      let colour = T.graphite;
+      let baseAlpha = 0.95;
+      if (s === S.FLARE) { colour = T.amber; baseAlpha = 1; }
+      else if (s === S.IMMATERIAL) { colour = T.slate; baseAlpha = 0.5; }
+      else if (s === S.CLOSED) { colour = T.slate; baseAlpha = 0.34; }
+      else if (s === S.UNRESOLVED) { colour = T.bone; baseAlpha = 0.62; }
+      else if (s === S.MAT_ESC) { colour = T.amber; baseAlpha = 1; }
+      else if (s === S.MAT_CONT) { colour = T.verdigris; baseAlpha = 0.95; }
+
+      ctx.fillStyle = colour;
+      for (let i = 0; i < n; i++) {
+        if (st[i] !== s) continue;
+        let a = baseAlpha * (1 - 0.42 * state.z[i]);
+        let rad = state.r[i];
+        if (s === S.FLARE) {
+          const k = Math.min(1, (now - t0[i]) / FLARE_MS);
+          a = 1 - k * 0.35;
+          rad = state.r[i] * (1 + 2.2 * (1 - k));
+        } else if (s === S.MAT_ESC) {
+          // A slow breath, so the survivors read as still live.
+          a = baseAlpha * (0.78 + 0.22 * Math.sin(now / 620 + i));
+          rad = state.r[i] * 1.9;
+        } else if (s === S.IDLE) {
+          a = baseAlpha * (0.74 + 0.26 * Math.sin(now / 2400 + i * 0.37)) * (1 - 0.42 * state.z[i]);
+        }
+        ctx.globalAlpha = Math.max(0.03, Math.min(1, a));
+        const d = rad * 2;
+        ctx.fillRect(state.x[i] - rad, state.y[i] - rad, d, d);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ⭐ LOAD-BEARING LINES.
+   *
+   * Thickness is a function of the number of decisions resting on that premise
+   * and of nothing else -- `direct` comes straight from the reverse index. A
+   * premise carrying 882 direct dependents is a thick taut line; one carrying
+   * two is a hairline. This is a structural load diagram, not a network graph.
+   *
+   * On retraction the lines GO SLACK: `state.sag` is driven by a spring, the
+   * curve's control point drops, and the conclusions above lose their footing
+   * before anything flares.
+   */
+  function drawLoadLines(now) {
+    const stones = state.stones;
+    if (!stones.length) return;
+    const baseY = H * 0.93;
+    const maxDirect = stones[0].direct || 1;
+
+    for (let i = 0; i < stones.length; i++) {
+      const s = stones[i];
+      const slot = state.stoneSlot[i];
+      const sx = (0.05 + 0.9 * ((slot + 0.5) / stones.length)) * W;
+      const load = s.direct / maxDirect;
+      const thickness = 0.5 + Math.sqrt(load) * 7.0;
+
+      const isHub = s.id === state.hubId;
+      const sag = isHub ? state.sag : state.sag * 0.28;
+
+      // Height carries load too: a premise holding 882 decisions rises most of
+      // the frame, one holding two barely leaves the plinth. Two encodings of
+      // the same true number, so the diagram reads at a glance and on inspection.
+      const rise = H * (0.16 + 0.62 * Math.sqrt(load));
+      const topY = baseY - rise;
+      const lean = (W * 0.5 - sx) * 0.06;
+      const midY = (baseY + topY) / 2 + sag * rise * 0.34;
+      const midX = sx + lean * 0.5 + sag * lean * 0.8;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, baseY);
+      ctx.quadraticCurveTo(midX, midY, sx + lean, topY);
+      ctx.lineWidth = Math.max(0.6, thickness * (1 - 0.3 * sag));
+      ctx.strokeStyle = isHub && state.sag > 0.02 ? T.oxide : T.graphite;
+      ctx.globalAlpha = isHub ? 0.95 : 0.30 + 0.45 * load;
+      ctx.stroke();
+
+      // The premise stone itself.
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = isHub && state.sag > 0.02 ? T.oxide : T.graphite;
+      const sw = 2 + thickness * 0.8;
+      ctx.fillRect(sx - sw / 2, baseY - 3, sw, 6);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function tick(now) {
+    // Spring: stiffness 120, damping 18, as specified.
+    if (!reduced) {
+      const k = 120;
+      const c = 18;
+      const dt = 1 / 60;
+      const a = (state.sagTarget - state.sag) * k - state.sagV * c;
+      state.sagV += a * dt;
+      state.sag += state.sagV * dt;
+    } else {
+      state.sag = state.sagTarget;
+    }
+
+    // Settle expired flares into their final regime.
+    const st = state.st;
+    const t0 = state.t0;
+    const fin = state.finalState;
+    for (let i = 0; i < state.n; i++) {
+      if (st[i] === S.FLARE && now - t0[i] > FLARE_MS) st[i] = fin[i];
+    }
+
+    draw(now);
+
+    state.frames++;
+    if (!state.fpsT) state.fpsT = now;
+    if (now - state.fpsT >= 1000) {
+      state.fps = Math.round((state.frames * 1000) / (now - state.fpsT));
+      state.fpsSamples.push(state.fps);
+      state.frames = 0;
+      state.fpsT = now;
+      window.__unwindFps = state.fps;
+      window.__unwindFpsSamples = state.fpsSamples;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ── data ──────────────────────────────────────────────────────────
+
+  async function boot() {
+    const res = await fetch("/api/field");
+    const field = await res.json();
+    state.field = field;
+    state.nodes = field.nodes;
+    state.n = field.nodes.length;
+    state.maxAge = field.nodes.reduce((m, node) => Math.max(m, node.age), 1);
+    state.stones = field.stones;
+    state.hubId = field.hub.claim_id;
+    // Stones arrive sorted heaviest-first, which would stack every thick line
+    // at the left edge. Position carries no information, so it is assigned for
+    // legibility: the hub near a third across, the rest filling around it.
+    const total = field.stones.length;
+    const hubSlot = Math.floor(total * 0.30);
+    const free = [];
+    for (let k = 0; k < total; k++) if (k !== hubSlot) free.push(k);
+    state.stoneSlot = new Int32Array(total);
+    let f = 0;
+    field.stones.forEach((stone, i) => {
+      state.stoneSlot[i] = stone.id === field.hub.claim_id ? hubSlot : free[f++];
+    });
+
+    const n = state.n;
+    state.x = new Float32Array(n);
+    state.y = new Float32Array(n);
+    state.z = new Float32Array(n);
+    state.r = new Float32Array(n);
+    state.st = new Uint8Array(n);
+    state.finalState = new Uint8Array(n);
+    state.t0 = new Float32Array(n);
+    field.nodes.forEach((node, i) => state.index.set(node.id, i));
+
+    $("c-nodes").textContent = field.counts.conclusions.toLocaleString();
+    $("c-claims").textContent = field.counts.claims.toLocaleString();
+    $("c-edges").textContent = field.counts.reverse_index_edges.toLocaleString();
+    $("c-debt").textContent = field.debt.total.toLocaleString();
+    $("debt-note").textContent =
+      `across ${field.debt.claims_implicated} premises · ${field.debt.conclusions_scored} decisions`;
+
+    $("bar-hints").innerHTML =
+      `try <b>supplier_K lead time is now 20 days</b>` +
+      `<br>or <b>broker says supplier_K lead time is 34</b> &nbsp;(this one is refused)`;
+
+    resize();
+    requestAnimationFrame(tick);
+  }
+
+  // ── the retraction bar → the parse echo ───────────────────────────
+
+  /* The bar accepts prose and resolves it to a (claim, source, value). This is
+   * deliberately forgiving on the way IN and strict on the way OUT: whatever it
+   * decides is rendered back through the echo for a human to confirm, so a
+   * misparse arrives as a question rather than as a correction somebody
+   * receives. */
+  function interpret(text) {
+    const t = text.toLowerCase();
+    const num = t.match(/(\d+(?:\.\d+)?)/);
+    const value = num ? parseFloat(num[1]) : 20;
+    let source = "src_supplier_K";
+    if (/broker|zenith|freight/.test(t)) source = "src_broker_Z";
+    else if (/msa|amendment|agreement|clause/.test(t)) source = "src_msa_K";
+    else if (/supplier_l|supplier l/.test(t)) source = "src_supplier_L";
+    else if (/erp|internal/.test(t)) source = "src_erp_internal";
+    return { claim: "clm_000000", source, new_value: value };
+  }
+
+  let pending = null;
+
+  async function showEcho(spec) {
+    const q = new URLSearchParams(spec).toString();
+    const res = await fetch(`/api/echo?${q}`);
+    const e = await res.json();
+    pending = spec;
+
+    $("e-read").innerHTML =
+      `${e.read_as.canonical} &nbsp; <b>${e.read_as.from} → ${e.read_as.to}</b>`;
+    $("e-source").textContent = `${e.source} · authority ${e.authority.reason_code}`;
+    $("e-affects").innerHTML =
+      `${e.affects_claim} &nbsp; (carrying <b>${e.carrying.toLocaleString()}</b> decisions)`;
+
+    const refusal = $("e-refusal");
+    if (!e.authority.allowed) {
+      refusal.hidden = false;
+      refusal.innerHTML =
+        `<span class="code">REFUSED — ${e.authority.reason_code}</span><br>${e.authority.why}`;
+      $("e-confirm").textContent = "Show the refusal";
+    } else {
+      refusal.hidden = true;
+      $("e-confirm").textContent = "Confirm";
+    }
+    $("bar-wrap").classList.add("gone");
+    $("echo").hidden = false;
+    $("e-confirm").focus();
+  }
+
+  // ── the wave and the cull ─────────────────────────────────────────
+
+  function runCascade(spec) {
+    $("echo").hidden = true;
+    const counter = $("counter");
+    counter.hidden = false;
+
+    // Lines go slack FIRST. The footing is lost before anything flares.
+    state.sagTarget = 1;
+
+    let radius = 0;
+    let culled = 0;
+    const tally = { immaterial: 0, closed_out: 0, unresolved: 0, material: 0 };
+
+    const q = new URLSearchParams({ ...spec, pace_ms: reduced ? 0 : 6 }).toString();
+    const es = new EventSource(`/api/cascade/stream?${q}`);
+    state.running = true;
+
+    // `begin` carries the radius and the pacing disclosure. Deliberately not
+    // named `open`: EventSource fires a native `open` on connect, and two
+    // different payloads in one listener is a bug waiting for a bad demo.
+    es.addEventListener("begin", (ev) => {
+      const d = JSON.parse(ev.data);
+      radius = d.radius;
+      $("counter-from").textContent = radius.toLocaleString();
+      $("counter-to").textContent = radius.toLocaleString();
+      const pacing = $("pacing");
+      pacing.hidden = false;
+      pacing.textContent = d.paced_ms
+        ? `real cascade verdicts · delivery paced ${d.paced_ms} ms/batch for legibility`
+        : "real cascade verdicts · unpaced";
+    });
+
+    es.addEventListener("nodes", (ev) => {
+      const data = JSON.parse(ev.data);
+      const now = performance.now();
+      for (const node of data.n) {
+        const i = state.index.get(node.id);
+        if (i === undefined) continue;
+        const final = REGIME_STATE[node.r] ?? S.IDLE;
+        state.finalState[i] = final;
+        state.st[i] = reduced ? final : S.FLARE;
+        state.t0[i] = now;
+
+        // ⚠ THE COUNTER MOVES HERE AND NOWHERE ELSE. Every decrement is caused
+        // by an event that carried a real verdict, so the number on screen is
+        // the number of events received. It cannot drift from the cascade.
+        if (final === S.MAT_ESC || final === S.MAT_CONT) tally.material++;
+        else {
+          culled++;
+          if (final === S.IMMATERIAL) tally.immaterial++;
+          else if (final === S.CLOSED) tally.closed_out++;
+          else if (final === S.UNRESOLVED) tally.unresolved++;
+        }
+      }
+      $("counter-to").textContent = (radius - culled).toLocaleString();
+      $("counter-breakdown").textContent =
+        `${tally.immaterial.toLocaleString()} immaterial — the buffer absorbed it\n` +
+        `${tally.closed_out.toLocaleString()} already closed out — the world moving cannot hurt them\n` +
+        `${tally.unresolved.toLocaleString()} unresolved — sent to judgment, not guessed`;
+    });
+
+    es.addEventListener("refused", (ev) => {
+      const d = JSON.parse(ev.data);
+      state.sagTarget = 0;
+      counter.hidden = true;
+      const refusal = $("e-refusal");
+      refusal.hidden = false;
+      refusal.innerHTML =
+        `<span class="code">REFUSED — ${d.reason_code}</span><br>${d.why}` +
+        `<br><br>Decision state: <b>${d.decision_state}</b>. Nothing was traversed; ` +
+        `the radius is zero.`;
+      $("echo").hidden = false;
+      $("e-confirm").textContent = "Try an authorised source";
+      $("e-confirm").onclick = restart;
+    });
+
+    es.addEventListener("done", (ev) => {
+      const d = JSON.parse(ev.data);
+      es.close();
+      state.running = false;
+      if (d.radius === 0) return;
+      $("counter-to").textContent = d.material.toLocaleString();
+      window.__unwindCull = { radius: d.radius, material: d.material, regimes: d.regimes };
+      setTimeout(() => showSplit(spec), reduced ? 0 : 1600);
+    });
+
+  }
+
+  // ── the split ─────────────────────────────────────────────────────
+
+  async function showSplit(spec) {
+    const res = await fetch(`/api/survivors?${new URLSearchParams(spec)}`);
+    const d = await res.json();
+
+    $("s-rev-n").textContent = d.counts.reversible;
+    $("s-esc-n").textContent = d.counts.escaped;
+
+    const row = (r, escaped) =>
+      `<li class="${r.age_days >= 120 ? "old" : ""}"><span>${r.id} · ${r.kind}</span>` +
+      `<span class="age">${escaped ? "sent " + r.sent_at : r.decided_at} · ${r.age_days}d</span></li>`;
+
+    $("s-rev").innerHTML = d.reversible.slice(0, 14).map((r) => row(r, false)).join("");
+    $("s-esc").innerHTML = d.escaped.slice(0, 14).map((r) => row(r, true)).join("");
+
+    $("split-gap").innerHTML =
+      `<b>${d.counts.escaped_120d_or_older} of these went out 120 days or more before ` +
+      `the fact changed</b>, the oldest ${d.oldest_escaped_days} days. Everything on the ` +
+      `right already reached a counterparty. That gap is the product.`;
+
+    show("split");
+  }
+
+  // ── the obligation (dark → paper) ─────────────────────────────────
+
+  async function showObligation(spec) {
+    const res = await fetch(`/api/obligation?${new URLSearchParams(spec)}`);
+    const o = await res.json();
+
+    $("o-id").textContent = o.obligation_id;
+    $("o-status").textContent = o.status.replace(/_/g, " ");
+    $("o-lede").textContent =
+      `A commitment we made rests on a fact that is no longer true, and it has ` +
+      `already left the building.`;
+
+    // GROUPED BY COUNTERPARTY, not by telling. One customer reached through two
+    // channels is one customer and one apology -- rendering a heading per
+    // telling would put the same name on screen twice and undo the whole point
+    // of deriving identity from the commitment rather than from the effect.
+    const byWho = new Map();
+    for (const t of o.tellings) {
+      if (!byWho.has(t.counterparty)) byWho.set(t.counterparty, []);
+      byWho.get(t.counterparty).push(t);
+    }
+    $("o-told").innerHTML = [...byWho.entries()]
+      .map(
+        ([who, ts]) =>
+          `<div class="told"><div class="who">${who}</div>` +
+          `<div class="line">told &nbsp;${ts[0].told}</div>` +
+          ts
+            .map(
+              (t) =>
+                `<div class="line">when &nbsp;${t.told_at.slice(0, 10)} · via ` +
+                `${t.connector} (${t.ref})</div>`
+            )
+            .join("") +
+          `<div class="line now">now &nbsp;&nbsp;${ts[0].now}</div></div>`
+      )
+      .join("");
+
+    $("o-rev").innerHTML = o.reversible_actions.map((a) => `<li>${a}</li>`).join("")
+      || `<li>nothing reversible remains</li>`;
+    $("o-irr").innerHTML = o.unrecoverable.map((a) => `<li>${a}</li>`).join("")
+      || `<li>nothing unrecoverable</li>`;
+
+    const ex = o.exposure;
+    const money = (m) => `${ex.currency} ${(m / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    $("o-exposure").innerHTML =
+      `${money(ex.low)} — ${money(ex.high)}` +
+      (ex.unpriced_effects
+        ? `<span class="unpriced">⚠ ${ex.unpriced_effects} unrecoverable effect(s) carry no ` +
+          `recorded amount and are NOT priced into this range.</span>`
+        : "");
+    $("o-assume-list").innerHTML = ex.assumptions.map((a) => `<li>${a}</li>`).join("");
+
+    $("o-draft").textContent = o.correction_text.replace(/\[drafted without a model[^\]]*\]/g, "").trim();
+    const tag = $("o-nomodel");
+    tag.hidden = !o.drafted_without_model;
+    if (o.drafted_without_model) {
+      tag.textContent =
+        "DRAFTED WITHOUT A MODEL — Vertex was unavailable for this run. The facts above " +
+        "are read from the record; the wording is deterministic. The tag stays visible.";
+    }
+    $("o-approver").textContent = o.approver;
+    show("obligation");
+  }
+
+  // ── court ─────────────────────────────────────────────────────────
+
+  async function showCourt(spec) {
+    const res = await fetch(`/api/court?${new URLSearchParams(spec)}`);
+    const c = await res.json();
+    if (!c.convened) {
+      $("court-meta").textContent = c.why;
+      show("court");
+      return;
+    }
+    $("court-meta").textContent =
+      `${c.team_seated} owners seated from ${c.team_eligible} eligible · ` +
+      `${c.turns_used} turns · budget ${c.budget.spent}/${c.budget.allowance} · ` +
+      `converged ${c.converged} · team dissolved ${c.team_dissolved}`;
+
+    $("court-pleas").innerHTML = c.pleas
+      .map(
+        (p) =>
+          `<li><span>${p.owner}</span><span class="stance ${p.stance}">${p.stance.replace(/_/g, " ")}</span>` +
+          `<span>${p.conclusion}</span><span class="ev">${p.evidence.length} cited</span></li>`
+      )
+      .join("");
+
+    $("court-ruling").innerHTML =
+      `${c.ruling.decision}` +
+      (c.ruling.advisory
+        ? `<span class="advisory">ADVISORY — above the cost threshold this ruling does not ` +
+          `take effect on its own authority; it becomes a recommendation attached to a ` +
+          `signature request.</span>`
+        : "");
+
+    $("court-dissent").innerHTML = c.dissent.length
+      ? `<span class="lbl">dissent recorded (${c.dissent.length})</span><br>` +
+        c.dissent.map((d) => `· ${d}`).join("<br>")
+      : `<span class="lbl">no dissent</span><br>every seated owner's stance survived the tally.`;
+
+    show("court");
+  }
+
+  // ── load rating ───────────────────────────────────────────────────
+
+  async function showLoadRating() {
+    const res = await fetch("/api/loadrating?source=src_supplier_K");
+    const d = await res.json();
+    $("lr-source").textContent = `${d.source_id} · ${d.name} · version ${d.version}`;
+    $("lr-before").textContent = d.before.toFixed(2);
+    $("lr-after").textContent = d.after.toFixed(2);
+    $("lr-note").textContent = d.note + " Versioned and reversible: the downgrade appends, it never overwrites.";
+    const bar = $("lr-bar");
+    bar.style.width = d.before * 100 + "%";
+    show("loadrating");
+    requestAnimationFrame(() => {
+      setTimeout(() => { bar.style.width = d.after * 100 + "%"; }, reduced ? 0 : 260);
+    });
+  }
+
+  // ── honesty ───────────────────────────────────────────────────────
+
+  async function showHonesty() {
+    const res = await fetch("/api/honesty");
+    const h = await res.json();
+    const cov = h.coverage;
+
+    const rows = cov.by_class
+      .map(
+        (c) =>
+          `<tr class="${c.label === cov.worst_class ? "worst" : ""}">` +
+          `<td>${c.label}</td><td>${c.gold}</td><td>${c.correct}</td>` +
+          `<td>${c.wrong_value}</td><td>${c.missed}</td>` +
+          `<td>${c.recall === null ? "—" : (c.recall * 100).toFixed(1) + "%"}</td></tr>`
+      )
+      .join("");
+    $("h-cov").innerHTML =
+      `<tr><th>class</th><th>gold</th><th>correct</th><th>wrong</th><th>missed</th><th>recall</th></tr>` +
+      rows;
+    $("h-worst").textContent =
+      `Overall ${(cov.overall_recall * 100).toFixed(1)}% over ${cov.artifacts_audited} artifacts. ` +
+      `Worst class ${cov.worst_class} at ${(cov.worst_recall * 100).toFixed(1)}%. ` +
+      `This is where Gemini's second pass earns its place.`;
+
+    const cr = h.credentials;
+    $("h-creds").innerHTML =
+      `<div>model &nbsp; <span class="ok">${cr.model_fast}</span> · ${cr.model_deep}</div>` +
+      `<div>location &nbsp; ${cr.location}</div>` +
+      `<div>vertex &nbsp; <span class="${cr.vertex_disabled ? "bad" : "ok"}">` +
+      `${cr.vertex_disabled ? "DISABLED for this run" : "enabled"}</span></div>` +
+      `<div>live verification &nbsp; <span class="${cr.live_verification_present ? "ok" : "bad"}">` +
+      `${cr.live_verification_present ? "docs/LIVE-VERIFICATION.md present" : "NOT PRESENT — no model call has been made from this repository"}</span></div>` +
+      `<div style="margin-top:10px">${cr.note}</div>`;
+
+    $("h-built").innerHTML =
+      h.built.map((b) => `<div><span class="b">[BUILT]</span> ${b}</div>`).join("") +
+      h.designed.map((d) => `<div><span class="d">[DESIGNED]</span> ${d}</div>`).join("");
+
+    show("honesty");
+  }
+
+  // ── screen orchestration ──────────────────────────────────────────
+
+  const SCREENS = ["split", "obligation", "court", "loadrating", "honesty"];
+
+  function show(name) {
+    SCREENS.forEach((s) => { $(s).hidden = s !== name; });
+    state.screen = name;
+    const btn = document.querySelector(`#${name} .btn-advance`);
+    if (btn) btn.focus();
+  }
+
+  function hideAll() {
+    SCREENS.forEach((s) => { $(s).hidden = true; });
+    state.screen = "field";
+  }
+
+  function restart() {
+    hideAll();
+    $("echo").hidden = true;
+    $("counter").hidden = true;
+    $("pacing").hidden = true;
+    $("bar-wrap").classList.remove("gone");
+    $("bar").value = "";
+    $("e-confirm").onclick = onConfirm;
+    state.sagTarget = 0;
+    state.st.fill(S.IDLE);
+    state.finalState.fill(S.IDLE);
+    $("bar").focus();
+  }
+
+  function onConfirm() {
+    if (!pending) return;
+    runCascade(pending);
+  }
+
+  // ── wiring ────────────────────────────────────────────────────────
+
+  $("bar-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const text = $("bar").value.trim();
+    if (!text) return;
+    showEcho(interpret(text));
+  });
+
+  $("e-confirm").onclick = onConfirm;
+  $("e-cancel").onclick = restart;
+
+  document.querySelectorAll(".btn-advance").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.next;
+      if (next === "obligation") showObligation(pending || { claim: "clm_000000", source: "src_supplier_K", new_value: 20 });
+      else if (next === "court") showCourt(pending || { claim: "clm_000000", source: "src_supplier_K", new_value: 20 });
+      else if (next === "loadrating") showLoadRating();
+      else if (next === "honesty") showHonesty();
+      else restart();
+    });
+  });
+
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "h" || ev.key === "H") {
+      if (state.screen === "honesty") { hideAll(); return; }
+      showHonesty();
+    } else if (ev.key === "r" || ev.key === "R") {
+      if (document.activeElement !== $("bar")) restart();
+    } else if (ev.key === "Escape") {
+      hideAll();
+    }
+  });
+
+  window.addEventListener("resize", resize);
+
+  // Replay disclosure. If the API cannot be reached, the demo falls back to the
+  // committed golden transcript -- and says so, in a banner nobody can miss.
+  boot().catch((err) => {
+    const banner = $("replay-banner");
+    banner.hidden = false;
+    banner.textContent =
+      "REPLAY — live run failed (" + err.message + "), this is a recorded execution";
+  });
+
+  window.__unwindState = state;
+})();

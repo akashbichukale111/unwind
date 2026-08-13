@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UNWIND — consequence clearing</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2312151A'/%3E%3Crect x='2' y='11' width='12' height='2' fill='%23C88A2E'/%3E%3Crect x='7' y='3' width='2' height='8' fill='%234A535E'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Non-blocking: if the CDN is slow or unreachable the field still renders,
+     and the fallback stacks in style.css keep the condensed/serif/mono split. -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ─────────── THE FIELD ─────────── -->
+<canvas id="field" aria-label="Field of live decisions"></canvas>
+
+<div id="hud-left" class="hud mono">
+  <div class="hud-row"><span class="k">live decisions</span><span id="c-nodes" class="v">—</span></div>
+  <div class="hud-row"><span class="k">premises</span><span id="c-claims" class="v">—</span></div>
+  <div class="hud-row"><span class="k">support edges</span><span id="c-edges" class="v">—</span></div>
+  <div class="hud-row hud-debt"><span class="k">causal debt</span><span id="c-debt" class="v">—</span></div>
+  <div class="hud-note" id="debt-note">standing consequence on a normal day</div>
+</div>
+
+<div id="hud-right" class="hud">
+  <div id="counter" hidden>
+    <div class="counter-line">
+      <span id="counter-from" class="counter-from">—</span>
+      <span class="counter-arrow">→</span>
+      <span id="counter-to" class="counter-to">—</span>
+    </div>
+    <div id="counter-breakdown" class="mono counter-breakdown"></div>
+  </div>
+</div>
+
+<div id="legend" class="hud mono">
+  <span class="tag built">BUILT</span> cascade · regimes · court · obligations
+  <span class="tag designed">DESIGNED</span> vertex T2 · model armor · deploy
+  <span class="sep">·</span> <span class="key">H</span> honesty panel
+  <span class="sep">·</span> <span class="key">R</span> restart
+</div>
+
+<div id="pacing" class="hud mono" hidden></div>
+
+<!-- ─────────── THE BAR ─────────── -->
+<div id="bar-wrap">
+  <form id="bar-form" autocomplete="off">
+    <input id="bar" type="text" spellcheck="false"
+           placeholder="State a fact that changed."
+           aria-label="State a fact that changed" />
+  </form>
+  <div id="bar-hints" class="mono"></div>
+</div>
+
+<!-- ─────────── THE PARSE ECHO ─────────── -->
+<div id="echo" class="panel mono" hidden>
+  <div class="echo-grid">
+    <span class="k">Read as:</span><span id="e-read" class="v"></span>
+    <span class="k">Source:</span><span id="e-source" class="v"></span>
+    <span class="k">Affects:</span><span id="e-affects" class="v"></span>
+  </div>
+  <div id="e-refusal" class="echo-refusal" hidden></div>
+  <div class="echo-actions">
+    <button id="e-confirm" type="button" class="btn">Confirm</button>
+    <button id="e-cancel" type="button" class="btn btn-quiet">Not what I meant</button>
+  </div>
+</div>
+
+<!-- ─────────── THE SPLIT ─────────── -->
+<section id="split" class="overlay" hidden>
+  <div class="split-grid">
+    <div class="split-col">
+      <h2 class="cond">STILL REVERSIBLE</h2>
+      <div id="s-rev-n" class="split-n cond">—</div>
+      <div class="split-sub mono">in-place correction</div>
+      <ul id="s-rev" class="split-list mono"></ul>
+    </div>
+    <div class="split-rule" aria-hidden="true"></div>
+    <div class="split-col">
+      <h2 class="cond">ALREADY ESCAPED</h2>
+      <div id="s-esc-n" class="split-n cond">—</div>
+      <div class="split-sub mono">went out to someone</div>
+      <ul id="s-esc" class="split-list mono"></ul>
+    </div>
+  </div>
+  <p id="split-gap" class="split-gap"></p>
+  <button class="btn btn-advance" data-next="obligation" type="button">Show what we owe</button>
+</section>
+
+<!-- ─────────── THE OBLIGATION (paper) ─────────── -->
+<section id="obligation" class="paper" hidden>
+  <div class="paper-inner">
+    <div class="paper-head mono">
+      <span id="o-id"></span>
+      <span id="o-status"></span>
+    </div>
+    <h1 class="serif" id="o-title">Correction obligation</h1>
+    <p class="serif o-lede" id="o-lede"></p>
+
+    <h3 class="o-h mono">Who was told something that is no longer true</h3>
+    <div id="o-told"></div>
+
+    <div class="o-cols">
+      <div>
+        <h3 class="o-h mono">Still reversible</h3>
+        <ul id="o-rev" class="o-list"></ul>
+      </div>
+      <div>
+        <h3 class="o-h mono o-h-bad">Not reversible</h3>
+        <ul id="o-irr" class="o-list o-list-bad"></ul>
+      </div>
+    </div>
+
+    <h3 class="o-h mono">Residual exposure</h3>
+    <div id="o-exposure" class="o-exposure serif"></div>
+    <details id="o-assume" class="o-assume">
+      <summary class="mono">assumptions</summary>
+      <ul id="o-assume-list"></ul>
+    </details>
+
+    <h3 class="o-h mono">Draft correction</h3>
+    <blockquote id="o-draft" class="serif o-draft"></blockquote>
+    <div id="o-nomodel" class="o-nomodel mono" hidden></div>
+
+    <div class="o-sign mono">
+      <span class="k">must be signed by</span>
+      <span id="o-approver" class="v"></span>
+    </div>
+    <button class="btn btn-advance btn-dark" data-next="court" type="button">Show the hearing</button>
+  </div>
+</section>
+
+<!-- ─────────── THE COURT ─────────── -->
+<section id="court" class="overlay" hidden>
+  <h2 class="cond overlay-h">THE HEARING</h2>
+  <div id="court-meta" class="mono court-meta"></div>
+  <ul id="court-pleas" class="mono court-pleas"></ul>
+  <div id="court-ruling" class="court-ruling"></div>
+  <div id="court-dissent" class="court-dissent mono"></div>
+  <button class="btn btn-advance" data-next="loadrating" type="button">Show the consequence</button>
+</section>
+
+<!-- ─────────── LOAD RATING ─────────── -->
+<section id="loadrating" class="overlay" hidden>
+  <h2 class="cond overlay-h">LOAD RATING</h2>
+  <div class="lr-wrap">
+    <div id="lr-source" class="mono"></div>
+    <div class="lr-bar-track"><div id="lr-bar" class="lr-bar"></div></div>
+    <div class="lr-nums cond"><span id="lr-before">—</span><span class="lr-arrow">→</span><span id="lr-after">—</span></div>
+    <p id="lr-note" class="mono lr-note"></p>
+  </div>
+  <button class="btn btn-advance" data-next="honesty" type="button">Show what is not built</button>
+</section>
+
+<!-- ─────────── HONESTY PANEL ─────────── -->
+<section id="honesty" class="overlay" hidden>
+  <h2 class="cond overlay-h">WHAT IS MEASURED, AND WHERE IT IS BAD</h2>
+  <div class="h-grid">
+    <div>
+      <h3 class="mono h-h">Extraction coverage</h3>
+      <table id="h-cov" class="mono h-table"></table>
+      <p id="h-worst" class="mono h-worst"></p>
+    </div>
+    <div>
+      <h3 class="mono h-h">Credentials</h3>
+      <div id="h-creds" class="mono h-creds"></div>
+      <h3 class="mono h-h">Built / designed</h3>
+      <div id="h-built" class="mono h-built"></div>
+    </div>
+  </div>
+  <button class="btn btn-advance" data-next="field" type="button">Back to the field</button>
+</section>
+
+<div id="replay-banner" class="replay mono" hidden></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
