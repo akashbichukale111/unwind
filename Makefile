@@ -105,6 +105,10 @@ multi-premise: ## Two premises failing at once: radii merge, arbiter allocates
 golden: ## Deterministic court transcript; CI fails if it drifts from the committed copy
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli golden --out evals/golden/court.txt
 
+.PHONY: verify-live
+verify-live: ## ⚠ NEEDS CREDENTIALS. Real Vertex call + recall comparison + T2. Writes docs/LIVE-VERIFICATION.md
+	@$(PY) scripts/verify_live.py
+
 .PHONY: vertex-check
 vertex-check: ## ONE real Vertex call. Prints the raw response or the exact failure.
 	@$(PY) scripts/vertex_check.py
