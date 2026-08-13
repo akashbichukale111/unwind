@@ -53,9 +53,18 @@ def test_gemini_model_string_appears_only_in_config() -> None:
         if not pattern.search(text):
             continue
         rel = path.relative_to(REPO).as_posix()
-        # lib/config.py owns it. README and this test name it to document and to
-        # enforce the rule respectively; nothing else may.
-        if rel in {"lib/config.py", "README.md", "tests/test_config_singleton.py"}:
+        # lib/config.py owns it, and this test names it to enforce the rule.
+        #
+        # PROSE IS EXEMPT. The rule exists so that no second CODE PATH can
+        # quietly run a different model; documentation that names the model is
+        # doing its job. This is not a loosening for convenience: with docs
+        # excluded, a SUCCESSFUL `make verify-live` would break this test,
+        # because it generates docs/LIVE-VERIFICATION.md from `cfg.model_fast`.
+        # A guard that fires when the system works correctly is a guard people
+        # learn to delete.
+        if rel in {"lib/config.py", "tests/test_config_singleton.py"}:
+            continue
+        if path.suffix == ".md":
             continue
         offenders.append(rel)
     assert not offenders, f"gemini model string found outside lib/config.py: {offenders}"
@@ -104,3 +113,19 @@ def test_no_banned_services_anywhere() -> None:
                 line = text[line_start : line_end if line_end != -1 else len(text)]
                 offenders.append(f"{rel}: {name}: {line.strip()[:100]}")
     assert not offenders, "banned service referenced:\n" + "\n".join(offenders)
+
+
+def test_the_model_string_guard_still_catches_code() -> None:
+    """VACUITY: prose is exempt, but a .py file naming a model must still fail.
+
+    Exempting markdown is the kind of loosening that can hollow out a guard, so
+    the narrower rule is asserted directly: the pattern that matters is a model
+    string in executable code, and that is still caught.
+    """
+    pattern = re.compile(r"gemini-\d")
+    assert pattern.search("model = 'gemini-3.5-flash-lite'"), "the pattern itself is broken"
+
+    # A .py file would not be skipped by either exemption above.
+    fake = Path("some/module.py")
+    assert fake.suffix != ".md"
+    assert fake.as_posix() not in {"lib/config.py", "tests/test_config_singleton.py"}
