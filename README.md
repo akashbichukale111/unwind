@@ -36,13 +36,14 @@ cannot read.
 make install && make ui      # http://127.0.0.1:8000 — no GCP account needed
 ```
 
-⚠ **No model call has ever been made from this repository.** The Vertex/ADK
-foundation gate passed on the maintainer's machine (project
-`project-895d4ca8-d301-447d-916`, location `global`, GA Flash) and is recorded
-as evidence, not reproduced here. Every T2 number in this repo came from
-`ScriptedT2Model` and is labelled wherever it appears. `make verify-live` is the
-one command that closes the gap; `docs/LIVE-VERIFICATION.md` states exactly what
-is still unmeasured.
+✅ **Gemini via Vertex AI is verified running.** `make verify-live` executed on
+2026-08-13 against project `project-895d4ca8-d301-447d-916`, location `global`,
+model `gemini-3.5-flash-lite`: **Vertex call OK, 0 model errors**, and the
+headline measurement below. See [Live verification](#live-verification).
+
+⚠ **The T2 judgement tier is still unmeasured**, and the live run is the reason
+we now know that precisely rather than vaguely — see the same section. Numbers
+elsewhere in this repo that come from `ScriptedT2Model` remain labelled as such.
 
 ⚠ **Why this needs ADK 2.** Commitment owners are *single-turn agent tools*, not
 sub-agents. A sub-agent takes the floor and does not give it back; the court
@@ -54,7 +55,7 @@ overlap in wall-clock time rather than trusting the docstring.
 
 | | Component | Evidence |
 | --- | --- | --- |
-| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 221 passed, 11 skipped |
+| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 235 passed, 11 skipped |
 | **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
 | **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
 | **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
@@ -81,25 +82,107 @@ overlap in wall-clock time rather than trusting the docstring.
 | **[BUILT]** | Load rating — versioned, reversible, contestable | refuses anything carrying agent-trust fields |
 | **[BUILT]** | `multi_premise/` — 10 scenarios | radii merge, 0 duplicate obligations, arbiter allocates |
 | **[BUILT]** | Golden court transcript | `make golden`; CI fails on drift |
-| **[DESIGNED]** | Vertex T2 path (`judgment/model.py`) | Written, **never executed in this container** |
+| **[VERIFIED]** | **Gemini via Vertex AI** | live run 2026-08-13: call OK, 0 model errors, **81.8% → 100.0%** recall (+18.2 pp) |
+| **[BUILT, NOT VERIFIED]** | T2 judgement (`judgment/assessor.py`) | executes live with 0 exceptions; **0 of 60 resolved** — the sample cannot resolve, see below |
 | **[DESIGNED]** | Compensation-path synthesis | Deliberately not built; `synthesise()` raises |
 | **[DESIGNED]** | Model Armor on the extraction path | **[UNVERIFIED]** — see below |
 | **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
-| **[DESIGNED]** | Firestore rules + composite indexes | Written, **never deployed** |
-| **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written, **never run** |
+| **[DESIGNED]** | Firestore rules + composite indexes | Written; **never deployed**, no project state changed |
+| **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written; **never run, there is no URL** |
 | **[BUILT]** | **The field** — 4,206 nodes, canvas | **60 fps measured** (`make ui-check`), depth axis = time |
 | **[BUILT]** | **Load-bearing lines** — thickness ∝ dependents | from the reverse index; slack on retraction is a spring |
 | **[BUILT]** | **The cull** — 2,594 → 78 on real events | counter asserted equal to the cascade's own count |
 | **[BUILT]** | Parse echo + refusal, both on screen | a misparse arrives as a question |
 | **[BUILT]** | **The obligation** — dark field → bone paper | renders the real Task 4 object |
 | **[BUILT]** | Court, load-rating drop, honesty panel | dissent shown; worst class highlighted |
-| **[BUILT]** | `make verify-live` — the credentialed runner | fails loudly, never falls back to the stub |
+| **[VERIFIED]** | `make verify-live` — the credentialed runner | **executed**; refuses stubs; wrote `docs/LIVE-VERIFICATION.md` |
 | **[DESIGNED]** | `docs/RETRACTION-FEED.md` — the protocol | schema fields exist; no feed published |
 | **[FUTURE]** | Video, Devpost entry, deployed URL | — |
 
+## Live verification
+
+**Observed, not projected.** `make verify-live` on an authenticated machine,
+2026-08-13. The command refuses to run against a stub and writes nothing on any
+failure path, so every figure here came from a real Vertex call.
+
+| | |
+| --- | --- |
+| Project | `project-895d4ca8-d301-447d-916` |
+| Location | `global` |
+| Model | `gemini-3.5-flash-lite` (GA) |
+| Vertex call | **OK** |
+| Model errors | **0** |
+
+### Parser only vs parser + Gemini
+
+| | Recall |
+| --- | --- |
+| Parser only | **81.8%** (36 / 44) |
+| Parser + Gemini | **100.0%** (44 / 44) |
+| **Delta** | **+18.2 percentage points** |
+
+| Class | Gold | Parser | + Gemini | Delta |
+| --- | ---: | ---: | ---: | ---: |
+| `numeric:currency` | 4 | 100.0% | 100.0% | 0.0 |
+| `numeric:percentage` | 4 | 100.0% | 100.0% | 0.0 |
+| `numeric:quantity` | 8 | 100.0% | 100.0% | 0.0 |
+| **`temporal:absolute-duration`** | **24** | **66.7%** | **100.0%** | **+33.3 pp** |
+| `temporal:relative-date` | 4 | 100.0% | 100.0% | 0.0 |
+
+**This is the architectural argument, measured.** The parser is deliberately
+first because a regex has no instruction-following surface to attack. It is
+already perfect on four classes, so Gemini never sees them — their delta is
+zero. The model is shown only what the parser could not read, and it closed
+exactly that gap.
+
+**How to read the 100%, honestly:** the model's denominator is **8, not 44**.
+The parser missed 8 claims; Gemini saw those 8 and returned 8 correct values.
+The 100% describes the *combined pipeline over 44 gold claims* — not a claim
+that the model extracts perfectly. 44 claims is a small sample from a synthetic
+corpus; `docs/COVERAGE.md` sets out what that corpus does and does not
+represent.
+
+### T2 — attempted, resolved nothing, and that is a non-test
+
+| Queue | Attempted | Resolved | Unresolved | Exceptions |
+| ---: | ---: | ---: | ---: | ---: |
+| 174 | 60 | **0** | **60** | 0 |
+
+Not a success, and not a model failure. **All 174 queue nodes have
+`committed_lead_days = None`** — verified against the corpus. `assess()` returns
+UNRESOLVED whenever the original commitment carries no numeric term, and that
+branch runs *before* the model's answer is consulted. The outcome was fixed by
+the corpus, not decided by Gemini.
+
+What the run does establish: 60 nodes, 120 model calls, **zero exceptions**. The
+orchestration works end to end against live Vertex. Judgement quality remains
+unmeasured, and closing it needs a fixture that does not exist yet — see
+[Remaining work](#remaining-work).
+
+## Evidence
+
+- **[`docs/LIVE-VERIFICATION.md`](docs/LIVE-VERIFICATION.md)** — the live run in
+  full, the method, and what is still unverified. Normally generated by
+  `make verify-live`.
+- **[`docs/evidence/README.md`](docs/evidence/README.md)** — the evidence index:
+  what each artifact proves and what it does not.
+- **[`docs/COVERAGE.md`](docs/COVERAGE.md)** — the extraction confusion matrix,
+  regenerated in CI, drift fails the build.
+- **`docs/shots/`** — interface screenshots, produced by `make ui-check` rather
+  than hand-captured.
+- **Terminal screenshot of the live run** — **not in this repository.** It exists
+  only as a chat attachment and could not be copied onto the machine that
+  authored this commit, so no file was created and none was recreated.
+  `docs/LIVE-VERIFICATION.md` is the authoritative evidence for the run; the
+  evidence index says where the image goes if it is added later.
+
 ### What has actually been run
 
-- `make test` → **234 passed, 11 skipped** (245 collected; the 11 skips need a
+- `make verify-live` → **executed 2026-08-13** on an authenticated machine.
+  Vertex call OK, 0 model errors, recall **81.8% → 100.0%** (+18.2 pp over
+  44 gold claims). T2: 60 attempted, 0 resolved, 0 exceptions — see
+  [Live verification](#live-verification).
+- `make test` → **235 passed, 11 skipped** (246 collected; the 11 skips need a
   live Firestore emulator). `ruff check` and `ruff format --check` clean.
 - `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.
@@ -170,6 +253,40 @@ orchestration around the model: principal separation, blindness, the turn cap,
 and whether an unavailable model yields UNRESOLVED instead of a guess.
 
 ---
+
+## Remaining work
+
+Stated as facts about this repository, not as a roadmap.
+
+### Verified by execution
+- Gemini via Vertex AI: one real call, **0 model errors**.
+- Parser vs parser+Gemini recall: **81.8% → 100.0%**, **+18.2 pp**, 44 gold claims.
+- Interface: **60 fps** at 4,206 nodes; cull counter equals the cascade's own count.
+- 41 eval scenarios, **0 model calls** on the T0/T1 path, false-retraction rate **0.0**.
+
+### Built, executes live, but the result proves nothing about quality
+- **T2 judgement.** 60 nodes, 120 model calls, **0 exceptions** — but **0
+  resolved**, because all 174 queue nodes carry `committed_lead_days = None` and
+  the assessor declines before the model's answer is used. **To close this**,
+  the corpus needs a fixture where the original commitment carries a numeric
+  term *and* the premise is genuinely ambiguous, so the comparison branch is
+  reached and the model decides the outcome. That fixture does not exist.
+
+### Never executed
+- **Cloud Run deployment.** `infra/deploy.sh` is written and has never run.
+  **There is no deployed URL.**
+- **Firestore rules and composite indexes.** Written under `infra/`, never
+  deployed; no GCP project state has been changed by this repository.
+- **Model Armor.** Never configured, so it has never blocked anything. The
+  extraction quarantine is the real defence and does not depend on it.
+- **Compensation-path synthesis.** Deliberately `[DESIGNED]`; `synthesise()`
+  raises rather than emitting a reverse path that looks executable.
+- **The retraction feed.** Schema fields exist and the authority gate is built
+  and tested; no feed has been published or consumed.
+
+### Not code
+- Demo video, Devpost entry, and the terminal screenshot at
+  `docs/evidence/live-vertex-verification.png`.
 
 ## The primitive
 
