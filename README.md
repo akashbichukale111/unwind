@@ -53,7 +53,7 @@ and compensation-path synthesis (deliberately [DESIGNED] — see below).
 
 | | Component | Evidence |
 | --- | --- | --- |
-| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 173 passed |
+| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 221 passed, 11 skipped |
 | **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
 | **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
 | **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
