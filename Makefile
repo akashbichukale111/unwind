@@ -88,6 +88,23 @@ adversarial: ## Both attacks: the obvious forgery and the partial-authority over
 debt: ## Score standing causal debt -- what UNWIND shows on a normal day
 	@UNWIND_VERTEX_DISABLED=1 $(PY) -m spine.cli debt
 
+.PHONY: court
+court: ## Run the repair court over the hub cascade and print the JSON report
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli settle
+
+.PHONY: obligation
+obligation: ## Render ONE full correction obligation -- the product's actual output
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli obligation --pick cnc_001211
+
+.PHONY: multi-premise
+multi-premise: ## Two premises failing at once: radii merge, arbiter allocates
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli settle \
+		--also-claim clm_000115 --also-source src_supplier_L --also-new-value 26
+
+.PHONY: golden
+golden: ## Deterministic court transcript; CI fails if it drifts from the committed copy
+	@UNWIND_VERTEX_DISABLED=1 $(PY) -m settle.cli golden --out evals/golden/court.txt
+
 .PHONY: vertex-check
 vertex-check: ## ONE real Vertex call. Prints the raw response or the exact failure.
 	@$(PY) scripts/vertex_check.py
@@ -100,22 +117,18 @@ smoke: ## Run the throwaway ADK smoke agent (requires Vertex credentials)
 web-ui: ## Launch `adk web` for local tracing during development
 	.venv/bin/adk web agents
 
-# The three targets above emit JSON on stdout and are silenced with @ so the
-# output pipes into jq without make's own recipe echo corrupting it.
+# The JSON-emitting targets above are silenced with @ so their output pipes
+# into jq without make's own recipe echo corrupting it.
 
 # ---------------------------------------------------------------------------
-# Task 1 has not built these. They fail loudly rather than printing a fake pass.
+# Not built. Fails loudly rather than printing a fake pass.
 # ---------------------------------------------------------------------------
 .PHONY: demo
 demo: ## [NOT BUILT - Task 5] End-to-end cascade demo
 	@echo "make demo: NOT BUILT."
-	@echo "The end-to-end cascade demo is scheduled for Task 5."
-	@echo "Task 1 delivers scaffolding + corpus only. Failing loudly on purpose."
+	@echo "The end-to-end cascade demo is scheduled for Task 5, with the field"
+	@echo "visualisation and the timestamped run. The court and the obligation it"
+	@echo "produces ARE built -- see 'make court', 'make obligation', 'make golden'."
+	@echo "Failing loudly on purpose."
 	@exit 1
 
-.PHONY: golden
-golden: ## [NOT BUILT - Task 4] Golden-transcript regression run
-	@echo "make golden: NOT BUILT."
-	@echo "Golden transcripts require the cascade (Task 2) and the court (Task 4)."
-	@echo "Task 1 delivers scaffolding + corpus only. Failing loudly on purpose."
-	@exit 1

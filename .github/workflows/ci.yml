@@ -126,14 +126,58 @@ jobs:
             exit 1
           fi
 
-      # `make demo` and `make golden` are unbuilt and MUST fail. A green CI that
-      # let them pass silently would be the exact dishonesty they exist to prevent.
+      # The court must reach a verdict with the single door to a model CLOSED.
+      # Owners plead from arithmetic and the arbiter rules on the tally; only the
+      # prose degrades. If this needs Vertex, the tier discipline has regressed.
+      - name: The court sits with Vertex disabled
+        env:
+          UNWIND_VERTEX_DISABLED: "1"
+          UNWIND_OTEL_CONSOLE: "0"
+        run: |
+          out=$(.venv/bin/python -m settle.cli settle)
+          turns=$(echo "$out" | .venv/bin/python -c "import json,sys; print(json.load(sys.stdin)['court']['turns_used'])")
+          conv=$(echo "$out" | .venv/bin/python -c "import json,sys; print(json.load(sys.stdin)['court']['converged'])")
+          obs=$(echo "$out" | .venv/bin/python -c "import json,sys; print(len(json.load(sys.stdin)['obligations']))")
+          echo "turns=$turns converged=$conv obligations=$obs"
+          if [ "$turns" != "4" ] || [ "$conv" != "True" ] || [ "$obs" -lt 1 ]; then
+            echo "the court did not complete four turns and raise an obligation" >&2
+            exit 1
+          fi
+
+      # The product's actual output, end to end: a named counterparty, something
+      # still reversible, and something that is not.
+      - name: An obligation names a counterparty and both fates
+        env:
+          UNWIND_VERTEX_DISABLED: "1"
+          UNWIND_OTEL_CONSOLE: "0"
+        run: |
+          out=$(.venv/bin/python -m settle.cli obligation --pick cnc_001211)
+          echo "$out"
+          echo "$out" | grep -q "counterparty::" || { echo "no counterparty named" >&2; exit 1; }
+          echo "$out" | grep -q "^  \[ \]" || { echo "no reversible action listed" >&2; exit 1; }
+          echo "$out" | grep -q "^  \[X\]" || { echo "no unrecoverable item listed" >&2; exit 1; }
+          echo "$out" | grep -q "human::" || { echo "no human signatory" >&2; exit 1; }
+
+      # The golden transcript is the court's regression surface. If it drifts,
+      # the committed transcript no longer describes the committed code.
+      - name: Court transcript still matches the code
+        env:
+          UNWIND_VERTEX_DISABLED: "1"
+          UNWIND_OTEL_CONSOLE: "0"
+        run: |
+          .venv/bin/python -m settle.cli golden --out evals/golden/court.txt >/dev/null
+          if ! git diff --quiet -- evals/golden/court.txt; then
+            echo "evals/golden/court.txt is stale:" >&2
+            git --no-pager diff -- evals/golden/court.txt >&2
+            echo "Run 'make golden' and commit the result." >&2
+            exit 1
+          fi
+
+      # `make demo` is unbuilt and MUST fail. A green CI that let it pass
+      # silently would be the exact dishonesty it exists to prevent.
       - name: Unbuilt targets fail loudly
         run: |
           if make demo >/dev/null 2>&1; then
             echo "make demo exited 0; it is not built and must fail" >&2; exit 1
           fi
-          if make golden >/dev/null 2>&1; then
-            echo "make golden exited 0; it is not built and must fail" >&2; exit 1
-          fi
-          echo "both unbuilt targets failed as required"
+          echo "the unbuilt target failed as required"

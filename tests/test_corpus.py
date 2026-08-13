@@ -131,9 +131,11 @@ def test_at_least_three_conclusions_are_unresolved(stats: dict) -> None:
 def test_one_of_each_reversibility_class_exists_with_money(stats: dict) -> None:
     by_id = {c["conclusion_id"]: c for c in _jsonl("conclusions.jsonl")}
     demonstrative = stats["demonstrative_reversibility"]
-    assert set(demonstrative) == {"idempotent", "compensable", "irreversible"}
+    assert set(demonstrative) == {"idempotent", "compensable", "irreversible", "mixed"}
 
     for reversibility, conclusion_id in demonstrative.items():
+        if reversibility == "mixed":
+            continue  # asserted separately below; its two effects disagree by design
         effect = by_id[conclusion_id]["external_effects"][0]
         assert effect["reversibility"] == reversibility
 
@@ -170,3 +172,25 @@ def test_adversarial_artifact_is_stored_and_not_processed() -> None:
 def test_decisions_are_visibly_old(stats: dict) -> None:
     median_gap = stats["timing"]["median_decision_to_retraction_days"]
     assert median_gap > 60, f"median decision age is only {median_gap} days"
+
+
+def test_the_mixed_case_carries_two_effects_of_opposite_fate() -> None:
+    """One commitment, one recoverable effect, one that is simply gone.
+
+    Every other conclusion in the corpus escaped exactly once, which makes each
+    obligation wholly recoverable or wholly not. Without this case the product's
+    central output could never show the distinction it exists to draw: something
+    to re-issue printed beside something nobody can take back.
+    """
+    stats = json.loads((DATA / "stats.json").read_text(encoding="utf-8"))
+    by_id = {c["conclusion_id"]: c for c in _jsonl("conclusions.jsonl")}
+    mixed = by_id[stats["demonstrative_reversibility"]["mixed"]]
+
+    effects = mixed["external_effects"]
+    assert len(effects) == 2, "the mixed case does not have two effects"
+    kinds = {e["reversibility"] for e in effects}
+    assert kinds == {"idempotent", "irreversible"}, f"fates do not disagree: {kinds}"
+
+    irreversible = next(e for e in effects if e["reversibility"] == "irreversible")
+    assert irreversible["amount_minor"] > 0
+    assert irreversible["currency"] == "USD"

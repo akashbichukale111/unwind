@@ -18,6 +18,12 @@
       "routed_to_human": 0,
       "total": 1
     },
+    "multi_premise": {
+      "failed": 0,
+      "passed": 10,
+      "routed_to_human": 0,
+      "total": 10
+    },
     "tool_failure": {
       "failed": 0,
       "passed": 10,
@@ -25,9 +31,7 @@
       "total": 10
     }
   },
-  "empty_scenario_classes": [
-    "multi_premise"
-  ],
+  "empty_scenario_classes": [],
   "false_retraction_rate": 0.0,
   "harness_version": "0.2.0",
   "metrics_computed": [
@@ -72,7 +76,7 @@
           "source_id": "src_supplier_K"
         },
         "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
-        "elapsed_seconds": 2.0937,
+        "elapsed_seconds": 0.8924,
         "ground_truth_size": 2594,
         "model_calls": 0,
         "radius_size": 2594,
@@ -189,7 +193,7 @@
           "key": "time_to_obligation",
           "name": "Time to obligation",
           "tier": "T0/T1/T2",
-          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 2.094s.",
+          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.892s.",
           "unit": "seconds",
           "value": null
         }
@@ -207,7 +211,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.182,
+        "elapsed_seconds": 0.1982,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -283,7 +287,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.182,
+        "elapsed_seconds": 0.1888,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -359,7 +363,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_002, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1801,
+        "elapsed_seconds": 0.19,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -437,7 +441,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.1797,
+        "elapsed_seconds": 0.1902,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -515,7 +519,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001144 says 9.0 (from src_supplier_M). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a si",
-        "elapsed_seconds": 0.2091,
+        "elapsed_seconds": 0.2106,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -591,7 +595,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "Confidence 0.40 is below the floor of 0.86 required to retract something carrying 2594 dependent commitments. The bar is set by what it would cost to be wrong, and at this radius being wrong is expensive.",
-        "elapsed_seconds": 0.8528,
+        "elapsed_seconds": 0.8221,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -667,7 +671,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8106,
+        "elapsed_seconds": 0.8479,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -743,7 +747,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.1883,
+        "elapsed_seconds": 0.2255,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -819,7 +823,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#001, no live claim contests it, and confidence 1.00 clears the floor of 0.66 for a radius of 18.",
-        "elapsed_seconds": 0.1792,
+        "elapsed_seconds": 0.2042,
         "model_calls": 0,
         "radius_size": 18,
         "regime_counts": {
@@ -895,7 +899,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#002, no live claim contests it, and confidence 1.00 clears the floor of 0.62 for a radius of 6.",
-        "elapsed_seconds": 0.1854,
+        "elapsed_seconds": 0.1971,
         "model_calls": 0,
         "radius_size": 6,
         "regime_counts": {
@@ -971,7 +975,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1824,
+        "elapsed_seconds": 0.1871,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1047,7 +1051,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_erp_internal' holds authority over ['capacity.', 'internal.', 'inventory.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1744,
+        "elapsed_seconds": 0.1803,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1123,7 +1127,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1724,
+        "elapsed_seconds": 0.1787,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1199,7 +1203,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_fx_desk' holds authority over ['fx.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1755,
+        "elapsed_seconds": 0.1769,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1275,7 +1279,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_logistics_ops' holds authority over ['dock.', 'freight.transit.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1664,
+        "elapsed_seconds": 0.1738,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1351,7 +1355,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_L' holds authority over ['contract.supplier_L.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1662,
+        "elapsed_seconds": 0.1753,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1427,7 +1431,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_K' holds authority over ['contract.supplier_K.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.196,
+        "elapsed_seconds": 0.2063,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1503,7 +1507,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_supplier_L' holds authority over ['supplier_L.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1923,
+        "elapsed_seconds": 0.1916,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1579,7 +1583,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No claim 'clm_999999' exists to retract.",
-        "elapsed_seconds": 0.1861,
+        "elapsed_seconds": 0.1862,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1655,7 +1659,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No source 'src_does_not_exist' is known, so it holds no authority over anything.",
-        "elapsed_seconds": 0.1879,
+        "elapsed_seconds": 0.1956,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1731,7 +1735,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1934,
+        "elapsed_seconds": 0.2034,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1807,7 +1811,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1955,
+        "elapsed_seconds": 0.2007,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1885,7 +1889,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.1891,
+        "elapsed_seconds": 0.2086,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1961,7 +1965,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1853,
+        "elapsed_seconds": 0.1916,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -2037,7 +2041,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8453,
+        "elapsed_seconds": 0.8534,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2113,7 +2117,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1887,
+        "elapsed_seconds": 0.1963,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2189,7 +2193,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1837,
+        "elapsed_seconds": 0.1951,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2265,7 +2269,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.2013,
+        "elapsed_seconds": 0.2374,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -2341,7 +2345,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8527,
+        "elapsed_seconds": 0.952,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2417,7 +2421,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.2023,
+        "elapsed_seconds": 0.2041,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2483,13 +2487,762 @@
       "name": "vertex-unavailable-mid-cascade",
       "reason": null,
       "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": false,
+        "claim_ids": [
+          "clm_000115",
+          "clm_000958"
+        ],
+        "converged": true,
+        "dissent_count": 1,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 1,
+        "elapsed_seconds": 0.2265,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 11,
+        "radius_size": 50,
+        "ruling": "preserved 0, amended 2, conceded 9",
+        "team_dissolved": true,
+        "team_eligible": 11,
+        "team_seated": 11,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 11
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "ruling not advisory",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "contested-capacity-across-two-premises",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000"
+        ],
+        "converged": true,
+        "dissent_count": 2,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 0,
+        "elapsed_seconds": 0.8379,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2594,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 48,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "contested-line-capacity-three-owners",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000"
+        ],
+        "converged": true,
+        "dissent_count": 1,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 0,
+        "elapsed_seconds": 0.8998,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2594,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 48,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "contested-line-capacity-two-owners",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": false,
+        "claim_ids": [
+          "clm_000002",
+          "clm_000003"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 0,
+        "elapsed_seconds": 0.2536,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 144,
+        "ruling": "preserved 0, amended 8, conceded 4",
+        "team_dissolved": true,
+        "team_eligible": 33,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "ruling not advisory",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "disjoint-radii-still-one-hearing",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000",
+          "clm_000958"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 1,
+        "elapsed_seconds": 0.9084,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2594,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 57,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "hub-and-erp-overlap",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000",
+          "clm_000115"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 1,
+        "elapsed_seconds": 0.9014,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2601,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 49,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "hub-and-supplier-L-overlap",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": false,
+        "claim_ids": [
+          "clm_000958",
+          "clm_000959"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 0,
+        "elapsed_seconds": 0.2556,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 60,
+        "ruling": "preserved 0, amended 1, conceded 11",
+        "team_dissolved": true,
+        "team_eligible": 26,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "ruling not advisory",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "same-source-two-claims",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000",
+          "clm_000001"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 0,
+        "elapsed_seconds": 0.8785,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2658,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 48,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "silent-partner-premise",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": false,
+        "claim_ids": [
+          "clm_000115",
+          "clm_000958"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 1,
+        "elapsed_seconds": 0.2134,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 11,
+        "radius_size": 50,
+        "ruling": "preserved 0, amended 1, conceded 10",
+        "team_dissolved": true,
+        "team_eligible": 11,
+        "team_seated": 11,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 11
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": "ruling not advisory",
+          "unit": "ratio",
+          "value": null
+        }
+      ],
+      "name": "supplier-L-and-erp-overlap",
+      "reason": null,
+      "status": "passed"
+    },
+    {
+      "class": "multi_premise",
+      "detail": {
+        "advisory": true,
+        "claim_ids": [
+          "clm_000000",
+          "clm_000115",
+          "clm_000958"
+        ],
+        "converged": true,
+        "dissent_count": 0,
+        "duplicate_obligations": 0,
+        "duplicates_suppressed": 2,
+        "elapsed_seconds": 0.8947,
+        "model": "scripted-stub (NOT Vertex)",
+        "obligations": 12,
+        "radius_size": 2601,
+        "ruling": "preserved 0, amended 7, conceded 5",
+        "team_dissolved": true,
+        "team_eligible": 58,
+        "team_seated": 12,
+        "turns_used": 4
+      },
+      "metrics": [
+        {
+          "detail": {
+            "duplicates": 0,
+            "obligations": 12
+          },
+          "direction": "lower_is_better",
+          "key": "false_retraction_rate",
+          "name": "False-retraction rate",
+          "tier": "T0/T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "note": "settlement scenarios assert court behaviour, not regime mix"
+          },
+          "direction": "lower_is_better",
+          "key": "unresolved_rate",
+          "name": "Unresolved rate",
+          "tier": "T1/T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 0.0
+        },
+        {
+          "detail": {
+            "model": "scripted-stub"
+          },
+          "direction": "lower_is_better",
+          "key": "cost_per_cascade",
+          "name": "Cost per cascade",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "usd",
+          "value": 0.0
+        },
+        {
+          "detail": {},
+          "direction": "higher_is_better",
+          "key": "human_escalation_precision",
+          "name": "Human-escalation precision",
+          "tier": "T2",
+          "unavailable_reason": null,
+          "unit": "ratio",
+          "value": 1.0
+        }
+      ],
+      "name": "three-premises-same-week",
+      "reason": null,
+      "status": "passed"
     }
   ],
   "python": "3.12.3",
-  "run_at": "2026-08-13T01:51:06.268492+00:00",
-  "scenarios_discovered": 31,
+  "run_at": "2026-08-13T02:03:27.243616+00:00",
+  "scenarios_discovered": 41,
   "scenarios_failed": 0,
-  "scenarios_passed": 31,
+  "scenarios_passed": 41,
   "scenarios_skipped": 0,
   "stage": "task-2-deterministic-spine",
   "total_model_calls": 0

@@ -22,21 +22,32 @@ Google "All Things Agentic" Hackathon
 
 ---
 
-## ⚠ Status: Task 3 of 5 — judgment and adversarial defence
+## ⚠ Status: Task 4 of 5 — the court and settlement
 
-**The model enters the system, and every place it enters is a place where being
-wrong is safe.** A retraction is now routed to one of five states with a stated
-reason; a legitimate source reaching one step outside its authority is refused by
-name; the re-deriver structurally cannot see the decision it is re-deriving; and
-with Vertex switched off the whole thing still runs, rendering judgement nodes
-UNRESOLVED rather than resolving them silently.
+**The pipeline now ends where the product actually is: a drafted correction
+addressed to a named counterparty, with the irreversible items marked
+unrecoverable rather than quietly dropped.** A commitment argues for its own
+survival to an arbiter that cannot be it; the four-turn hearing is bounded by
+its shape rather than by monitoring; and what the court does not preserve
+becomes an obligation with a range, its assumptions, and a human who must sign.
 
-⚠ **No real Vertex AI call has ever been made in this repository.** There were no
-GCP credentials in the build environment. Extraction is fully deterministic and
-needs no model, so its numbers are real; anything reported about the T2 judgement
-path came from a scripted stub and is labelled as such wherever it appears.
+⚠ **The Vertex/ADK foundation gate passed — but not in this build environment.**
+The smoke test (Vertex request, Gemini tool call, `echo_tier(T0)`, final
+response, no 401/403/404) was run and reported by the maintainer on
+`project-895d4ca8-d301-447d-916`, location `global`, model `gemini-3.5-flash-lite`.
+This container still has no GCP credentials, so **nothing in this repository has
+executed a model call**. Every T2 number here came from `ScriptedT2Model` and is
+labelled as such wherever it appears. The headline parser-vs-parser-plus-Gemini
+recall comparison is therefore **still unmeasured**.
 
-Still not built: the court, obligations, compensation, load rating, and any UI.
+⚠ **Why this project needs ADK 2.** Commitment owners are *single-turn agent
+tools*, not sub-agents. Delegating to a sub-agent hands over control; the court
+needs N owners discovered at runtime, run in parallel, with the arbiter keeping
+the floor to rule. `tests/test_court.py` asserts the pleas genuinely overlap in
+time rather than taking the docstring's word for it.
+
+Still not built: the operator UI, the field visualisation, the demo, the video,
+and compensation-path synthesis (deliberately [DESIGNED] — see below).
 
 ### The honesty map
 
@@ -57,23 +68,40 @@ Still not built: the court, obligations, compensation, load rating, and any UI.
 | **[BUILT]** | Two-source rule above exposure | tested; duplicate ids do not count as two |
 | **[BUILT]** | **Confidence gate with echo-back** | rendered before acting, in every state |
 | **[BUILT]** | Both adversarial cases refused by reason code | `make adversarial`; enforced in CI |
-| **[BUILT]** | 31 eval scenarios across 4 classes | `make eval` → 31 passed, 0 model calls |
-| **[DESIGNED]** | Vertex T2 path (`judgment/model.py`) | Written, **never executed** — no credentials |
+| **[BUILT]** | 41 eval scenarios across 5 classes | `make eval` → 41 passed, 0 model calls |
+| **[BUILT]** | **Repair court** — owners, arbiter, four-turn protocol | `make court`; N owners run in parallel, tested |
+| **[BUILT]** | **Arbiter is a third principal** (ruling 1.10) | separation checked over a whole bench, 6 vacuity cases |
+| **[BUILT]** | Turn cap + cost ledger + conservative default | no `while` in `court/protocol.py`, asserted by test |
+| **[BUILT]** | Dynamic team formation, dissolved on settlement | size is a function of the radius; two radii, two sizes |
+| **[BUILT]** | Irreversibility triage, conservative under doubt | max(record, op table); fires on 232 real effects |
+| **[BUILT]** | Counterparty cartographer — **no send capability** | AST guard + a fixture that CAN send, so it is not vacuous |
+| **[BUILT]** | **Correction obligation** — the product's output | `make obligation`; range + assumptions + named human |
+| **[BUILT]** | Approval broker — may request, may not approve | `approve()` raises; only `human::` may sign |
+| **[BUILT]** | Load rating — versioned, reversible, contestable | refuses anything carrying agent-trust fields |
+| **[BUILT]** | `multi_premise/` — 10 scenarios | radii merge, 0 duplicate obligations, arbiter allocates |
+| **[BUILT]** | Golden court transcript | `make golden`; CI fails on drift |
+| **[DESIGNED]** | Vertex T2 path (`judgment/model.py`) | Written, **never executed in this container** |
+| **[DESIGNED]** | Compensation-path synthesis | Deliberately not built; `synthesise()` raises |
 | **[DESIGNED]** | Model Armor on the extraction path | **[UNVERIFIED]** — see below |
 | **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
 | **[DESIGNED]** | Firestore rules + composite indexes | Written, **never deployed** |
 | **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written, **never run** |
-| **[FUTURE]** | The court: owners, arbiter, negotiation | Task 4 |
-| **[FUTURE]** | Obligations, compensation, irreversibility triage | Task 4 |
-| **[FUTURE]** | Load rating, the operator UI, the demo | Task 5 |
+| **[FUTURE]** | Operator UI, field visualisation, demo, video | Task 5 |
 
 ### What has actually been run
 
-- `make test` → **173 passed** (162 in-process, 11 against a live Firestore
+- `make test` → **232 passed, 11 skipped** (the 11 need a live Firestore
   emulator). `ruff check` and `ruff format --check` clean.
-- `make eval` → **31 scenarios passed, 0 failed, 0 model calls.**
+- `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.
 - `UNWIND_VERTEX_DISABLED=1 make eval` → identical. Enforced in CI.
+- `make court` → 4 turns, converged, 12 owners seated from 48 eligible,
+  **12 obligations raised**, with Vertex disabled.
+- `make obligation` → one full correction obligation: a named counterparty, one
+  re-issuable email, one unrecoverable payment, exposure **USD 8,925.00** as a
+  range with its assumptions, routed to a `human::` signatory.
+- `make multi-premise` → two radii merged; **0 duplicate obligations.**
+- `make golden` → byte-stable; CI fails on drift.
 - `make adversarial` → both attacks refused with `source_outside_claim_scope`
   and a radius of 0. Enforced in CI by reason code.
 - `make coverage` → overall extraction recall **81.8%**; worst class
@@ -83,17 +111,38 @@ Still not built: the court, obligations, compensation, load rating, and any UI.
 - `make t2` → 174-node queue, all rendering UNRESOLVED under the scripted model.
 - `make corpus-verify` → byte-identical.
 
-**Never run:** any Vertex AI call, any Cloud Run deploy, any real Pub/Sub topic,
-any Firestore rules or index deployment, Model Armor, `npm install` in `web/`.
-**There is no deployed URL.**
+**Run elsewhere, not here:** the Vertex smoke test — reported passing by the
+maintainer on their own machine (see Status above). It is recorded as evidence,
+not reproduced by this repository.
+
+**Never run:** any Vertex AI call *from this repository*, any Cloud Run deploy,
+any real Pub/Sub topic, any Firestore rules or index deployment, Model Armor,
+`npm install` in `web/`. **There is no deployed URL.**
+
+### Forty distinct arguments across 170 conclusions
+
+The hub radius reaches **170 clause-governed conclusions**, but they rest on
+**40 distinct contractual claims**. The court therefore hears forty distinct
+arguments, replicated across 170 commitments — and the demo says so. Inflating
+the clause set to make the hearing look busier would read as padding; an honest
+large number beats a manufactured one. Both figures come from
+`corpus/data/stats.json`.
 
 ### Numbers
 
 Every number in this repository was produced by a committed script
 (`corpus/generate.py` → `corpus/data/stats.json`, or `pytest`). **No latency,
 cost, accuracy or benchmark figure is stated anywhere**, because none has been
-measured. The two dollar amounts in the corpus (USD 41,800 and USD 12,650) are
-invented parameters of a synthetic scenario, not estimates.
+measured. The three dollar amounts in the corpus (USD 41,800, USD 12,650 and
+USD 8,925) are invented parameters of a synthetic scenario, not estimates —
+and residual exposure is always reported as a **range with its assumptions**,
+with any effect that carries no recorded amount counted separately rather than
+priced.
+
+**Every T2 number in this repository came from `ScriptedT2Model`.** That is a
+harness measuring itself on the model's side. What it measures honestly is the
+orchestration around the model: principal separation, blindness, the turn cap,
+and whether an unavailable model yields UNRESOLVED instead of a guess.
 
 ---
 

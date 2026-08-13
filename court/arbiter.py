@@ -98,7 +98,7 @@ class NeutralArbiter:
 
         with agent_decision_span(self.arbiter_id, Tier.T2) as span:
             weighed = [(p, _weight(p)) for p in pleas]
-            contested = _contested_resources(challenges)
+            contested = _contested_resources(challenges, pleas)
 
             preserved: list[str] = []
             amended: list[str] = []
@@ -213,14 +213,26 @@ def _weight(plea: Plea) -> float:
     return 1.0 if plea.evidence else 0.4
 
 
-def _contested_resources(challenges: list[Challenge]) -> dict[str, str]:
-    """conclusion_id -> the resource it is contending for."""
+def _contested_resources(challenges: list[Challenge], pleas: list[Plea]) -> dict[str, str]:
+    """conclusion_id -> the resource it is contending for.
+
+    A `Challenge` names OWNERS, because that is who is arguing; everything
+    downstream allocates over COMMITMENTS, because that is what holds a slot.
+    The translation happens here, through the pleas, which are the only place
+    both identifiers appear together. Keying this map by owner id instead --
+    which it did until a test caught it -- silently disabled allocation
+    entirely: every lookup missed, nothing was ever contested, and two
+    commitments would both have kept the same capacity.
+    """
+    owner_to_conclusion = {p.member_owner_id: p.conclusion_id for p in pleas}
     contested: dict[str, str] = {}
     for challenge in challenges:
         if not challenge.contested_resource:
             continue
-        for cid in (challenge.challenger_owner_id, challenge.target_owner_id):
-            contested.setdefault(cid, challenge.contested_resource)
+        for owner_id in (challenge.challenger_owner_id, challenge.target_owner_id):
+            conclusion_id = owner_to_conclusion.get(owner_id)
+            if conclusion_id is not None:
+                contested.setdefault(conclusion_id, challenge.contested_resource)
     return contested
 
 

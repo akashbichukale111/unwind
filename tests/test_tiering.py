@@ -46,7 +46,15 @@ def test_vertex_is_enabled_by_default() -> None:
 
 
 def test_region_is_pinned_not_inferred() -> None:
-    assert get_config().vertex_location == "us-central1"
+    """`global`, and it is a measurement rather than a preference.
+
+    This is the location the Vertex smoke test actually passed on -- request,
+    tool call, echo_tier(T0), final response, no 401/403/404. A regional
+    endpoint was tried first and is not the verified configuration, so pinning
+    the region we merely assumed would put an untested value in the one file
+    that is allowed to name it.
+    """
+    assert get_config().vertex_location == "global"
 
 
 def test_backend_is_pinned_to_vertex_not_the_bare_gemini_api() -> None:
@@ -55,7 +63,7 @@ def test_backend_is_pinned_to_vertex_not_the_bare_gemini_api() -> None:
 
     applied = configure_vertex_backend()
     assert applied["GOOGLE_GENAI_USE_ENTERPRISE"] == "true"
-    assert applied["GOOGLE_CLOUD_LOCATION"] == "us-central1"
+    assert applied["GOOGLE_CLOUD_LOCATION"] == "global"
     assert os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] == "true"
     # The deprecated flag must NOT be set: google-adk 2.6.3 warns on it, and a
     # conflicting pair silently resolves in favour of the enterprise flag.

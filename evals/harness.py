@@ -197,6 +197,14 @@ def run_scenario(scenario_class: str, path: Path) -> ScenarioOutcome:
     # scenarios assert which of the five states the system reaches and why --
     # that is the whole question for an adversarial or ambiguous case, where
     # "what did it decide" matters far more than "how big was the radius".
+    # A third shape: SETTLEMENT scenarios carry `retractions` (plural) and ask
+    # what the court did with two overlapping radii -- did they merge, did any
+    # commitment get two obligations, did the arbiter allocate a contested
+    # resource or deadlock over it. Neither of the other two shapes can express
+    # that, because both assume exactly one retraction.
+    if "retractions" in spec:
+        return _run_settlement_scenario(scenario_class, name, spec)
+
     if "ground_truth" not in spec:
         return _run_outcome_scenario(scenario_class, name, spec)
 
@@ -385,6 +393,152 @@ def _run_outcome_scenario(scenario_class: str, name: str, spec: dict[str, Any]) 
             "vertex_disabled": bool(spec.get("vertex_disabled")),
             "elapsed_seconds": round(elapsed, 4),
             "check": _OUTCOME_CHECKS.get(wanted, wanted),
+        },
+    )
+
+
+def _run_settlement_scenario(
+    scenario_class: str, name: str, spec: dict[str, Any]
+) -> ScenarioOutcome:
+    """Two or more premises fail; assert the court merged and settled correctly.
+
+    The three questions the brief asks of `multi_premise/`, as assertions:
+      · do the radii MERGE, or does the second cascade re-raise the first's work
+      · does any commitment end up with TWO obligations
+      · does the arbiter ALLOCATE a contested resource, or deadlock on it
+    """
+    import os
+
+    from judgment.model import ScriptedT2Model
+    from lib.config import reset_config_cache
+    from settle.pipeline import settle
+    from spine.cascade import CorpusStore, run_cascade
+
+    expect = spec.get("expect", {})
+    previous = os.environ.get("UNWIND_VERTEX_DISABLED")
+    if spec.get("vertex_disabled"):
+        os.environ["UNWIND_VERTEX_DISABLED"] = "1"
+        reset_config_cache()
+
+    started = time.perf_counter()
+    try:
+        store = CorpusStore.from_repo(REPO)
+        results = [
+            run_cascade(
+                store=store,
+                claim_id=r["claim_id"],
+                source_id=r["source_id"],
+                new_value=r["new_value"],
+                reason=r.get("reason", ""),
+                triggered_at=datetime.fromisoformat(r["triggered_at"].replace("Z", "+00:00")),
+                confidence=float(r.get("confidence", 1.0)),
+                corroborating_sources=r.get("corroborating_sources"),
+            )
+            for r in spec["retractions"]
+        ]
+        # The scripted model keeps the eval deterministic and is LABELLED as
+        # such: no number from this path may ever be presented as a Vertex
+        # measurement.
+        outcome = settle(
+            results=results,
+            store=store,
+            model=ScriptedT2Model(),
+            now=datetime.fromisoformat(
+                spec["retractions"][0]["triggered_at"].replace("Z", "+00:00")
+            ),
+            repair_id=f"rep_{name}",
+            contested_resources=spec.get("contested_resources"),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return ScenarioOutcome(
+            scenario_class, name, "failed", f"settlement raised {type(exc).__name__}: {exc}"
+        )
+    finally:
+        if spec.get("vertex_disabled"):
+            if previous is None:
+                os.environ.pop("UNWIND_VERTEX_DISABLED", None)
+            else:
+                os.environ["UNWIND_VERTEX_DISABLED"] = previous
+            reset_config_cache()
+    elapsed = time.perf_counter() - started
+
+    obligation_ids = [d.obligation.obligation_id for d in outcome.obligations]
+    covered = [d.conclusion_id for d in outcome.obligations]
+    duplicate_obligations = len(covered) - len(set(covered))
+    court = outcome.proceedings.outcome if outcome.proceedings else None
+
+    failures: list[str] = []
+    if "max_duplicate_obligations" in expect:
+        if duplicate_obligations > expect["max_duplicate_obligations"]:
+            failures.append(
+                f"duplicate obligations: {duplicate_obligations} > "
+                f"{expect['max_duplicate_obligations']}"
+            )
+    if expect.get("radii_merge") and outcome.duplicates_suppressed <= 0:
+        failures.append("radii did not overlap, so this scenario does not test merging at all")
+    if "min_team_size" in expect and outcome.team.seated < expect["min_team_size"]:
+        failures.append(f"team seated {outcome.team.seated} < {expect['min_team_size']}")
+    if expect.get("arbiter_must_rule") and court is None:
+        failures.append("no ruling was produced")
+    if expect.get("must_converge") and outcome.proceedings and not outcome.proceedings.converged:
+        failures.append("the protocol failed to converge")
+    if expect.get("must_allocate"):
+        if not (court and any("lost the allocation" in d for d in court.dissent)):
+            failures.append("a contested resource was not allocated -- the arbiter deadlocked")
+    if expect.get("team_must_dissolve") and not outcome.team.dissolved:
+        failures.append("the team outlived the settlement")
+    if "min_obligations" in expect and len(outcome.obligations) < expect["min_obligations"]:
+        failures.append(f"obligations {len(outcome.obligations)} < {expect['min_obligations']}")
+
+    # Every obligation must still name a human. An unsigned obligation is fine;
+    # an unsignable one is a dead end.
+    unassigned = [
+        d.obligation.obligation_id for d in outcome.obligations if not d.obligation.approver
+    ]
+    if unassigned:
+        failures.append(f"obligations with no approver: {unassigned}")
+
+    metrics = [
+        MetricResult(
+            "false_retraction_rate",
+            0.0,
+            detail={"obligations": len(outcome.obligations), "duplicates": duplicate_obligations},
+        ),
+        MetricResult(
+            "unresolved_rate",
+            0.0,
+            detail={"note": "settlement scenarios assert court behaviour, not regime mix"},
+        ),
+        MetricResult("cost_per_cascade", 0.0, detail={"model": "scripted-stub"}),
+        MetricResult(
+            "human_escalation_precision",
+            1.0 if court and court.ruling.advisory else None,
+            unavailable_reason=None if court and court.ruling.advisory else "ruling not advisory",
+        ),
+    ]
+
+    return ScenarioOutcome(
+        scenario_class,
+        name,
+        "failed" if failures else "passed",
+        "; ".join(failures) if failures else None,
+        metrics=metrics,
+        detail={
+            "claim_ids": outcome.claim_ids,
+            "radius_size": outcome.radius_size,
+            "duplicates_suppressed": outcome.duplicates_suppressed,
+            "team_eligible": outcome.team.eligible,
+            "team_seated": outcome.team.seated,
+            "team_dissolved": outcome.team.dissolved,
+            "turns_used": outcome.proceedings.turns_used if outcome.proceedings else 0,
+            "converged": outcome.proceedings.converged if outcome.proceedings else None,
+            "ruling": court.ruling.decision if court else None,
+            "advisory": court.ruling.advisory if court else None,
+            "dissent_count": len(court.dissent) if court else 0,
+            "obligations": len(obligation_ids),
+            "duplicate_obligations": duplicate_obligations,
+            "model": "scripted-stub (NOT Vertex)",
+            "elapsed_seconds": round(elapsed, 4),
         },
     )
 

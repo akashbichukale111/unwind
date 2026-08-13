@@ -26,6 +26,7 @@ the first one alone is sufficient:
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -194,19 +195,41 @@ def _turn_notice(state: dict[str, Any], proceedings: Proceedings) -> None:
 
 
 def _turn_plea(state: dict[str, Any], proceedings: Proceedings) -> None:
-    """Turn 2. One plea per owner. Budget is drawn per plea."""
+    """Turn 2. One plea per owner, and the N owners plead IN PARALLEL.
+
+    ⚠ THE PARALLELISM IS THE POINT, NOT AN OPTIMISATION. Owners are agent tools
+    called by a parent that keeps the floor: it fans N of them out at once,
+    waits, and then rules. Had they been sub-agents the parent would have handed
+    over control at the first delegation and could not have done either half.
+    That is the ADK 2 justification for this project, so it is executed rather
+    than described -- `tests/test_court.py` asserts the pleas genuinely overlap
+    in time.
+
+    Budget is drawn BEFORE fan-out, so the cost bound holds regardless of how
+    the futures interleave. Results are collected in submission order, so a
+    parallel hearing and a serial one produce the same transcript.
+    """
     notice: Notice = state["notice"]
-    pleas: list[Plea] = []
+    admitted: list[tuple[CommitmentOwner, Brief]] = []
     for owner in state["owners"]:
         brief = notice.brief_for(owner.conclusion_id)
         if brief is None:
             continue
         if not proceedings.ledger.draw():
-            # Out of budget mid-hearing. Everything already pleaded stands;
-            # everything not reached is handled by the conservative default.
+            # Out of budget. Everything admitted still pleads; everything not
+            # reached is handled by the conservative default.
             proceedings.converged = False
             break
-        pleas.append(owner.plead(brief, state["model"]))
+        admitted.append((owner, brief))
+
+    model = state["model"]
+    if len(admitted) <= 1:
+        pleas = [owner.plead(brief, model) for owner, brief in admitted]
+    else:
+        with ThreadPoolExecutor(max_workers=len(admitted)) as pool:
+            futures = [pool.submit(owner.plead, brief, model) for owner, brief in admitted]
+            pleas = [f.result() for f in futures]
+
     state["pleas"] = pleas
     proceedings.repair.pleas = pleas
 

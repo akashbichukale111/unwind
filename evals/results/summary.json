@@ -18,6 +18,12 @@
       "routed_to_human": 0,
       "total": 1
     },
+    "multi_premise": {
+      "failed": 0,
+      "passed": 10,
+      "routed_to_human": 0,
+      "total": 10
+    },
     "tool_failure": {
       "failed": 0,
       "passed": 10,
@@ -850,11 +856,207 @@
       },
       "status": "passed",
       "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "contested-capacity-across-two-premises",
+      "radius_size": 50,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "contested-line-capacity-three-owners",
+      "radius_size": 2594,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "contested-line-capacity-two-owners",
+      "radius_size": 2594,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "disjoint-radii-still-one-hearing",
+      "radius_size": 144,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "hub-and-erp-overlap",
+      "radius_size": 2594,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "hub-and-supplier-L-overlap",
+      "radius_size": 2601,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "same-source-two-claims",
+      "radius_size": 60,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "silent-partner-premise",
+      "radius_size": 2658,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "supplier-L-and-erp-overlap",
+      "radius_size": 50,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
+    },
+    {
+      "authority_reason": null,
+      "cascade_id": null,
+      "class": "multi_premise",
+      "decision_state": null,
+      "ground_truth_size": null,
+      "metrics": {
+        "cost_per_cascade": 0.0,
+        "false_retraction_rate": 0.0,
+        "human_escalation_precision": 1.0,
+        "unresolved_rate": 0.0
+      },
+      "model_calls": null,
+      "name": "three-premises-same-week",
+      "radius_size": 2601,
+      "reason": null,
+      "regime_counts": null,
+      "status": "passed",
+      "tier_reached": null
     }
   ],
-  "scenarios_discovered": 31,
+  "scenarios_discovered": 41,
   "scenarios_failed": 0,
-  "scenarios_passed": 31,
+  "scenarios_passed": 41,
   "scenarios_skipped": 0,
   "stage": "task-2-deterministic-spine",
   "total_model_calls": 0

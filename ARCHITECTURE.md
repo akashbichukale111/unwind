@@ -172,6 +172,69 @@ information.
 Measures extraction against a labelled corpus and publishes the class it is
 worst at, and has no code path that can call an under-covered decision safe.
 
+### `lib/principals.py`
+Checks role separation across a whole bench rather than a pair, because ruling
+1.10's failure — an arbiter that is also an owner, an assessor or a re-deriver —
+turns a multi-agent system into one model talking to itself in different voices.
+
+### `court/team.py`
+Composes the repair team at runtime from a radius that did not exist a second
+earlier, so team size is a function of what actually broke rather than of a
+topology somebody drew in advance.
+
+### `court/owners.py`
+Makes each commitment argue its own case as a partisan single-turn agent tool —
+the ADK 2 shape that lets the parent fan N of them out in parallel and keep the
+floor — while `adjudicate()` raises so a party can never decide its own survival.
+
+### `court/arbiter.py`
+Rules as a third principal with no stake by construction, allocating a contested
+resource rather than deadlocking on it, and going advisory above a cost
+threshold so nothing expensive moves on the system's own authority.
+
+### `court/protocol.py`
+Bounds the hearing by SHAPE — four phases in a fixed tuple, no back-edge, no
+`while` — so a runaway court is not a risk that is monitored but a program that
+cannot be written without deleting a test.
+
+### `settle/irreversibility.py`
+Takes the more conservative of what the record claims and what the operation is
+known to be, because a connector calling its own countersignature "idempotent"
+is exactly the disagreement that would otherwise send an automated unwind at
+something already signed.
+
+### `settle/cartography.py`
+Determines who holds a wrong belief this organisation put there and has no
+capability to tell them, so a mapping bug produces a wrong list a human rejects
+instead of a wrong email a customer receives.
+
+### `settle/obligation.py`
+Ends the pipeline at a drafted correction naming a counterparty, the actions
+still reversible, the exposure that is not — as a range with its assumptions —
+and the human who must sign, which is the difference between this and a lineage
+tool.
+
+### `settle/broker.py`
+Routes an obligation to the person who must sign it and cannot sign it itself,
+because an obligation approved by the system that raised it has not been
+approved by anybody.
+
+### `settle/compensation.py`
+Refuses, loudly and on purpose: a half-built reverse-path synthesiser would emit
+paths that look executable to every downstream component that assumes a proposal
+was checked.
+
+### `settle/loadrating.py`
+Lowers how much future weight a SOURCE carries when its claims are falsified,
+and refuses anything carrying agent-trust fields, because an agent can extract
+perfectly from a source that lies constantly and merging the two punishes the
+wrong party.
+
+### `settle/pipeline.py`
+Merges overlapping radii on the commitment before any obligation exists, because
+two premises failing in the same week reach many of the same commitments and
+raising two obligations against one means apologising to the same customer twice.
+
 ### `corpus/`
 Is a deliverable, not a fixture: the die-back is **measured** off a stated model
 of commercial behaviour, so the demo's central number is computed rather than
@@ -217,8 +280,8 @@ Verified present in `google-adk` 2.6.3 (`google.adk.workflow`, `google.adk.tools
 | --- | --- |
 | `FunctionNode` | **In use.** The cascade graph is nothing but function nodes — T0 traversal and T1 materiality, no model call. |
 | `Workflow` + `Edge` / `DEFAULT_ROUTE` | **In use.** `agents/cascade/workflow.py` branches on `ctx.route`; the regime split is a routing decision, not a prompt. |
-| `AgentTool` (agent-as-tool) | The repair court: a parent runs a subset of sub-agents in parallel and keeps control. |
-| Dynamic node scheduling | The repair team is composed at runtime from a blast radius that did not exist a second earlier. |
+| `AgentTool` (agent-as-tool) | **In use.** The repair court: owners are single-turn agent tools, so the arbiter fans N of them out in parallel and still holds the gavel. This is the reason the project needs ADK 2. |
+| Dynamic node scheduling | **In use.** The repair team is composed at runtime from a blast radius that did not exist a second earlier; `court/team.py` sizes it from the alert cell. |
 | `LongRunningFunctionTool` | Durable pause/resume: a human may sign a correction obligation on Tuesday. |
 
 ## The write path
@@ -226,3 +289,14 @@ Verified present in `google-adk` 2.6.3 (`google.adk.workflow`, `google.adk.tools
 UNWIND's output is **corrections that leave the building** — a re-issued quote, a
 compensation, a signed apology. The reverse index, the authority gate and the
 traces exist to make that write path safe; they are not the product.
+
+## Framing the demo honestly
+
+The hub radius reaches **170 clause-governed conclusions**, but those rest on
+**40 distinct contractual claims** — so the court hears **forty distinct
+arguments across 170 conclusions**, not 170 different ones. The replication is
+real and it is not disguised: inflating the clause set to make the hearing look
+busier would be padding, and an honest large number beats a manufactured one.
+
+Both figures are computed by `corpus/generate.py` into
+`corpus/data/stats.json` (`contractual_claims`, `clause_governed_conclusions`).
