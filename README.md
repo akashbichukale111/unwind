@@ -90,8 +90,8 @@ and compensation-path synthesis (deliberately [DESIGNED] — see below).
 
 ### What has actually been run
 
-- `make test` → **232 passed, 11 skipped** (the 11 need a live Firestore
-  emulator). `ruff check` and `ruff format --check` clean.
+- `make test` → **221 passed, 11 skipped** (232 collected; the 11 skips need a
+  live Firestore emulator). `ruff check` and `ruff format --check` clean.
 - `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.
 - `UNWIND_VERTEX_DISABLED=1 make eval` → identical. Enforced in CI.
