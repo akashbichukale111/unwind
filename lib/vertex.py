@@ -60,6 +60,14 @@ def materialise_credentials() -> str | None:
     # A key file names its own project, so the caller need not set it twice.
     if parsed.get("project_id") and not os.environ.get("UNWIND_PROJECT_ID"):
         os.environ["UNWIND_PROJECT_ID"] = parsed["project_id"]
+        # `get_config()` is cached for the process. Any caller that resolved it
+        # BEFORE the key was materialised is holding the no-account default
+        # `unwind-local`, and would build a client against a project that does
+        # not exist -- failing with a confusing 403 rather than the real cause.
+        # Drop the cache so the project the key actually belongs to wins.
+        from lib.config import reset_config_cache  # noqa: PLC0415
+
+        reset_config_cache()
     return path
 
 
@@ -129,12 +137,16 @@ class VertexClient:
             except ImportError as exc:  # pragma: no cover
                 raise VertexUnavailableError("google-genai is not installed") from exc
             configure_vertex_backend()
+            # Re-resolve AFTER materialising: the key may have supplied the
+            # project, in which case `self.config` predates it.
+            cfg = get_config()
+            self.config = cfg
 
             kwargs: dict[str, Any] = {
                 # Vertex AI, not the developer Gemini API.
                 "enterprise": True,
-                "project": self.config.project_id,
-                "location": self.config.vertex_location,
+                "project": cfg.project_id,
+                "location": cfg.vertex_location,
             }
 
             # A short-lived OAuth token is the cheapest way to reach Vertex from

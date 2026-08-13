@@ -11,8 +11,12 @@ import sys
 os.environ.setdefault("UNWIND_OTEL_CONSOLE", "0")
 
 from lib.config import get_config
-from lib.vertex import configure_vertex_backend, get_vertex_client
+from lib.vertex import configure_vertex_backend, get_vertex_client, materialise_credentials
 
+# Materialise BEFORE resolving config: a service-account key names its own
+# project, and `get_config()` is cached for the process. Resolving first would
+# print -- and then use -- the no-account default `unwind-local`.
+materialise_credentials()
 cfg = get_config()
 print(f"model     : {cfg.model_fast}")
 print(f"project   : {cfg.project_id}")
