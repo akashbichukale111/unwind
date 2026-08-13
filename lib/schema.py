@@ -262,12 +262,22 @@ class ObligationStatus(str, Enum):
 
 
 class ResidualExposure(_Base):
-    """A range, never a point estimate, and it carries its own assumptions."""
+    """A range, never a point estimate, and it carries its own assumptions.
+
+    A point estimate of an unrecoverable loss is a fiction with a decimal place:
+    it invites the reader to treat a modelling choice as a measurement. The
+    range is bounded by what was actually recorded, and `unpriced_effects`
+    reports how many effects carried no amount at all -- so a reader can see
+    that the range is a floor rather than assuming it is a ceiling.
+    """
 
     low: int = Field(description="Minor units (cents)")
     high: int = Field(description="Minor units (cents)")
     currency: str = "USD"
     assumptions: list[str] = Field(default_factory=list)
+    #: Effects with no recorded amount. These are NOT priced into the range --
+    #: inventing a figure for them would breach the no-invented-numbers rule.
+    unpriced_effects: int = 0
 
 
 class Obligation(_Base):
@@ -286,6 +296,21 @@ class Obligation(_Base):
 # ===========================================================================
 
 
+class PleaStance(str, Enum):
+    """The four things an owner may argue. A closed set, not free text.
+
+    An owner that could say anything would be a chat participant; an owner that
+    must pick one of four is a party to a proceeding whose outcome can be
+    tallied deterministically.
+    """
+
+    SURVIVE_UNCHANGED = "survive_unchanged"
+    SURVIVE_AMENDED = "survive_amended"
+    CONCEDE = "concede"
+    #: Attacks the retraction rather than defending the commitment.
+    DISPUTE_RETRACTION = "dispute_retraction"
+
+
 class Plea(_Base):
     """A commitment owner arguing for its own conclusion in the repair court."""
 
@@ -293,12 +318,24 @@ class Plea(_Base):
     conclusion_id: str
     argument: str
     claimed_materiality: float | None = None
+    stance: PleaStance = PleaStance.SURVIVE_UNCHANGED
+    #: Citations to record. An empty list is what triggers the discount below --
+    #: the brief requires unevidenced pleas to be discounted AUTOMATICALLY, so
+    #: this is not advisory.
+    evidence: list[str] = Field(default_factory=list)
+    #: Set by the protocol, never by the owner: a party does not get to decide
+    #: how much its own argument counts.
+    discounted: bool = False
+    weight: float = 1.0
 
 
 class Challenge(_Base):
     challenger_owner_id: str
     target_owner_id: str
     argument: str
+    #: Conflicting commitments contend for the same finite thing (reserved
+    #: capacity, one delivery slot). Naming it makes allocation possible.
+    contested_resource: str | None = None
 
 
 class Ruling(_Base):
@@ -306,6 +343,14 @@ class Ruling(_Base):
     decision: str
     rationale: str
     decided_at: datetime
+    #: Above the cost threshold a ruling does not take effect on its own
+    #: authority; it becomes a recommendation attached to a signature request.
+    advisory: bool = False
+    #: False when the protocol hit its turn cap or budget without settling, in
+    #: which case the conservative default applied rather than a real ruling.
+    converged: bool = True
+    #: Owners whose commitment the ruling did not preserve, in ruling order.
+    conceded_conclusion_ids: list[str] = Field(default_factory=list)
 
 
 class Repair(_Base):

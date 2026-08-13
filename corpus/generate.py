@@ -1108,6 +1108,39 @@ def build(seed: int = SEED) -> dict[str, Any]:
             "irreversible": irreversible_id,
         }
 
+        # -- the MIXED case: one commitment, two effects, opposite fates -----
+        # Every other conclusion in this corpus escaped exactly once, which
+        # makes each obligation wholly recoverable or wholly not. Real
+        # commitments are rarely that tidy: the same quote gets emailed to the
+        # customer AND has a non-refundable premium paid against it, so the
+        # correction has something to re-issue and something that is simply
+        # gone. Without this case the product's central output could never
+        # demonstrate the distinction it exists to draw.
+        mixed_candidates = [
+            cid
+            for cid in escaped_live_material
+            if cid not in {idempotent_id, compensable_id, irreversible_id}
+        ]
+        if mixed_candidates:
+            mixed_id = mixed_candidates[len(mixed_candidates) // 4]
+            # Effect 0 stays as generated (an idempotent send/issue). The second
+            # effect is the one that cannot be taken back.
+            by_id[mixed_id]["external_effects"][0].update(
+                {"connector": "email", "op": "send_quote", "reversibility": "idempotent"}
+            )
+            by_id[mixed_id]["external_effects"].append(
+                {
+                    "connector": "payments",
+                    "op": "pay_invoice",
+                    "ref": f"pay-{mixed_id}",
+                    "reversibility": "irreversible",
+                    "occurred_at": by_id[mixed_id]["external_effects"][0]["occurred_at"],
+                    "amount_minor": 892_500,  # USD 8,925.00, already settled
+                    "currency": "USD",
+                }
+            )
+            demonstrative["mixed"] = mixed_id
+
     # -- reverse index: DIRECT edges only ---------------------------------
     # Depth is 1 for every row because this is the runtime structure T0 walks
     # one hop at a time. The transitive closure is ground truth for evals and
@@ -1318,8 +1351,8 @@ def build(seed: int = SEED) -> dict[str, Any]:
     assert radius_size > 0, "hub claim has no dependents"
     assert len(unresolved_conclusion_ids) >= 3, "fewer than 3 UNRESOLVED conclusions"
     assert stats["depth"]["max_premise_chain_depth"] >= 3, "radius is not genuinely transitive"
-    assert set(demonstrative) == {"idempotent", "compensable", "irreversible"}, (
-        "the three demonstrative reversibility cases were not all assignable"
+    assert set(demonstrative) == {"idempotent", "compensable", "irreversible", "mixed"}, (
+        "the four demonstrative reversibility cases were not all assignable"
     )
     for claim in claims:
         assert claim["authority_scope"], f"{claim['claim_id']} has empty authority_scope"

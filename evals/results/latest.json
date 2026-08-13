@@ -72,7 +72,7 @@
           "source_id": "src_supplier_K"
         },
         "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
-        "elapsed_seconds": 0.9053,
+        "elapsed_seconds": 2.0937,
         "ground_truth_size": 2594,
         "model_calls": 0,
         "radius_size": 2594,
@@ -189,7 +189,7 @@
           "key": "time_to_obligation",
           "name": "Time to obligation",
           "tier": "T0/T1/T2",
-          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.905s.",
+          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 2.094s.",
           "unit": "seconds",
           "value": null
         }
@@ -207,7 +207,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1758,
+        "elapsed_seconds": 0.182,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -283,7 +283,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1819,
+        "elapsed_seconds": 0.182,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -359,7 +359,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_002, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.2123,
+        "elapsed_seconds": 0.1801,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -437,7 +437,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.1997,
+        "elapsed_seconds": 0.1797,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -515,7 +515,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001144 says 9.0 (from src_supplier_M). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a si",
-        "elapsed_seconds": 0.2313,
+        "elapsed_seconds": 0.2091,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -591,7 +591,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "Confidence 0.40 is below the floor of 0.86 required to retract something carrying 2594 dependent commitments. The bar is set by what it would cost to be wrong, and at this radius being wrong is expensive.",
-        "elapsed_seconds": 0.809,
+        "elapsed_seconds": 0.8528,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -666,8 +666,8 @@
         "check": "the radius or exposure requires a signature",
         "contesting_claims": [],
         "decision_state": "ask_human",
-        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8341,
+        "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.8106,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -743,7 +743,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.1739,
+        "elapsed_seconds": 0.1883,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -819,7 +819,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#001, no live claim contests it, and confidence 1.00 clears the floor of 0.66 for a radius of 18.",
-        "elapsed_seconds": 0.1636,
+        "elapsed_seconds": 0.1792,
         "model_calls": 0,
         "radius_size": 18,
         "regime_counts": {
@@ -895,7 +895,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#002, no live claim contests it, and confidence 1.00 clears the floor of 0.62 for a radius of 6.",
-        "elapsed_seconds": 0.1744,
+        "elapsed_seconds": 0.1854,
         "model_calls": 0,
         "radius_size": 6,
         "regime_counts": {
@@ -971,7 +971,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1671,
+        "elapsed_seconds": 0.1824,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1047,7 +1047,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_erp_internal' holds authority over ['capacity.', 'internal.', 'inventory.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1708,
+        "elapsed_seconds": 0.1744,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1123,7 +1123,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1624,
+        "elapsed_seconds": 0.1724,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1199,7 +1199,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_fx_desk' holds authority over ['fx.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1635,
+        "elapsed_seconds": 0.1755,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1275,7 +1275,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_logistics_ops' holds authority over ['dock.', 'freight.transit.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1627,
+        "elapsed_seconds": 0.1664,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1351,7 +1351,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_L' holds authority over ['contract.supplier_L.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.16,
+        "elapsed_seconds": 0.1662,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1427,7 +1427,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_K' holds authority over ['contract.supplier_K.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1816,
+        "elapsed_seconds": 0.196,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1503,7 +1503,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_supplier_L' holds authority over ['supplier_L.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.168,
+        "elapsed_seconds": 0.1923,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1579,7 +1579,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No claim 'clm_999999' exists to retract.",
-        "elapsed_seconds": 0.1673,
+        "elapsed_seconds": 0.1861,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1655,7 +1655,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No source 'src_does_not_exist' is known, so it holds no authority over anything.",
-        "elapsed_seconds": 0.1583,
+        "elapsed_seconds": 0.1879,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1731,7 +1731,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1793,
+        "elapsed_seconds": 0.1934,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1807,7 +1807,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1705,
+        "elapsed_seconds": 0.1955,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1885,7 +1885,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.1673,
+        "elapsed_seconds": 0.1891,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1961,7 +1961,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1811,
+        "elapsed_seconds": 0.1853,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -2036,8 +2036,8 @@
         "check": "the radius or exposure requires a signature",
         "contesting_claims": [],
         "decision_state": "ask_human",
-        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.9267,
+        "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.8453,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2113,7 +2113,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1702,
+        "elapsed_seconds": 0.1887,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2189,7 +2189,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1661,
+        "elapsed_seconds": 0.1837,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2265,7 +2265,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.1717,
+        "elapsed_seconds": 0.2013,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -2340,8 +2340,8 @@
         "check": "the radius or exposure requires a signature",
         "contesting_claims": [],
         "decision_state": "ask_human",
-        "decision_why": "A single uncorroborated source cannot retract against 54450.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.7452,
+        "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
+        "elapsed_seconds": 0.8527,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2417,7 +2417,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1826,
+        "elapsed_seconds": 0.2023,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2486,7 +2486,7 @@
     }
   ],
   "python": "3.12.3",
-  "run_at": "2026-08-12T15:48:22.467606+00:00",
+  "run_at": "2026-08-13T01:51:06.268492+00:00",
   "scenarios_discovered": 31,
   "scenarios_failed": 0,
   "scenarios_passed": 31,

@@ -46,9 +46,15 @@ MODEL_DEEP = "gemini-3.6-flash"
 #: that silently wanted the expensive model should have to say so.
 GEMINI_MODEL = MODEL_FAST
 
-# Vertex AI region. Pinned, not inferred from ambient environment, so a cascade
+# Vertex AI location. Pinned, not inferred from ambient environment, so a cascade
 # cannot silently move jurisdictions between runs.
-VERTEX_LOCATION = "us-central1"
+#
+# `global`, not a region, and this is a measurement rather than a preference: it
+# is the location the smoke test actually passed on (Vertex request, Gemini tool
+# call, echo_tier(T0), final response, no 401/403/404). A regional endpoint was
+# tried first and is NOT the verified configuration, so the committed value is
+# the one with evidence behind it.
+VERTEX_LOCATION = "global"
 
 
 class Tier(str, Enum):

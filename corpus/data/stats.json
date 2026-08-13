@@ -37,7 +37,8 @@
   "demonstrative_reversibility": {
     "compensable": "cnc_001967",
     "idempotent": "cnc_000079",
-    "irreversible": "cnc_002416"
+    "irreversible": "cnc_002416",
+    "mixed": "cnc_001211"
   },
   "depth": {
     "by_depth": {
