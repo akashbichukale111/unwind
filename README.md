@@ -22,32 +22,33 @@ Google "All Things Agentic" Hackathon
 
 ---
 
-## ⚠ Status: Task 4 of 5 — the court and settlement
+## ⚠ Status: Task 5 of 5 — the interface, the demo, the submission
 
-**The pipeline now ends where the product actually is: a drafted correction
-addressed to a named counterparty, with the irreversible items marked
-unrecoverable rather than quietly dropped.** A commitment argues for its own
-survival to an arbiter that cannot be it; the four-turn hearing is bounded by
-its shape rather than by monitoring; and what the court does not preserve
-becomes an obligation with a range, its assumptions, and a human who must sign.
+**Type a fact that changed. Watch 2,594 decisions light up and 78 survive.
+Then read the correction one of them now owes a named customer.**
 
-⚠ **The Vertex/ADK foundation gate passed — but not in this build environment.**
-The smoke test (Vertex request, Gemini tool call, `echo_tier(T0)`, final
-response, no 401/403/404) was run and reported by the maintainer on
-`project-895d4ca8-d301-447d-916`, location `global`, model `gemini-3.5-flash-lite`.
-This container still has no GCP credentials, so **nothing in this repository has
-executed a model call**. Every T2 number here came from `ScriptedT2Model` and is
-labelled as such wherever it appears. The headline parser-vs-parser-plus-Gemini
-recall comparison is therefore **still unmeasured**.
+The whole demo runs with the model switched off. That is not a degraded mode —
+the blast radius is a graph traversal and materiality is subtraction, so 90% of
+the die-back is arithmetic. Gemini is the second pass, on the part a parser
+cannot read.
 
-⚠ **Why this project needs ADK 2.** Commitment owners are *single-turn agent
-tools*, not sub-agents. Delegating to a sub-agent hands over control; the court
+```bash
+make install && make ui      # http://127.0.0.1:8000 — no GCP account needed
+```
+
+⚠ **No model call has ever been made from this repository.** The Vertex/ADK
+foundation gate passed on the maintainer's machine (project
+`project-895d4ca8-d301-447d-916`, location `global`, GA Flash) and is recorded
+as evidence, not reproduced here. Every T2 number in this repo came from
+`ScriptedT2Model` and is labelled wherever it appears. `make verify-live` is the
+one command that closes the gap; `docs/LIVE-VERIFICATION.md` states exactly what
+is still unmeasured.
+
+⚠ **Why this needs ADK 2.** Commitment owners are *single-turn agent tools*, not
+sub-agents. A sub-agent takes the floor and does not give it back; the court
 needs N owners discovered at runtime, run in parallel, with the arbiter keeping
-the floor to rule. `tests/test_court.py` asserts the pleas genuinely overlap in
-time rather than taking the docstring's word for it.
-
-Still not built: the operator UI, the field visualisation, the demo, the video,
-and compensation-path synthesis (deliberately [DESIGNED] — see below).
+the gavel to rule. `tests/test_court.py` measures that the pleas genuinely
+overlap in wall-clock time rather than trusting the docstring.
 
 ### The honesty map
 
@@ -86,15 +87,29 @@ and compensation-path synthesis (deliberately [DESIGNED] — see below).
 | **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
 | **[DESIGNED]** | Firestore rules + composite indexes | Written, **never deployed** |
 | **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written, **never run** |
-| **[FUTURE]** | Operator UI, field visualisation, demo, video | Task 5 |
+| **[BUILT]** | **The field** — 4,206 nodes, canvas | **60 fps measured** (`make ui-check`), depth axis = time |
+| **[BUILT]** | **Load-bearing lines** — thickness ∝ dependents | from the reverse index; slack on retraction is a spring |
+| **[BUILT]** | **The cull** — 2,594 → 78 on real events | counter asserted equal to the cascade's own count |
+| **[BUILT]** | Parse echo + refusal, both on screen | a misparse arrives as a question |
+| **[BUILT]** | **The obligation** — dark field → bone paper | renders the real Task 4 object |
+| **[BUILT]** | Court, load-rating drop, honesty panel | dissent shown; worst class highlighted |
+| **[BUILT]** | `make verify-live` — the credentialed runner | fails loudly, never falls back to the stub |
+| **[DESIGNED]** | `docs/RETRACTION-FEED.md` — the protocol | schema fields exist; no feed published |
+| **[FUTURE]** | Video, Devpost entry, deployed URL | — |
 
 ### What has actually been run
 
-- `make test` → **221 passed, 11 skipped** (232 collected; the 11 skips need a
+- `make test` → **234 passed, 11 skipped** (245 collected; the 11 skips need a
   live Firestore emulator). `ruff check` and `ruff format --check` clean.
 - `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.
 - `UNWIND_VERTEX_DISABLED=1 make eval` → identical. Enforced in CI.
+- `make ui-check` → drives a real Chromium: **60 fps median at 4,206 nodes**
+  (three 2-second samples, all 60), the on-screen cull counter equals the
+  cascade's own material count (**78**), no horizontal scroll at 380px, zero
+  app-origin console errors.
+- `make contrast` → all 42 token pairs recomputed; every text colour ≥ 4.5:1,
+  no eighth colour, no gradient, no radius above 4px.
 - `make court` → 4 turns, converged, 12 owners seated from 48 eligible,
   **12 obligations raised**, with Vertex disabled.
 - `make obligation` → one full correction obligation: a named counterparty, one
@@ -106,18 +121,28 @@ and compensation-path synthesis (deliberately [DESIGNED] — see below).
   and a radius of 0. Enforced in CI by reason code.
 - `make coverage` → overall extraction recall **81.8%**; worst class
   `temporal:absolute-duration` at **66.7%**.
-- `make sentinel` → 1,146 watchers armed, 440 silence signals, quietest premise
-  unaffirmed for 251 days.
-- `make t2` → 174-node queue, all rendering UNRESOLVED under the scripted model.
+- `make sentinel` → 1,146 watchers armed, 440 silence signals.
 - `make corpus-verify` → byte-identical.
 
 **Run elsewhere, not here:** the Vertex smoke test — reported passing by the
-maintainer on their own machine (see Status above). It is recorded as evidence,
-not reproduced by this repository.
+maintainer on their own machine. Recorded as evidence, not reproduced.
 
 **Never run:** any Vertex AI call *from this repository*, any Cloud Run deploy,
 any real Pub/Sub topic, any Firestore rules or index deployment, Model Armor,
 `npm install` in `web/`. **There is no deployed URL.**
+
+### The interface
+
+Seven colours, four typefaces, one canvas. The field is dark and structural; the
+obligation is warm paper. The transition between them is the point of the whole
+screen.
+
+Contrast is measured rather than eyeballed, and measuring it found a real
+tension in the palette: against the field ground, only bone (14.98:1) and amber
+(6.21:1) clear 4.5:1 — graphite is 2.34:1 and the rust is 2.40:1. So the rust
+and the patina do lines, fills and the paper, where the rust reads at 6.24:1,
+and field text is bone at opacities that still measure above the floor.
+`make contrast` re-derives this and fails the build.
 
 ### Forty distinct arguments across 170 conclusions
 

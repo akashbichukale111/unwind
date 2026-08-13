@@ -73,7 +73,9 @@ def main() -> int:
             # this run is judged on.
 
             page.goto(BASE, wait_until="networkidle")
-            page.wait_for_function("window.__unwindState && window.__unwindState.n > 0", timeout=30000)
+            page.wait_for_function(
+                "window.__unwindState && window.__unwindState.n > 0", timeout=30000
+            )
             node_count = page.evaluate("window.__unwindState.n")
             results["nodes_rendered"] = node_count
 

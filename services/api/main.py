@@ -580,7 +580,13 @@ async def honesty() -> dict[str, Any]:
     report = audit(_artifacts(), as_of=CORPUS_AT)
     worst = report.worst_class
 
+    # File EXISTENCE is not evidence: docs/LIVE-VERIFICATION.md ships as a
+    # placeholder that documents the gap. Only a run of `make verify-live`
+    # removes the marker, so the marker is what the panel reads.
     live_doc = REPO / "docs" / "LIVE-VERIFICATION.md"
+    live_verified = (
+        live_doc.is_file() and "NOT YET RUN" not in live_doc.read_text(encoding="utf-8")[:400]
+    )
     return {
         "coverage": {
             "overall_recall": report.overall_recall,
@@ -606,7 +612,7 @@ async def honesty() -> dict[str, Any]:
             "location": cfg.vertex_location,
             "model_fast": cfg.model_fast,
             "model_deep": cfg.model_deep,
-            "live_verification_present": live_doc.is_file(),
+            "live_verification_present": live_verified,
             "note": (
                 "No model call has been made from this repository. The Vertex smoke "
                 "test was run and reported by the maintainer on their own machine. "

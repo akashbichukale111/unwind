@@ -76,7 +76,7 @@
           "source_id": "src_supplier_K"
         },
         "cascade_id": "6acd4adf242d5c13866c639daf4ef5fe",
-        "elapsed_seconds": 0.8924,
+        "elapsed_seconds": 0.8281,
         "ground_truth_size": 2594,
         "model_calls": 0,
         "radius_size": 2594,
@@ -193,7 +193,7 @@
           "key": "time_to_obligation",
           "name": "Time to obligation",
           "tier": "T0/T1/T2",
-          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.892s.",
+          "unavailable_reason": "Obligations are Task 4. Wall-clock for the cascade itself was 0.828s.",
           "unit": "seconds",
           "value": null
         }
@@ -211,7 +211,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1982,
+        "elapsed_seconds": 0.1919,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -287,7 +287,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.1888,
+        "elapsed_seconds": 0.1855,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -363,7 +363,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_002, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.19,
+        "elapsed_seconds": 0.1885,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -441,7 +441,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.1902,
+        "elapsed_seconds": 0.1849,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -519,7 +519,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001144 says 9.0 (from src_supplier_M). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a si",
-        "elapsed_seconds": 0.2106,
+        "elapsed_seconds": 0.217,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -595,7 +595,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "Confidence 0.40 is below the floor of 0.86 required to retract something carrying 2594 dependent commitments. The bar is set by what it would cost to be wrong, and at this radius being wrong is expensive.",
-        "elapsed_seconds": 0.8221,
+        "elapsed_seconds": 0.842,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -671,7 +671,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8479,
+        "elapsed_seconds": 0.8055,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -747,7 +747,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.2255,
+        "elapsed_seconds": 0.2153,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -823,7 +823,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#001, no live claim contests it, and confidence 1.00 clears the floor of 0.66 for a radius of 18.",
-        "elapsed_seconds": 0.2042,
+        "elapsed_seconds": 0.204,
         "model_calls": 0,
         "radius_size": 18,
         "regime_counts": {
@@ -899,7 +899,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct#002, no live claim contests it, and confidence 1.00 clears the floor of 0.62 for a radius of 6.",
-        "elapsed_seconds": 0.1971,
+        "elapsed_seconds": 0.1968,
         "model_calls": 0,
         "radius_size": 6,
         "regime_counts": {
@@ -975,7 +975,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1871,
+        "elapsed_seconds": 0.1922,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1051,7 +1051,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_erp_internal' holds authority over ['capacity.', 'internal.', 'inventory.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1803,
+        "elapsed_seconds": 0.1914,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1127,7 +1127,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1787,
+        "elapsed_seconds": 0.1863,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1203,7 +1203,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_fx_desk' holds authority over ['fx.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1769,
+        "elapsed_seconds": 0.1753,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1279,7 +1279,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_logistics_ops' holds authority over ['dock.', 'freight.transit.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1738,
+        "elapsed_seconds": 0.1777,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1355,7 +1355,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_L' holds authority over ['contract.supplier_L.'] and is not named in the authority scope of 'contract.supplier_K.delivery_clause_000' (['src_msa_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1753,
+        "elapsed_seconds": 0.1777,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1431,7 +1431,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_msa_K' holds authority over ['contract.supplier_K.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.2063,
+        "elapsed_seconds": 0.2351,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1507,7 +1507,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_supplier_L' holds authority over ['supplier_L.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1916,
+        "elapsed_seconds": 0.2074,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1583,7 +1583,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No claim 'clm_999999' exists to retract.",
-        "elapsed_seconds": 0.1862,
+        "elapsed_seconds": 0.1985,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1659,7 +1659,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "No source 'src_does_not_exist' is known, so it holds no authority over anything.",
-        "elapsed_seconds": 0.1956,
+        "elapsed_seconds": 0.208,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1735,7 +1735,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_001, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.2034,
+        "elapsed_seconds": 0.2002,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1811,7 +1811,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_msa_K has standing over contract.supplier_K.delivery_clause_000, no live claim contests it, and confidence 1.00 clears the floor of 0.63 for a radius of 8.",
-        "elapsed_seconds": 0.2007,
+        "elapsed_seconds": 0.1979,
         "model_calls": 0,
         "radius_size": 8,
         "regime_counts": {
@@ -1889,7 +1889,7 @@
         ],
         "decision_state": "defer",
         "decision_why": "supplier_M.expedite_window_days is contested: clm_001145 says 16.0 (from src_erp_internal). Two live sources disagree about one fact and neither has withdrawn. Holding the cascade until the sources settle it -- picking a",
-        "elapsed_seconds": 0.2086,
+        "elapsed_seconds": 0.1975,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -1965,7 +1965,7 @@
         "contesting_claims": [],
         "decision_state": "refuse",
         "decision_why": "'src_broker_Z' holds authority over ['freight_broker_Z.'] and is not named in the authority scope of 'supplier_K.lead_time_days' (['src_supplier_K']). It has no standing to retract this claim.",
-        "elapsed_seconds": 0.1916,
+        "elapsed_seconds": 0.1994,
         "model_calls": 0,
         "radius_size": 0,
         "regime_counts": {
@@ -2041,7 +2041,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.8534,
+        "elapsed_seconds": 0.8421,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2117,7 +2117,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1963,
+        "elapsed_seconds": 0.2121,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2193,7 +2193,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.1951,
+        "elapsed_seconds": 0.2076,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2269,7 +2269,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_tariff_bulletin has standing over tariff.hs_8536.rate_pct, no live claim contests it, and confidence 1.00 clears the floor of 0.72 for a radius of 72.",
-        "elapsed_seconds": 0.2374,
+        "elapsed_seconds": 0.212,
         "model_calls": 0,
         "radius_size": 72,
         "regime_counts": {
@@ -2345,7 +2345,7 @@
         "contesting_claims": [],
         "decision_state": "ask_human",
         "decision_why": "A single uncorroborated source cannot retract against 63375.00 USD of committed effect. One artifact is one assertion; at this level of consequence it needs either a second independent source or a person. Confidence was ",
-        "elapsed_seconds": 0.952,
+        "elapsed_seconds": 0.8669,
         "model_calls": 0,
         "radius_size": 2594,
         "regime_counts": {
@@ -2421,7 +2421,7 @@
         "contesting_claims": [],
         "decision_state": "execute",
         "decision_why": "src_supplier_L has standing over supplier_L.calibration_offset_days, no live claim contests it, and confidence 1.00 clears the floor of 0.65 for a radius of 14.",
-        "elapsed_seconds": 0.2041,
+        "elapsed_seconds": 0.2139,
         "model_calls": 0,
         "radius_size": 14,
         "regime_counts": {
@@ -2500,7 +2500,7 @@
         "dissent_count": 1,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 1,
-        "elapsed_seconds": 0.2265,
+        "elapsed_seconds": 0.2225,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 11,
         "radius_size": 50,
@@ -2574,7 +2574,7 @@
         "dissent_count": 2,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 0,
-        "elapsed_seconds": 0.8379,
+        "elapsed_seconds": 0.9668,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2594,
@@ -2648,7 +2648,7 @@
         "dissent_count": 1,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 0,
-        "elapsed_seconds": 0.8998,
+        "elapsed_seconds": 0.8554,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2594,
@@ -2723,7 +2723,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 0,
-        "elapsed_seconds": 0.2536,
+        "elapsed_seconds": 0.2645,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 144,
@@ -2798,7 +2798,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 1,
-        "elapsed_seconds": 0.9084,
+        "elapsed_seconds": 0.8959,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2594,
@@ -2873,7 +2873,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 1,
-        "elapsed_seconds": 0.9014,
+        "elapsed_seconds": 0.9576,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2601,
@@ -2948,7 +2948,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 0,
-        "elapsed_seconds": 0.2556,
+        "elapsed_seconds": 0.2402,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 60,
@@ -3023,7 +3023,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 0,
-        "elapsed_seconds": 0.8785,
+        "elapsed_seconds": 1.0139,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2658,
@@ -3098,7 +3098,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 1,
-        "elapsed_seconds": 0.2134,
+        "elapsed_seconds": 0.251,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 11,
         "radius_size": 50,
@@ -3174,7 +3174,7 @@
         "dissent_count": 0,
         "duplicate_obligations": 0,
         "duplicates_suppressed": 2,
-        "elapsed_seconds": 0.8947,
+        "elapsed_seconds": 0.9331,
         "model": "scripted-stub (NOT Vertex)",
         "obligations": 12,
         "radius_size": 2601,
@@ -3239,7 +3239,7 @@
     }
   ],
   "python": "3.12.3",
-  "run_at": "2026-08-13T02:03:27.243616+00:00",
+  "run_at": "2026-08-13T10:03:11.956106+00:00",
   "scenarios_discovered": 41,
   "scenarios_failed": 0,
   "scenarios_passed": 41,

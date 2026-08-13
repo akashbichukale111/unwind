@@ -20,6 +20,7 @@ from judgment.recall_compare import (
     compare,
     render_markdown,
 )
+from lib.config import MODEL_FAST
 
 NOW = datetime(2026, 7, 6, 9, 0, tzinfo=UTC)
 
@@ -56,12 +57,15 @@ def test_an_unavailable_model_is_refused() -> None:
 def test_a_model_that_merely_renames_itself_is_still_refused() -> None:
     """VACUITY: the guard must check behaviour, not the model_id string.
 
-    A stub relabelled `gemini-3.5-flash-lite` is still a stub. The probe makes
-    a real call and requires a non-empty reply, so renaming does not get past it.
+    A stub relabelled with the real production model id is still a stub. The probe
+    makes a real call and requires a non-empty reply, so renaming cannot get past it.
     """
 
     class _RenamedStub:
-        model_id = "gemini-3.5-flash-lite"
+        # The real production model id, imported rather than written out, so
+        # this stays a stub-wearing-the-real-name test AND keeps the model
+        # string in lib/config.py alone.
+        model_id = MODEL_FAST
 
         def complete(self, prompt: str, *, purpose: str) -> ModelReply:
             return ModelReply(text="", model=self.model_id, available=False)
@@ -127,7 +131,7 @@ def test_reply_parsing_tolerates_a_chatty_model(raw: str, expected: float | None
 
 
 def test_rendered_markdown_states_the_method() -> None:
-    comparison = RecallComparison(model_id="gemini-3.5-flash-lite")
+    comparison = RecallComparison(model_id=MODEL_FAST)
     body = render_markdown(comparison, ran_at=NOW, project="proj")
     assert "never sees the gold" in body
     assert "refuses to run against `ScriptedT2Model`" in body

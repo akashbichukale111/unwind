@@ -173,6 +173,33 @@ jobs:
             exit 1
           fi
 
+      # The palette and the 4.5:1 floor are in tension, and the resolution is
+      # load-bearing rather than cosmetic: on the dark field only two of the
+      # seven tokens are legible as text. This recomputes every pair and parses
+      # the stylesheet, so a future edit cannot quietly put rust on ink.
+      - name: Contrast, palette, gradient and radius
+        run: .venv/bin/python scripts/check_contrast.py
+
+      # `make verify-live` must FAIL without credentials rather than falling
+      # back to the stub. CI has no credentials, which makes it the ideal place
+      # to prove the refusal actually happens.
+      - name: verify-live refuses to run without credentials
+        env:
+          UNWIND_OTEL_CONSOLE: "0"
+        run: |
+          if .venv/bin/python scripts/verify_live.py; then
+            echo "verify_live.py exited 0 with no credentials; it must not" >&2
+            exit 1
+          fi
+          code=$?
+          echo "verify-live exited $code as required"
+          if [ ! -f docs/LIVE-VERIFICATION.md ]; then
+            echo "the placeholder should still be present" >&2; exit 1
+          fi
+          if ! grep -q "NOT YET RUN" docs/LIVE-VERIFICATION.md; then
+            echo "verify-live wrote results without credentials" >&2; exit 1
+          fi
+
       # `make demo` is unbuilt and MUST fail. A green CI that let it pass
       # silently would be the exact dishonesty it exists to prevent.
       - name: Unbuilt targets fail loudly
