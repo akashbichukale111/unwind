@@ -12,11 +12,26 @@ explaining why `adk deploy` is not used).
 
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = (REPO / "infra" / "deploy.sh").read_text(encoding="utf-8")
+
+
+def _load_preflight():
+    """Load `scripts/deploy_check.py` by path — `scripts/` is not a package."""
+    spec = importlib.util.spec_from_file_location(
+        "unwind_deploy_check", REPO / "scripts" / "deploy_check.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+PREFLIGHT = _load_preflight()
 
 
 def _invokes_adk(script: str) -> bool:
@@ -114,6 +129,57 @@ def test_procfile_is_cloud_run_shaped() -> None:
 def test_the_dead_nextjs_skeleton_is_excluded_from_the_build() -> None:
     ignore = (REPO / ".dockerignore").read_text(encoding="utf-8")
     assert "web/app" in ignore, "buildpacks could detect a Node app and build the wrong thing"
+
+
+# ---------------------------------------------------------------------------
+# ⚠ check #11 — the preflight asserted a build mechanism this repo does not use
+#
+# The deploy is `gcloud run deploy --source .`: buildpacks read the Procfile and
+# there is no Dockerfile, by design. Check #11 ran `docker build` whenever the
+# docker BINARY was on PATH, so on any machine with a running daemon the
+# preflight failed on a correct repository. The daemon-down case had already
+# been softened to a WARN, which hid the real defect: the check was keyed on
+# the wrong artifact.
+# ---------------------------------------------------------------------------
+
+plan = PREFLIGHT.container_build_plan
+
+
+def test_no_dockerfile_means_no_docker_build_is_attempted(tmp_path: Path) -> None:
+    """A: the reported failure. Docker installed AND the daemon up, no Dockerfile.
+
+    `docker_on_path=True` is the Codespace that failed. The plan must not be
+    `build`, because there is nothing to build and the deploy does not want one.
+    """
+    assert plan(tmp_path, docker_on_path=True) == "no-dockerfile"
+
+
+def test_the_skip_is_not_vacuous_a_real_dockerfile_is_still_built(tmp_path: Path) -> None:
+    """B: VACUITY. A skip that never stops skipping is a deleted check.
+
+    If this repository ever gains a Dockerfile, the build must be exercised
+    again — otherwise the fix above is just a way of never testing the build.
+    """
+    (tmp_path / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+    assert plan(tmp_path, docker_on_path=True) == "build"
+
+
+def test_a_dockerfile_without_docker_still_warns(tmp_path: Path) -> None:
+    """The pre-existing branch is preserved: buildable, but not tested here."""
+    (tmp_path / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+    assert plan(tmp_path, docker_on_path=False) == "no-docker"
+
+
+def test_this_repository_takes_the_no_dockerfile_path_either_way() -> None:
+    """The PASS message must be true of the real repo, not just of a tmp_path.
+
+    Anchored to the actual tree: if someone adds a Dockerfile without settling
+    which build mechanism wins, this fails and the contradiction gets decided
+    deliberately rather than at minute six of a Cloud Build.
+    """
+    assert not (REPO / "Dockerfile").is_file(), "a Dockerfile appeared; deploy.sh uses buildpacks"
+    assert plan(REPO, docker_on_path=True) == "no-dockerfile"
+    assert plan(REPO, docker_on_path=False) == "no-dockerfile"
 
 
 # ---------------------------------------------------------------------------

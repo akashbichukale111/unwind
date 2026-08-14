@@ -38,6 +38,23 @@ def ok(check: str, detail: str = "") -> None:
     print(f"  PASS  {check}" + (f"  ({detail})" if detail else ""))
 
 
+def container_build_plan(repo: Path, docker_on_path: bool) -> str:
+    """What check #11 should do: `no-dockerfile`, `no-docker`, or `build`.
+
+    ⚠ THIS REPOSITORY HAS NO DOCKERFILE ON PURPOSE. `infra/deploy.sh` runs
+    `gcloud run deploy --source .`, which builds with buildpacks from the
+    `Procfile`. Running `docker build` here asserted a build mechanism the
+    deployment does not use, so the preflight failed on a correct repository.
+
+    Pure, so the vacuity test can drive every branch without a Docker daemon.
+    """
+    if not (repo / "Dockerfile").is_file():
+        return "no-dockerfile"
+    if not docker_on_path:
+        return "no-docker"
+    return "build"
+
+
 def main() -> int:
     print("=" * 70)
     print("UNWIND — deploy preflight (no credentials required)")
@@ -277,8 +294,11 @@ def main() -> int:
             else:
                 ok("indexes.json parses", f"{len(parsed['indexes'])} composite indexes")
 
-    # ---- 11. container builds locally, if Docker is available -------------
-    if shutil.which("docker"):
+    # ---- 11. container builds locally, if there is a container to build ---
+    plan = container_build_plan(REPO, bool(shutil.which("docker")))
+    if plan == "no-dockerfile":
+        ok("container build", "no Dockerfile — buildpacks + Procfile, as designed")
+    elif plan == "build":
         print("  ....  docker found; attempting a local build (this is slow)")
         build = subprocess.run(
             ["docker", "build", "-q", "-t", "unwind-preflight", "."],
