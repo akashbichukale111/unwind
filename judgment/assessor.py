@@ -28,7 +28,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from judgment.model import T2Model
 from judgment.rederive import REDERIVER_PRINCIPAL, ReDerivation
 from lib.config import Tier
 from lib.telemetry import agent_decision_span
@@ -90,17 +89,28 @@ def assess(
     derivation: ReDerivation,
     original_committed_lead_days: float | None,
     now: datetime,
-    model: T2Model | None = None,
     margin_days: float = MATERIAL_MARGIN_DAYS,
 ) -> T2Assessment:
     """Grade a blind re-derivation against what was actually committed.
 
+    ⚠ THIS FUNCTION IS DETERMINISTIC. It makes no model call and takes no model.
+
+    It previously accepted a `model` parameter that no caller ever passed and
+    that the body never used. A Task 5 audit flagged it as something a judge
+    would find, and it is removed rather than left to imply model use that does
+    not happen. If a future version wants a model to arbitrate a thin margin,
+    it must add the parameter back AND call it.
+
     The assessor is the ONLY place the original value enters the T2 path. The
     re-deriver never saw it; the assessor sees both and compares. That is the
-    whole point of the split.
+    whole point of the split -- and the comparison itself is subtraction, which
+    is exactly the kind of work this project keeps away from a model.
     """
     assert_separate_principals(derivation)
 
+    # Tier.T2 is the TIER this work belongs to (judgement), not a claim that a
+    # model was called. The re-deriver is T2's model half; this is T2's
+    # arithmetic half.
     with agent_decision_span(ASSESSOR_PRINCIPAL, Tier.T2) as span:
         span.set_attribute("unwind.correlation_id", derivation.correlation_id)
 

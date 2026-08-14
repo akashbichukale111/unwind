@@ -55,7 +55,7 @@ overlap in wall-clock time rather than trusting the docstring.
 
 | | Component | Evidence |
 | --- | --- | --- |
-| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 235 passed, 11 skipped |
+| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 245 passed, 11 skipped |
 | **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
 | **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
 | **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
@@ -166,6 +166,13 @@ unmeasured, and closing it needs a fixture that does not exist yet — see
   `make verify-live`.
 - **[`docs/evidence/README.md`](docs/evidence/README.md)** — the evidence index:
   what each artifact proves and what it does not.
+- **[`docs/JUDGE.md`](docs/JUDGE.md)** — the one-page judge card. If you read
+  one file, read that one.
+- **[`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md)** — why T2 judgement
+  quality is still unmeasured, and the one part of a fair fixture that could not
+  be built.
+- **[`docs/DEPLOY.md`](docs/DEPLOY.md)** — the deployment sequence, and the four
+  defects a line-by-line review found in a script that had never run.
 - **[`docs/COVERAGE.md`](docs/COVERAGE.md)** — the extraction confusion matrix,
   regenerated in CI, drift fails the build.
 - **`docs/shots/`** — interface screenshots, produced by `make ui-check` rather
@@ -182,7 +189,7 @@ unmeasured, and closing it needs a fixture that does not exist yet — see
   Vertex call OK, 0 model errors, recall **81.8% → 100.0%** (+18.2 pp over
   44 gold claims). T2: 60 attempted, 0 resolved, 0 exceptions — see
   [Live verification](#live-verification).
-- `make test` → **235 passed, 11 skipped** (246 collected; the 11 skips need a
+- `make test` → **245 passed, 11 skipped** (256 collected; the 11 skips need a
   live Firestore emulator). `ruff check` and `ruff format --check` clean.
 - `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.
@@ -267,14 +274,20 @@ Stated as facts about this repository, not as a roadmap.
 ### Built, executes live, but the result proves nothing about quality
 - **T2 judgement.** 60 nodes, 120 model calls, **0 exceptions** — but **0
   resolved**, because all 174 queue nodes carry `committed_lead_days = None` and
-  the assessor declines before the model's answer is used. **To close this**,
-  the corpus needs a fixture where the original commitment carries a numeric
-  term *and* the premise is genuinely ambiguous, so the comparison branch is
-  reached and the model decides the outcome. That fixture does not exist.
+  the assessor declines before the model's answer is used. A fixture was
+  designed and **deliberately not built**: mechanical answer-withholding is
+  achievable, but the clause text and the scoring key would be written by the
+  same author, which makes a judgement benchmark a mirror rather than a
+  measurement. Full reasoning in
+  [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md).
 
 ### Never executed
-- **Cloud Run deployment.** `infra/deploy.sh` is written and has never run.
-  **There is no deployed URL.**
+- **Cloud Run deployment.** **There is no deployed URL.** `infra/deploy.sh` was
+  rewritten after a review found four defects — including a Cloud Run `--region`
+  derived from the Vertex location, where the verified value `global` is not a
+  valid Cloud Run region. `make deploy-check` now passes 16 preflight checks
+  without credentials, but **a passing preflight is not a deployment**.
+  `make deploy-verify URL=...` is what would prove one, and it has not run.
 - **Firestore rules and composite indexes.** Written under `infra/`, never
   deployed; no GCP project state has been changed by this repository.
 - **Model Armor.** Never configured, so it has never blocked anything. The
@@ -364,7 +377,7 @@ Nothing here needs a Google Cloud account.
 ```bash
 make install                 # uv venv (Python 3.12) + deps
 make emulator                # terminal 1: Firestore emulator (needs Java 11+)
-make test                    # terminal 2: 232 tests, 11 of which need the emulator
+make test                    # terminal 2: 256 tests, 11 of which need the emulator
 make dev                     # terminal 2: API on http://127.0.0.1:8000/healthz
 make corpus-verify           # proves the committed corpus is reproducible
 make eval                    # runs the hub-retraction scenario, reports real metrics

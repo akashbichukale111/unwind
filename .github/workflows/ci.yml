@@ -200,6 +200,12 @@ jobs:
             echo "verify-live wrote results without credentials" >&2; exit 1
           fi
 
+      # infra/deploy.sh has never executed. The preflight is the only thing
+      # standing between a bad input and a Cloud Build that fails six minutes
+      # in, so it runs on every push -- it needs no credentials by design.
+      - name: Deploy preflight
+        run: .venv/bin/python scripts/deploy_check.py
+
       # `make demo` is unbuilt and MUST fail. A green CI that let it pass
       # silently would be the exact dishonesty it exists to prevent.
       - name: Unbuilt targets fail loudly

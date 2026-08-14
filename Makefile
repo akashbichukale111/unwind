@@ -118,9 +118,21 @@ ui-check: ## Drive the UI in a real browser: measure fps, capture screens, asser
 contrast: ## Recompute every colour pair; fail below 4.5:1
 	@$(PY) scripts/check_contrast.py
 
+.PHONY: deploy-check
+deploy-check: ## Preflight the deploy with NO credentials. Fails loudly and specifically.
+	@$(PY) scripts/deploy_check.py
+
+.PHONY: deploy-verify
+deploy-verify: ## Prove a deployed service COMPUTES, not merely renders. URL=https://...
+	@$(PY) scripts/deploy_verify.py "$(URL)"
+
 .PHONY: verify-live
 verify-live: ## ⚠ NEEDS CREDENTIALS. Real Vertex call + recall comparison + T2. Writes docs/LIVE-VERIFICATION.md
 	@$(PY) scripts/verify_live.py
+
+.PHONY: deploy
+deploy: ## ⚠ NEEDS CREDENTIALS. Deploy to Cloud Run. Run deploy-check first.
+	@./infra/deploy.sh
 
 .PHONY: vertex-check
 vertex-check: ## ONE real Vertex call. Prints the raw response or the exact failure.
