@@ -72,6 +72,27 @@ UNRESOLVED remaining is not a failure. The assessor under-reports by design:
 a thin margin returns UNRESOLVED rather than escalating, because an obligation
 an owner rejects burns the attention the real ones need.
 
+### ⚠ CORRECTION, added after this file was generated
+
+**The paragraph above is not the reason this run resolved nothing, and the
+generator has been fixed so future runs say so automatically.**
+
+The assessor never reached the thin-margin comparison. **All 60 attempted nodes
+carry `committed_lead_days = None`** — as do all 174 in the queue, verified
+against the corpus. `judgment/assessor.py` returns UNRESOLVED whenever the
+original commitment has no numeric term, and that branch executes **before the
+model's answer is consulted**. The outcome was fixed by the corpus, not decided
+by Gemini.
+
+**Zero resolved is therefore neither success nor model failure — it is a
+NON-TEST.** What the run does establish: 60 nodes, 120 model calls, **0
+exceptions**. Orchestration verified end to end against live Vertex; judgement
+quality still unmeasured.
+
+`scripts/verify_live.py` now computes and reports this distinction itself, so
+the next `make verify-live` will not need this correction. See
+`docs/T2-MEASUREMENT.md` for why a fair fixture was not built.
+
 ## The raw Vertex response
 
 One real call, pasted verbatim. This is the artifact that proves the

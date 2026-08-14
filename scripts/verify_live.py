@@ -217,8 +217,15 @@ def _run_t2(model, as_of: datetime) -> dict:
 
     outcomes: dict[str, int] = {}
     errors: list[str] = []
+    # ⚠ MEASURE WHY, DO NOT NARRATE IT. `assess()` returns UNRESOLVED before the
+    # model's answer is consulted whenever the original commitment carries no
+    # numeric term. If that is why the queue resolves nothing, the run is a
+    # NON-TEST rather than a model result, and the document must say which.
+    no_numeric_term = 0
     for verdict in sorted(queue, key=lambda v: v.conclusion_id)[:T2_LIMIT]:
         conclusion = store.get_conclusion(verdict.conclusion_id)
+        if conclusion is not None and conclusion.committed_lead_days is None:
+            no_numeric_term += 1
         premises: dict[str, object] = {}
         if conclusion:
             for premise_id in conclusion.premise_ids:
@@ -247,6 +254,12 @@ def _run_t2(model, as_of: datetime) -> dict:
 
     unresolved = outcomes.get("unresolved", 0)
     attempted = min(len(queue), T2_LIMIT)
+    queue_without_numeric_term = sum(
+        1
+        for v in queue
+        if (c := store.get_conclusion(v.conclusion_id)) is not None
+        and c.committed_lead_days is None
+    )
     return {
         "queue_size": len(queue),
         "attempted": attempted,
@@ -254,6 +267,9 @@ def _run_t2(model, as_of: datetime) -> dict:
         "resolved": attempted - unresolved - len(errors),
         "unresolved": unresolved,
         "errors": errors[:5],
+        "attempted_without_numeric_term": no_numeric_term,
+        "queue_without_numeric_term": queue_without_numeric_term,
+        "is_non_test": no_numeric_term == attempted and attempted > 0,
     }
 
 
@@ -268,12 +284,47 @@ def _t2_section(summary: dict) -> str:
         f"- Attempted (capped): **{summary['attempted']}**",
         f"- Resolved by the model: **{summary['resolved']}**",
         f"- Still UNRESOLVED: **{summary['unresolved']}**",
-        "",
-        "UNRESOLVED remaining is not a failure. The assessor under-reports by design:",
-        "a thin margin returns UNRESOLVED rather than escalating, because an obligation",
-        "an owner rejects burns the attention the real ones need.",
+        f"- Exceptions: **{len(summary['errors'])}**",
         "",
     ]
+
+    if summary.get("is_non_test"):
+        # The honest reading, derived from the data rather than assumed.
+        lines += [
+            "### ⚠ This is a NON-TEST, not a model result",
+            "",
+            f"All **{summary['attempted_without_numeric_term']} of "
+            f"{summary['attempted']}** attempted nodes carry "
+            "`committed_lead_days = None` "
+            f"({summary['queue_without_numeric_term']} of "
+            f"{summary['queue_size']} across the whole queue).",
+            "",
+            "`judgment/assessor.py` returns UNRESOLVED whenever the original",
+            "commitment carries no numeric term, and that branch executes **before**",
+            "**the model's answer is consulted**. So the outcome was fixed by the",
+            "corpus, not decided by Gemini. A different sample behaves identically.",
+            "",
+            "**Zero resolved is neither success nor failure here.** What the run does",
+            "establish: the T2 path executes end to end against a live Vertex model",
+            f"with {len(summary['errors'])} exceptions across {summary['attempted']} nodes",
+            f"({summary['attempted'] * 2} model calls). Orchestration verified;",
+            "**judgement quality remains unmeasured.**",
+            "",
+            "See `docs/T2-MEASUREMENT.md` for why a fair fixture was not built.",
+            "",
+        ]
+    else:
+        lines += [
+            "UNRESOLVED remaining is not automatically a failure. The assessor",
+            "under-reports by design: a thin margin returns UNRESOLVED rather than",
+            "escalating, because an obligation an owner rejects burns the attention",
+            "the real ones need. But note how many nodes could have resolved at all:",
+            "",
+            f"- Attempted nodes with NO numeric term (cannot resolve by construction): "
+            f"**{summary.get('attempted_without_numeric_term', 0)}**",
+            "",
+        ]
+
     if summary["errors"]:
         lines.append("Errors encountered:")
         lines.append("")
