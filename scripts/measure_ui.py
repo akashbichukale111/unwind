@@ -229,7 +229,7 @@ def _wait_for_server() -> None:
 
     for _ in range(60):
         try:
-            with urllib.request.urlopen(f"{BASE}/healthz", timeout=2) as r:
+            with urllib.request.urlopen(f"{BASE}/api/healthz", timeout=2) as r:
                 if r.status == 200:
                     return
         except (urllib.error.URLError, OSError):

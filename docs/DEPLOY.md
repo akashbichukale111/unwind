@@ -99,7 +99,7 @@ is worse than none, because it looks finished.**
 **Expected:**
 
 ```
-[1/5] healthz OK  stage=task-5-interface
+[1/5] healthz OK  stage=task-5-interface  (GET /api/healthz)
       model=gemini-3.5-flash-lite  location=global
 [2/5] UI served from the same origin (canvas + 2 static assets)
 [3/5] running one real cascade against the deployed API ...
@@ -132,7 +132,7 @@ The deployed service runs as the runtime service account, not as you. That the
 model works from your Codespace does not prove it works from the container.
 
 ```bash
-curl -s https://unwind-XXXXXXXX-uc.a.run.app/healthz | python3 -m json.tool
+curl -s https://unwind-XXXXXXXX-uc.a.run.app/api/healthz | python3 -m json.tool
 ```
 
 **Expected:** `"vertex_disabled": false`, `"vertex_location": "global"`.

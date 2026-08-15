@@ -378,7 +378,7 @@ Nothing here needs a Google Cloud account.
 make install                 # uv venv (Python 3.12) + deps
 make emulator                # terminal 1: Firestore emulator (needs Java 11+)
 make test                    # terminal 2: 256 tests, 11 of which need the emulator
-make dev                     # terminal 2: API on http://127.0.0.1:8000/healthz
+make dev                     # terminal 2: API on http://127.0.0.1:8000/api/healthz
 make corpus-verify           # proves the committed corpus is reproducible
 make eval                    # runs the hub-retraction scenario, reports real metrics
 make eval-vertex-off         # THE GUARANTEE: same run with Vertex disabled

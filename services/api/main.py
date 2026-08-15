@@ -72,7 +72,7 @@ def _stats() -> dict:
     return _CACHE["stats"]
 
 
-@app.get("/healthz")
+@app.get("/api/healthz")
 async def healthz() -> dict[str, object]:
     cfg = get_config()
     return {

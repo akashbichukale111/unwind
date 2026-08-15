@@ -3,7 +3,7 @@
 ⚠ A DEPLOYMENT THAT RENDERS BUT COMPUTES NOTHING IS WORSE THAN NO DEPLOYMENT,
 because it looks finished. So this does not check that the page loads. It:
 
-  1. hits /healthz and reports the stage the service thinks it is
+  1. hits /api/healthz and reports the stage the service thinks it is
   2. runs ONE REAL CASCADE against the deployed API over SSE
   3. counts the node events it actually received
   4. asserts the deployed service's own totals agree with those events
@@ -82,9 +82,9 @@ def main(argv: list[str]) -> int:
     print("=" * 70)
 
     # ---- 1. health -------------------------------------------------------
-    status, body = get(f"{base}/healthz")
+    status, body = get(f"{base}/api/healthz")
     if status != 200:
-        die(f"/healthz returned {status}", body[:400])
+        die(f"/api/healthz returned {status}", body[:400])
     health = json.loads(body)
     print(f"[1/5] healthz OK  stage={health.get('stage')}")
     print(f"      model={health.get('model')}  location={health.get('vertex_location')}")

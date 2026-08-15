@@ -18,7 +18,7 @@ from services.api.main import app
 
 def test_healthz_reports_the_real_configuration() -> None:
     with TestClient(app) as client:
-        body = client.get("/healthz").json()
+        body = client.get("/api/healthz").json()
     assert body["status"] == "ok"
     assert body["stage"] == "task-5-interface"
     assert len(body["topics"]) == 6

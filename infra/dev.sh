@@ -17,6 +17,6 @@ fi
 
 echo "==> Firestore emulator: ${FIRESTORE_EMULATOR_HOST}"
 echo "==> Pub/Sub: in-process shim"
-echo "==> API: http://127.0.0.1:8000  (try /healthz)"
+echo "==> API: http://127.0.0.1:8000  (try /api/healthz)"
 
 exec .venv/bin/uvicorn services.api.main:app --host 127.0.0.1 --port 8000 --reload
