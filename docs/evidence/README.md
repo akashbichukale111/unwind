@@ -175,7 +175,7 @@ make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
 ```
 
 Preflight screenshot: [`deploy-preflight-passed.png`](deploy-preflight-passed.png)
-— `make deploy-check`, 19/19 `PASS`, before any credentialed step ran.
+— `make deploy-check`, `PASS` on every check, captured before any credentialed step ran. The suite has since grown to 20 checks; the screenshot shows the 19 that existed when it was taken.
 
 ### Configuration
 

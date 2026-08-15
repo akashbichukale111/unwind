@@ -1,316 +1,348 @@
-# UNWIND
+# UNWIND — Consequence Clearing
 
-**Cache invalidation for decisions — when a fact turns out false, everything it
-touched raises its hand, and the system computes what must now be un-sent,
-un-paid, or apologised for.**
+**When a fact turns out false, every decision that rested on it raises its hand —
+and the system computes what must now be un-sent, un-paid, or apologised for.**
 
 Every decision an organisation makes rests on specific claims about the world: a
-supplier will ship in 11 days, a tariff rate is 8%, a clause means X. Those
-claims expire. When one changes, nothing in the enterprise points backwards from
-the claim to the decisions built on it — the dependency edge was never recorded.
-So correction propagates socially: someone remembers, sends an email, hopes. The
+supplier will ship in 11 days, a tariff rate is 8%, a clause means X. Those claims
+expire. When one changes, nothing in the enterprise points backwards from the
+claim to the decisions built on it — the dependency edge was never recorded. So
+correction propagates socially: someone remembers, sends an email, hopes. The
 result is a permanent, invisible population of decisions that are already wrong
 and still operating, and the ones that already escaped into the world — sent,
 signed, shipped, paid — are the expensive ones. UNWIND records the edge, watches
-the claim, and when it dies, walks backwards.
-
-Premises do not fail because the model reasoned badly. They fail because the
-world changed after the reasoning was correct.
+the claim, and when it dies, walks backwards. **Premises do not fail because the
+model reasoned badly. They fail because the world changed after the reasoning was
+correct.**
 
 **Category:** Consequence Clearing · **Track:** Fortified Enterprise Fleet ·
 Google "All Things Agentic" Hackathon
 
 ---
 
-## ⚠ Status: Task 5 of 5 — the interface, the demo, the submission
+## 2,594 → 78, and the reduction is arithmetic
 
-**Type a fact that changed. Watch 2,594 decisions light up and 78 survive.
-Then read the correction one of them now owes a named customer.**
+A supplier lead time moves from 11 days to 20. The reverse index finds **2,594
+dependent decisions**. Seventy-eight of them actually need a human.
 
-The whole demo runs with the model switched off. That is not a degraded mode —
-the blast radius is a graph traversal and materiality is subtraction, so 90% of
-the die-back is arithmetic. Gemini is the second pass, on the part a parser
-cannot read.
+| | | |
+| ---: | --- | --- |
+| **1,468** | immaterial | the buffer absorbed the shock — `shock > slack` is subtraction |
+| **874** | already closed out | the world moving cannot hurt a delivery that completed in March |
+| **174** | handed to judgement | the tier is allowed to say "I cannot decide this" |
+| **78** | **material — these reach a human** | 30 still correctable in place · 48 already escaped |
 
-```bash
-make install && make ui      # http://127.0.0.1:8000 — no GCP account needed
-```
+**All of it runs with zero model calls.** The blast radius is a graph traversal
+and materiality is subtraction, so ~90% of the die-back is arithmetic. This is
+not a degraded fallback — it is the architecture. `UNWIND_VERTEX_DISABLED=1`
+closes the single door to a model (`lib/vertex.py`), the full cascade runs
+anyway, and **CI fails the build if a single model call happens**.
 
-✅ **Gemini via Vertex AI is verified running.** `make verify-live` executed on
-2026-08-13 against project `project-895d4ca8-d301-447d-916`, location `global`,
-model `gemini-3.5-flash-lite`: **Vertex call OK, 0 model errors**, and the
-headline measurement below. See [Live verification](#live-verification).
-
-⚠ **The T2 judgement tier is still unmeasured**, and the live run is the reason
-we now know that precisely rather than vaguely — see the same section. Numbers
-elsewhere in this repo that come from `ScriptedT2Model` remain labelled as such.
-
-⚠ **Why this needs ADK 2.** Commitment owners are *single-turn agent tools*, not
-sub-agents. A sub-agent takes the floor and does not give it back; the court
-needs N owners discovered at runtime, run in parallel, with the arbiter keeping
-the gavel to rule. `tests/test_court.py` measures that the pleas genuinely
-overlap in wall-clock time rather than trusting the docstring.
-
-### The honesty map
-
-| | Component | Evidence |
-| --- | --- | --- |
-| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 245 passed, 11 skipped |
-| **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
-| **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
-| **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
-| **[BUILT]** | Numeric + temporal extractors, relative dates tracked apart | `docs/COVERAGE.md`, recall measured not asserted |
-| **[BUILT]** | **Coverage auditor** — may mark unresolved, never safe | `make coverage`; guard + vacuity test |
-| **[BUILT]** | Claim reconciler — reversible, logged, low-margin → human | `tests/test_judgment.py` |
-| **[BUILT]** | Watchers (1,146 dormant) + drift sentinel | `make sentinel`; sentinel may not retract, tested |
-| **[BUILT]** | **Blind re-deriver** — blindness enforced in 3 layers | `tests/test_blindness.py` incl. vacuity fixture |
-| **[BUILT]** | **T2 assessor as a separate principal** | refuses to grade its own work, tested |
-| **[BUILT]** | Quarantined extraction principal | cannot name an out-of-scope claim, tested |
-| **[BUILT]** | Confidence floor scaled by blast radius | tested at both ends |
-| **[BUILT]** | Two-source rule above exposure | tested; duplicate ids do not count as two |
-| **[BUILT]** | **Confidence gate with echo-back** | rendered before acting, in every state |
-| **[BUILT]** | Both adversarial cases refused by reason code | `make adversarial`; enforced in CI |
-| **[BUILT]** | 41 eval scenarios across 5 classes | `make eval` → 41 passed, 0 model calls |
-| **[BUILT]** | **Repair court** — owners, arbiter, four-turn protocol | `make court`; N owners run in parallel, tested |
-| **[BUILT]** | **Arbiter is a third principal** (ruling 1.10) | separation checked over a whole bench, 6 vacuity cases |
-| **[BUILT]** | Turn cap + cost ledger + conservative default | no `while` in `court/protocol.py`, asserted by test |
-| **[BUILT]** | Dynamic team formation, dissolved on settlement | size is a function of the radius; two radii, two sizes |
-| **[BUILT]** | Irreversibility triage, conservative under doubt | max(record, op table); fires on 232 real effects |
-| **[BUILT]** | Counterparty cartographer — **no send capability** | AST guard + a fixture that CAN send, so it is not vacuous |
-| **[BUILT]** | **Correction obligation** — the product's output | `make obligation`; range + assumptions + named human |
-| **[BUILT]** | Approval broker — may request, may not approve | `approve()` raises; only `human::` may sign |
-| **[BUILT]** | Load rating — versioned, reversible, contestable | refuses anything carrying agent-trust fields |
-| **[BUILT]** | `multi_premise/` — 10 scenarios | radii merge, 0 duplicate obligations, arbiter allocates |
-| **[BUILT]** | Golden court transcript | `make golden`; CI fails on drift |
-| **[VERIFIED]** | **Gemini via Vertex AI** | live run 2026-08-13: call OK, 0 model errors, **81.8% → 100.0%** recall (+18.2 pp) |
-| **[BUILT, NOT VERIFIED]** | T2 judgement (`judgment/assessor.py`) | executes live with 0 exceptions; **0 of 60 resolved** — the sample cannot resolve, see below |
-| **[DESIGNED]** | Compensation-path synthesis | Deliberately not built; `synthesise()` raises |
-| **[DESIGNED]** | Model Armor on the extraction path | **[UNVERIFIED]** — see below |
-| **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
-| **[DESIGNED]** | Firestore rules + composite indexes | Written; **never deployed**, no project state changed |
-| **[VERIFIED]** | `infra/deploy.sh` → Cloud Run | **Deployed and live** — `make deploy-verify` reports **5/5 PASS** |
-| **[BUILT]** | **The field** — 4,206 nodes, canvas | **60 fps measured** (`make ui-check`), depth axis = time |
-| **[BUILT]** | **Load-bearing lines** — thickness ∝ dependents | from the reverse index; slack on retraction is a spring |
-| **[BUILT]** | **The cull** — 2,594 → 78 on real events | counter asserted equal to the cascade's own count |
-| **[BUILT]** | Parse echo + refusal, both on screen | a misparse arrives as a question |
-| **[BUILT]** | **The obligation** — dark field → bone paper | renders the real Task 4 object |
-| **[BUILT]** | Court, load-rating drop, honesty panel | dissent shown; worst class highlighted |
-| **[VERIFIED]** | `make verify-live` — the credentialed runner | **executed**; refuses stubs; wrote `docs/LIVE-VERIFICATION.md` |
-| **[DESIGNED]** | `docs/RETRACTION-FEED.md` — the protocol | schema fields exist; no feed published |
-| **[FUTURE]** | Video, Devpost entry | — |
-
-## Live verification
-
-**Observed, not projected.** `make verify-live` on an authenticated machine,
-2026-08-13. The command refuses to run against a stub and writes nothing on any
-failure path, so every figure here came from a real Vertex call.
-
-| | |
-| --- | --- |
-| Project | `project-895d4ca8-d301-447d-916` |
-| Location | `global` |
-| Model | `gemini-3.5-flash-lite` (GA) |
-| Vertex call | **OK** |
-| Model errors | **0** |
-
-### Parser only vs parser + Gemini
-
-| | Recall |
-| --- | --- |
-| Parser only | **81.8%** (36 / 44) |
-| Parser + Gemini | **100.0%** (44 / 44) |
-| **Delta** | **+18.2 percentage points** |
-
-| Class | Gold | Parser | + Gemini | Delta |
-| --- | ---: | ---: | ---: | ---: |
-| `numeric:currency` | 4 | 100.0% | 100.0% | 0.0 |
-| `numeric:percentage` | 4 | 100.0% | 100.0% | 0.0 |
-| `numeric:quantity` | 8 | 100.0% | 100.0% | 0.0 |
-| **`temporal:absolute-duration`** | **24** | **66.7%** | **100.0%** | **+33.3 pp** |
-| `temporal:relative-date` | 4 | 100.0% | 100.0% | 0.0 |
-
-**This is the architectural argument, measured.** The parser is deliberately
-first because a regex has no instruction-following surface to attack. It is
-already perfect on four classes, so Gemini never sees them — their delta is
-zero. The model is shown only what the parser could not read, and it closed
-exactly that gap.
-
-**How to read the 100%, honestly:** the model's denominator is **8, not 44**.
-The parser missed 8 claims; Gemini saw those 8 and returned 8 correct values.
-The 100% describes the *combined pipeline over 44 gold claims* — not a claim
-that the model extracts perfectly. 44 claims is a small sample from a synthetic
-corpus; `docs/COVERAGE.md` sets out what that corpus does and does not
-represent.
-
-### T2 — attempted, resolved nothing, and that is a non-test
-
-| Queue | Attempted | Resolved | Unresolved | Exceptions |
-| ---: | ---: | ---: | ---: | ---: |
-| 174 | 60 | **0** | **60** | 0 |
-
-Not a success, and not a model failure. **All 174 queue nodes have
-`committed_lead_days = None`** — verified against the corpus. `assess()` returns
-UNRESOLVED whenever the original commitment carries no numeric term, and that
-branch runs *before* the model's answer is consulted. The outcome was fixed by
-the corpus, not decided by Gemini.
-
-What the run does establish: 60 nodes, 120 model calls, **zero exceptions**. The
-orchestration works end to end against live Vertex. Judgement quality remains
-unmeasured, and closing it needs a fixture that does not exist yet — see
-[Remaining work](#remaining-work).
-
-## Evidence
-
-- **[`docs/LIVE-VERIFICATION.md`](docs/LIVE-VERIFICATION.md)** — the live run in
-  full, the method, and what is still unverified. Normally generated by
-  `make verify-live`.
-- **[`docs/evidence/README.md`](docs/evidence/README.md)** — the evidence index:
-  what each artifact proves and what it does not.
-- **[`docs/JUDGE.md`](docs/JUDGE.md)** — the one-page judge card. If you read
-  one file, read that one.
-- **[`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md)** — why T2 judgement
-  quality is still unmeasured, and the one part of a fair fixture that could not
-  be built.
-- **[`docs/DEPLOY.md`](docs/DEPLOY.md)** — the deployment sequence, and the four
-  defects a line-by-line review found in a script that had never run.
-- **[`docs/COVERAGE.md`](docs/COVERAGE.md)** — the extraction confusion matrix,
-  regenerated in CI, drift fails the build.
-- **`docs/shots/`** — interface screenshots, produced by `make ui-check` rather
-  than hand-captured.
-- **Terminal screenshot of the live run** — **not in this repository.** It exists
-  only as a chat attachment and could not be copied onto the machine that
-  authored this commit, so no file was created and none was recreated.
-  `docs/LIVE-VERIFICATION.md` is the authoritative evidence for the run; the
-  evidence index says where the image goes if it is added later.
-
-### What has actually been run
-
-- `make verify-live` → **executed 2026-08-13** on an authenticated machine.
-  Vertex call OK, 0 model errors, recall **81.8% → 100.0%** (+18.2 pp over
-  44 gold claims). T2: 60 attempted, 0 resolved, 0 exceptions — see
-  [Live verification](#live-verification).
-- `make test` → **245 passed, 11 skipped** (256 collected; the 11 skips need a
-  live Firestore emulator). `ruff check` and `ruff format --check` clean.
-- `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
-  False-retraction rate **0.0**.
-- `UNWIND_VERTEX_DISABLED=1 make eval` → identical. Enforced in CI.
-- `make ui-check` → drives a real Chromium: **60 fps median at 4,206 nodes**
-  (three 2-second samples, all 60), the on-screen cull counter equals the
-  cascade's own material count (**78**), no horizontal scroll at 380px, zero
-  app-origin console errors.
-- `make contrast` → all 42 token pairs recomputed; every text colour ≥ 4.5:1,
-  no eighth colour, no gradient, no radius above 4px.
-- `make court` → 4 turns, converged, 12 owners seated from 48 eligible,
-  **12 obligations raised**, with Vertex disabled.
-- `make obligation` → one full correction obligation: a named counterparty, one
-  re-issuable email, one unrecoverable payment, exposure **USD 8,925.00** as a
-  range with its assumptions, routed to a `human::` signatory.
-- `make multi-premise` → two radii merged; **0 duplicate obligations.**
-- `make golden` → byte-stable; CI fails on drift.
-- `make adversarial` → both attacks refused with `source_outside_claim_scope`
-  and a radius of 0. Enforced in CI by reason code.
-- `make coverage` → overall extraction recall **81.8%**; worst class
-  `temporal:absolute-duration` at **66.7%**.
-- `make sentinel` → 1,146 watchers armed, 440 silence signals.
-- `make corpus-verify` → byte-identical.
-
-**Run elsewhere, not here:** the Vertex smoke test — reported passing by the
-maintainer on their own machine. Recorded as evidence, not reproduced.
-
-**Never run:** any Firestore rules or index deployment, Model Armor,
-`npm install` in `web/`.
-
-**Cloud Run deployment is live and verified.** `infra/deploy.sh` provisioned
-the runtime service account, the six Pub/Sub topics, and the Cloud Run service
-itself; `make deploy-verify` reports **5/5 PASS** (exit 0) against the deployed
-URL — see [Deployment](#deployment) below.
-
-### The interface
-
-Seven colours, four typefaces, one canvas. The field is dark and structural; the
-obligation is warm paper. The transition between them is the point of the whole
-screen.
-
-Contrast is measured rather than eyeballed, and measuring it found a real
-tension in the palette: against the field ground, only bone (14.98:1) and amber
-(6.21:1) clear 4.5:1 — graphite is 2.34:1 and the rust is 2.40:1. So the rust
-and the patina do lines, fills and the paper, where the rust reads at 6.24:1,
-and field text is bone at opacities that still measure above the floor.
-`make contrast` re-derives this and fails the build.
-
-### Forty distinct arguments across 170 conclusions
-
-The hub radius reaches **170 clause-governed conclusions**, but they rest on
-**40 distinct contractual claims**. The court therefore hears forty distinct
-arguments, replicated across 170 commitments — and the demo says so. Inflating
-the clause set to make the hearing look busier would read as padding; an honest
-large number beats a manufactured one. Both figures come from
-`corpus/data/stats.json`.
-
-### Numbers
-
-Every number in this repository was produced by a committed script
-(`corpus/generate.py` → `corpus/data/stats.json`, or `pytest`). **No latency,
-cost, accuracy or benchmark figure is stated anywhere**, because none has been
-measured. The three dollar amounts in the corpus (USD 41,800, USD 12,650 and
-USD 8,925) are invented parameters of a synthetic scenario, not estimates —
-and residual exposure is always reported as a **range with its assumptions**,
-with any effect that carries no recorded amount counted separately rather than
-priced.
-
-**Every T2 number in this repository came from `ScriptedT2Model`.** That is a
-harness measuring itself on the model's side. What it measures honestly is the
-orchestration around the model: principal separation, blindness, the turn cap,
-and whether an unavailable model yields UNRESOLVED instead of a guess.
+Gemini is the *second pass*, on the part a parser cannot read.
 
 ---
 
-## Remaining work
+## Quickstart
 
-Stated as facts about this repository, not as a roadmap.
+Nothing here needs a Google Cloud account.
 
-### Verified by execution
-- Gemini via Vertex AI: one real call, **0 model errors**.
-- Parser vs parser+Gemini recall: **81.8% → 100.0%**, **+18.2 pp**, 44 gold claims.
-- Interface: **60 fps** at 4,206 nodes; cull counter equals the cascade's own count.
-- 41 eval scenarios, **0 model calls** on the T0/T1 path, false-retraction rate **0.0**.
-- **Cloud Run deployment**: `make deploy-verify URL=...` reports **5/5 PASS**,
-  exit 0, against the live service — healthz, same-origin UI, a real cascade
-  (radius 2,594 → material 78, counter-integrity confirmed), the adversarial
-  refusal (`source_outside_claim_scope`, radius 0), and a real headless-browser
-  check (4,206 nodes rendered, on-screen counter 78 = cascade material 78).
+```bash
+git clone https://github.com/akashbichukale111/unwind.git
+cd unwind
+make install                              # uv venv (Python 3.12) + deps
+make test                                 # 261 passed, 11 skipped
+make ui                                   # http://127.0.0.1:8000
+```
 
-### Built, executes live, but the result proves nothing about quality
-- **T2 judgement.** 60 nodes, 120 model calls, **0 exceptions** — but **0
-  resolved**, because all 174 queue nodes carry `committed_lead_days = None` and
-  the assessor declines before the model's answer is used. A fixture was
-  designed and **deliberately not built**: mechanical answer-withholding is
-  achievable, but the clause text and the scoring key would be written by the
-  same author, which makes a judgement benchmark a mirror rather than a
-  measurement. Full reasoning in
-  [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md).
+Then type `supplier_K lead time is now 20 days` into the bar and watch 2,594
+become 78.
 
-### Never executed
-- **Firestore rules and composite indexes.** Written under `infra/`, never
-  deployed; no GCP project state has been changed by this repository.
-- **Model Armor.** Never configured, so it has never blocked anything. The
-  extraction quarantine is the real defence and does not depend on it.
-- **Compensation-path synthesis.** Deliberately `[DESIGNED]`; `synthesise()`
-  raises rather than emitting a reverse path that looks executable.
-- **The retraction feed.** Schema fields exist and the authority gate is built
-  and tested; no feed has been published or consumed.
+**The zero-model path, with no credentials at all:**
 
-### Not code
-- Demo video, Devpost entry, and the terminal screenshot at
-  `docs/evidence/live-vertex-verification.png`.
+```bash
+export UNWIND_VERTEX_DISABLED=1
+make cascade                              # one cascade: 2,594 dependents -> four regimes
+make cascade-forged                       # the forged retraction, refused at radius 0
+make eval                                 # 41 scenarios, 0 model calls
+```
+
+Full command list and the credentialed paths: [Running it](#running-it).
+
+---
+
+## Architecture
+
+![UNWIND architecture](assets/architecture.svg)
+
+A judge should be able to trace one request left to right in fifteen seconds:
+**UI → FastAPI (Cloud Run) → Gateway → `spine/` → `court/` + `judgment/` →
+Vertex AI**, with Firestore and Pub/Sub underneath and a correction obligation
+coming out the right-hand side. The hard dashed line is the **zero-model
+boundary**, and it is enforced by `tests/test_zero_model.py` walking the import
+graph of every module under `spine/` — not by a convention someone remembers.
+
+Solid boxes are built and tested today. Dashed boxes are locked design that is
+not built yet, and they are drawn dashed on purpose. Source:
+[`assets/architecture.svg`](assets/architecture.svg) ·
+[`assets/architecture.png`](assets/architecture.png).
+
+Component-by-component justification — one sentence each, and a component
+without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
+
+## Deployed
+
+| | |
+| --- | --- |
+| URL | `https://unwind-hgeodtazqq-uc.a.run.app` |
+| Service / region | `unwind` · `us-central1` |
+| Project | `project-895d4ca8-d301-447d-916` |
+| Artifact | `gcloud run deploy --source .` — buildpacks + root `Procfile` |
+| Serving | the real FastAPI app, `/api/*` **and** `web/static` from one origin |
+
+`infra/deploy.sh` also provisions the runtime service account (three
+least-privilege roles, no Owner/Editor) and the six Pub/Sub topics.
+
+**Last verified 2026-08-13** by `make deploy-verify`, **5/5 PASS, exit 0**:
+
+```
+[1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
+[2/5] UI served from the same origin
+[3/5] real cascade: radius 2,594 -> material 78, counter integrity OK
+[4/5] adversarial refusal OK — source_outside_claim_scope, radius 0
+[5/5] real headless-browser check: 4,206 nodes rendered, counter 78 = material 78
+
+DEPLOYMENT VERIFIED — it renders AND it computes.
+```
+
+Step 5 is the one that matters: a real browser reads the number **on screen** and
+asserts it equals what the deployed cascade actually **computed**. Opening a page
+proves a page loads; `78 = 78` proves it is not a fixture.
+
+> ⚠ **Cloud Run reserves the literal path `/healthz`** for its own platform health
+> checking and intercepts public requests to it before they reach user code. The
+> endpoint is therefore `/api/healthz`. This cost us one failed deploy-verify and
+> is written down so it costs you none.
+
+Re-confirm liveness before any demo:
+
+```bash
+bash scripts/health_check.sh                       # writes evidence/health/
+gcloud run services describe unwind --project project-895d4ca8-d301-447d-916 \
+  --region us-central1 --format="value(status.url,status.latestReadyRevisionName)"
+```
+
+---
+
+## ADK 2 — the locked construct mapping
+
+`google-adk==2.6.3`. This table is **locked architecture**, and it distinguishes
+what runs today from what lands in the build phase. An honest "landing next"
+beats an implied "already done".
+
+| ADK 2 construct | Where it sits | Status |
+| --- | --- | --- |
+| `Workflow` + `FunctionNode` + `Edge` / `DEFAULT_ROUTE` | the cascade graph; the four-regime split is `ctx.route`, not a prompt | **IN USE** — `agents/cascade/workflow.py` |
+| Deterministic router | Gateway reason codes, incl. `WORKER_FAULT` (Card 2) | **LOCKED DESIGN** — not built |
+| `FunctionNode` — warrant SPEND | spend-or-refuse on every delegated act (Card 0) | **LOCKED DESIGN** — not built |
+| Dynamic pattern | registry → coordinator selection (Card 2) | **LOCKED DESIGN** — not built |
+| Single-turn `AgentTool` | Countersign / Gemma gating warrant mints (Card 3) | **LOCKED DESIGN** — not built |
+| Durable long-running runtime | case pause/resume — a human may sign on Tuesday | **LOCKED DESIGN** — not built |
+
+### Status of `agents/`, stated plainly
+
+`agents/` is **310 lines** today. It contains:
+
+- `agents/cascade/` — the cascade as an ADK 2 `Workflow` of `FunctionNode`s.
+  **There is no `LlmAgent` in this graph, deliberately** — there is nothing
+  agentic about arithmetic, and the docstring says so.
+- `agents/smoke/` — one `LlmAgent`, marked delete-ready, which exists only to
+  prove ADK 2 + Vertex + `lib.config` are wired to each other.
+
+So: one ADK 2 construct is genuinely load-bearing today, and the remaining five
+are design that lands in the build phase. **The court's parallelism is real and
+measured** — `tests/test_court.py` asserts N owners' pleas overlap in wall-clock
+time — but it is implemented with a thread pool, **not** with `AgentTool`, and
+this README will not claim otherwise until the code does.
+
+### The four cards
+
+| | | |
+| --- | --- | --- |
+| **CARD 0 — WARRANT** | deterministic, decaying, capability-scoped authority; minted only from countersigned human-validated outcomes, debited on every delegated act; insufficient warrant is a structural refusal that routes to a human | locked design, not built |
+| **CARD 1 — UNWIND CORE** | everything above the fold in this README | **built · frozen · 261 tests** |
+| **CARD 2 — CONTROL TOWER** | registry · identity · gateway · decision memory · durable runtime · observability | locked design, not built |
+| **CARD 3 — COUNTERSIGN** | Gemma as an independent-family verifier gating warrant mints | locked design, not built |
+
+**Models: Gemini and Gemma only.** Veo and Lyria were evaluated and **cut** for
+failing a five-point necessity test. The cut is stated here rather than hidden,
+because a model added to a submission for the sake of breadth is a model the
+architecture does not need.
+
+---
+
+## Prior art — where WARRANT sits
+
+WARRANT is object-capability security where the capabilities are earned rather
+than granted: a classical capability is granted and delegable; a warrant is
+minted only from countersigned, human-validated outcomes, is non-transferable
+across principals, decays with idleness, and is scoped per risk class. Nobody
+hands it over; nobody can hand it on.
+
+We own the resemblance rather than deny it. The object-capability literature is
+decades old and got conservation right long before we did; what a classical
+capability does not carry is a *price that scales with the measured consequence
+of the act it authorises*. UNWIND already computes that consequence for free —
+the blast radius is a graph walk with no model call — which is the only reason
+this coupling is available to us at all. **This is a position we intend to
+defend, not a novelty claim we have already proved**: the questions that must be
+answered before it is claimed on camera are whether differential-privacy budgets
+constitute prior art for depleting-stock authority, and whether capability-based
+OS designs ever priced by object fan-out.
+
+---
+
+## The honesty map
+
+The rule in this repository is that a number is either produced by a committed
+script or labelled as not measured. There is no third category.
+
+| | |
+| --- | --- |
+| **Worst extraction class, published** | `temporal:absolute-duration` at **66.7%** — the worst class is on screen in the demo, highlighted, because that is exactly where the second pass earns its place |
+| **Gemini's measured contribution** | parser-only **81.8%** → parser+Gemini **100.0%**, **+18.2 pp** over 44 gold claims |
+| **How to read that 100%** | **the model's denominator is 8, not 44.** The parser missed 8 claims; Gemini saw those 8 and returned 8 correct values. The 100% is a property of the *combined pipeline over 44 gold claims* — it is **not** a claim that the model extracts perfectly |
+| **T2 judgement quality** | **unmeasured.** The live run attempted 60 nodes and resolved **0**, with **0 exceptions**. This is a **non-test, not a failure**: all 174 queue nodes carry `committed_lead_days = None`, and the assessor returns UNRESOLVED *before* the model's answer is consulted. The corpus fixed the outcome, not Gemini |
+| **The corpus** | **synthetic, single-author.** Artifacts and the extraction lexicon were written by the same author. `corpus/README.md` and `docs/COVERAGE.md` state this at length |
+| **The agents don't decide** | owner stance and arbiter tally are arithmetic. Honest framing: multi-principal orchestration with LLM narration |
+| **Never executed** | Firestore rules and composite indexes (written, never deployed) · Model Armor (never configured, so it has never blocked anything) · compensation-path synthesis (`synthesise()` raises rather than emitting a path that looks executable) · the retraction feed |
+
+Why the T2 fixture was **deliberately not built**: mechanical answer-withholding
+is achievable, but the clause text and the scoring key would be written by the
+same author, which makes a judgement benchmark a mirror rather than a
+measurement. Full reasoning in [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md).
+
+---
+
+## What has actually been run
+
+**`make test` → 261 passed, 11 skipped** (272 collected; the 11 skips need a live
+Firestore emulator). `ruff check` and `ruff format --check` clean.
+
+| Command | Result |
+| --- | --- |
+| `make test` | **261 passed, 11 skipped** |
+| `make eval` | **41 scenarios passed**, 0 failed, **0 model calls**; false-retraction rate **0.0** |
+| `UNWIND_VERTEX_DISABLED=1 make eval` | identical. Enforced in CI |
+| `make verify-live` | executed 2026-08-13 — Vertex call **OK**, **0 model errors**, recall **81.8% → 100.0%** |
+| `make ui-check` | real Chromium: **60 fps median** at 4,206 nodes, on-screen counter **78 = 78**, no horizontal scroll at 380px, 0 app-origin console errors |
+| `make deploy-check` | **20/20 PASS** — preflight only; checks inputs, not the deploy |
+| `make deploy-verify` | **5/5 PASS**, exit 0, against the live URL |
+| `make court` | 4 turns, converged, 12 owners seated from 48 eligible, 12 obligations raised, Vertex disabled |
+| `make obligation` | one full correction obligation — named counterparty, exposure **USD 8,925.00** as a range with its assumptions, routed to a `human::` signatory |
+| `make adversarial` | both attacks refused — `source_outside_claim_scope`, radius **0**. Enforced in CI by reason code |
+| `make coverage` | overall extraction recall **81.8%**; worst class **66.7%** |
+| `make contrast` | 42 token pairs recomputed; every text colour ≥ 4.5:1 |
+| `make corpus-verify` | byte-identical |
+| `make golden` | byte-stable; CI fails on drift |
+
+**Run elsewhere, not here:** the Vertex smoke test, reported passing by the
+maintainer on their own machine. Recorded as evidence, not reproduced.
+
+**Not in this repository:** the terminal screenshot of the live Vertex run. It
+exists only as a chat attachment and was never on the filesystem of the machine
+that authored the commit, so no file was created and none was recreated.
+[`docs/LIVE-VERIFICATION.md`](docs/LIVE-VERIFICATION.md) is the authoritative
+evidence for that run.
+
+---
+
+## Evidence
+
+- [`docs/JUDGE.md`](docs/JUDGE.md) — the one-page judge card.
+- [`docs/LIVE-VERIFICATION.md`](docs/LIVE-VERIFICATION.md) — the live Gemini run in full, the method, and what is still unverified.
+- [`docs/evidence/README.md`](docs/evidence/README.md) — what each artifact proves, and what it does not.
+- [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md) — why T2 judgement quality is unmeasured.
+- [`docs/COVERAGE.md`](docs/COVERAGE.md) — the extraction confusion matrix, regenerated in CI; drift fails the build.
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — the deployment sequence, and the four defects a line-by-line review found in a script that had never run.
+- [`submission/demo_script.md`](submission/demo_script.md) — the four-minute demo, shot by shot.
+- `evidence/health/` — timestamped health checks against the deployed URL.
+- `docs/shots/` — interface screenshots, produced by `make ui-check` rather than hand-captured.
+
+---
+
+## Running it
+
+```bash
+make install                 # uv venv (Python 3.12) + deps
+make emulator                # terminal 1: Firestore emulator (needs Java 11+)
+make test                    # terminal 2: 272 tests, 11 of which need the emulator
+make dev                     # terminal 2: API on http://127.0.0.1:8000/api/healthz
+make ui                      # the operator field — no credentials needed
+make corpus-verify           # proves the committed corpus is reproducible
+make eval                    # the hub-retraction scenario, real metrics
+make eval-vertex-off         # THE GUARANTEE: same run with Vertex disabled
+make cascade                 # one cascade: 2,594 dependents -> four regimes
+make cascade-forged          # the forged retraction, refused with its reason
+make court                   # the repair court over the hub cascade
+make obligation              # ONE full correction obligation
+make debt                    # standing causal debt, before anything breaks
+make ui-check                # drive the UI in a real browser; assert 78 = 78
+```
+
+`make demo` **exits non-zero and says it is not built.** It is a stub and will
+never print a false pass.
+
+### With credentials
+
+```bash
+gcloud auth application-default login
+export UNWIND_PROJECT_ID=your-project
+make vertex-check            # ONE real Vertex call; prints the raw response or the exact failure
+make verify-live             # real Vertex call + recall comparison + T2; writes docs/LIVE-VERIFICATION.md
+make deploy-check            # preflight, no credentials needed
+./infra/deploy.sh            # end to end
+make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
+```
+
+### Model and version verification
+
+| | Value | How it was checked |
+| --- | --- | --- |
+| ADK | `google-adk==2.6.3` | `adk --version`; installed from PyPI |
+| Model (fast) | `gemini-3.5-flash-lite` | GA on Vertex AI; re-verified 2026-08-12 |
+| Model (deep) | `gemini-3.6-flash` | GA on Vertex AI since 2026-07-21; re-verified 2026-08-12 |
+| Location | `global` | the location the live run actually used |
+| Region | `us-central1` | Cloud Run; pinned in `lib/config.py`, never inferred |
+| Backend | Vertex AI | `GOOGLE_GENAI_USE_ENTERPRISE=true`, set from config in `lib/vertex.py` |
+| Python | 3.12 | `pyproject.toml` requires `>=3.12,<3.13` |
+
+Both model strings appear in `lib/config.py` and nowhere else in the repository;
+`tests/test_config_singleton.py` greps every tracked file to prove it.
+
+⚠ **`MODEL_DEEP` is not a Pro model, deliberately.** As of 2026-08-12 no Gemini
+3.x Pro is GA on Vertex AI — `gemini-3.1-pro` is *preview*. A GA-only constraint
+excludes the entire Pro line, so the deep tier is the strongest GA model instead.
+A preview model can change or throttle underneath a live demo. **Both strings
+need re-verifying before submission.**
+
+Two things changed since this project was specified, both reported rather than
+silently worked around: `GOOGLE_GENAI_USE_VERTEXAI` is **deprecated** in
+google-adk 2.6.3 / google-genai 2.17.0, replaced by `GOOGLE_GENAI_USE_ENTERPRISE`;
+and "Gemini 3.5" is not a single flagship — the current family is
+`gemini-3.1-pro` (preview), `gemini-3.6-flash` (GA) and `gemini-3.5-flash-lite`
+(GA). The two GA models are what is pinned.
+
+---
 
 ## The primitive
 
 **The retractable decision** — a decision stored together with the live, typed
 premise set it depends on, such that any premise change propagates to it, is
 scored for **materiality** and **escapement**, is triaged for **reversibility**,
-and is converted into either a silent death, an in-place correction, a
-synthesised compensation, or a human-signed correction obligation.
+and is converted into either a silent death, an in-place correction, a synthesised
+compensation, or a human-signed correction obligation.
 
 ### The four regimes — and only one cell is an alert
 
@@ -329,11 +361,11 @@ be able to hallucinate.
 3. **Watch** — dormant watcher per live claim; sentinel on silence
 4. **Propagate** — claim dies → reverse index walked → blast radius
 5. **Score** — materiality × escapement → four regimes
-6. **Arbitrate** — commitment owners argue; neutral arbiter rules
+6. **Arbitrate** — commitment owners argue; a neutral arbiter rules
 7. **Settle** — idempotent / compensable / irreversible
 8. **Learn** — load rating of the lying source drops
 
-Task 2 builds **step 4 and the arithmetic half of step 5**. Steps 1–3 and 6–8 are not built.
+Steps 1–8 are built. What is not built is Cards 0, 2 and 3.
 
 ---
 
@@ -344,150 +376,62 @@ purchase orders, an ad flight and customer promises across six months.
 **Synthetic** — see [`corpus/README.md`](corpus/README.md) for the generation
 model, the assumptions it rests on, and every measured property.
 
-The headline: **the hub claim `supplier_K.lead_time_days = 11` carries 2,424
-transitive dependents. Moving it to 20 leaves 78 that are materially harmed and
-still open — 50 of which already escaped. 95.2 % die back on the buffer
-arithmetic alone; 96.8 % need no action at all.**
+**The hub claim `supplier_K.lead_time_days = 11` carries 2,594 transitive
+dependents. Moving it to 20 leaves 78 that are materially harmed and still open —
+48 of which already escaped.**
 
 Those percentages are computed from `committed_lead_days` on committed rows, not
 chosen. `tests/test_corpus.py` recomputes the die-back from `radius_truth.jsonl`
-and asserts the stats file agrees, and the eval recomputes the whole split from
-`claims.jsonl` + `conclusions.jsonl` + `reverse_index.jsonl` without ever reading
-the marking scheme.
+and asserts the stats file agrees, and the eval recomputes the whole split
+without ever reading the marking scheme.
 
 | | Measured | Target in the brief |
 | --- | --- | --- |
-| Conclusions / claims | 4,004 / 1,083 | ~4,000 / ~1,100 |
-| Hub transitive dependents | 2,424 | ~2,000 |
-| **Die-back** | **95.165 %** | ≈96 % |
+| Conclusions / claims | 4,206 / 1,146 | ~4,000 / ~1,100 |
+| Hub transitive dependents | **2,594** | ~2,000 |
+| Die-back | **95.165 %** | ≈96 % |
 | Live material survivors | 78 | withdrawn as inconsistent |
-| — not escaped / escaped | 28 / 50 | ~12 / ~19 |
-| **Escaped survivors decided ≥120d before** | **12** | ≥5 |
+| — not escaped / escaped | **30 / 48** | ~12 / ~19 |
+| Escaped survivors decided ≥120d before | **12** | ≥5 |
 | Median escape → retraction gap | 63.5 days (max 181) | "months" |
 | Max premise-chain depth | 5 | "report actual" |
 | UNRESOLVED conclusions | 4 | ≥3 |
-| Adversarial artifacts (refused, not processed) | 1 | 1 |
+| Adversarial artifacts (refused, not processed) | 2 | 1 |
 
-Every divergence is explained, not tuned away, in
-`corpus/README.md § Where the measurements differ from the specification`.
+Every divergence is explained, not tuned away, in `corpus/README.md
+§ Where the measurements differ from the specification`.
 
----
+### Numbers
 
-## Running it
-
-Nothing here needs a Google Cloud account.
-
-```bash
-make install                 # uv venv (Python 3.12) + deps
-make emulator                # terminal 1: Firestore emulator (needs Java 11+)
-make test                    # terminal 2: 256 tests, 11 of which need the emulator
-make dev                     # terminal 2: API on http://127.0.0.1:8000/api/healthz
-make corpus-verify           # proves the committed corpus is reproducible
-make eval                    # runs the hub-retraction scenario, reports real metrics
-make eval-vertex-off         # THE GUARANTEE: same run with Vertex disabled
-make cascade                 # one cascade: 2,424 dependents -> four regimes
-make cascade-forged          # the forged retraction, refused with its reason
-make debt                    # standing causal debt, before anything breaks
-make web-ui                  # `adk web agents` — tracing UI for the smoke agent
-```
-
-`make demo` and `make golden` **exit non-zero and say they are not built.** They
-are stubs for Tasks 4 and 5 and will never print a false pass.
-
-### With credentials
-
-```bash
-gcloud auth application-default login
-export UNWIND_PROJECT_ID=your-project
-make smoke                   # one real Vertex call through the smoke agent
-./infra/deploy.sh            # [UNVERIFIED] never executed — see below
-```
-
-### Model and version verification
-
-| | Value | How it was checked |
-| --- | --- | --- |
-| ADK | `google-adk==2.6.3` | `adk --version`; installed from PyPI |
-| Model (fast) | `gemini-3.5-flash-lite` | GA on Vertex AI; re-verified 2026-08-12 |
-| Model (deep) | `gemini-3.6-flash` | GA on Vertex AI since 2026-07-21; re-verified 2026-08-12 |
-| Region | `us-central1` | Pinned in `lib/config.py`, never inferred |
-| Backend | Vertex AI | `GOOGLE_GENAI_USE_ENTERPRISE=true`, set from config in `lib/vertex.py` |
-| Python | 3.12.3 | `pyproject.toml` requires `>=3.12,<3.13` |
-
-Both model strings appear in `lib/config.py` and nowhere else in the repository.
-`tests/test_config_singleton.py` greps every tracked file to prove it.
-
-⚠ **`MODEL_DEEP` is not a Pro model, deliberately.** As of 2026-08-12 no Gemini
-3.x Pro is generally available on Vertex AI — `gemini-3.1-pro` is *preview*. A
-GA-only constraint currently excludes the entire Pro line, so the deep tier is
-the strongest GA model instead. Promoting it when 3.1 Pro reaches GA is a
-one-line change in `lib/config.py`. **Both strings need re-verifying before
-submission.**
-
-**Two things changed since this project was specified**, both reported rather
-than silently worked around:
-
-- `GOOGLE_GENAI_USE_VERTEXAI` is **deprecated** in google-adk 2.6.3 /
-  google-genai 2.17.0, replaced by `GOOGLE_GENAI_USE_ENTERPRISE`. Setting the old
-  flag still works but emits a `DeprecationWarning`, so `lib/vertex.py` sets the
-  new one.
-- "Gemini 3.5" is not a single flagship. The current family is `gemini-3.1-pro`
-  (preview), `gemini-3.6-flash` (GA) and `gemini-3.5-flash-lite` (GA). The two
-  GA models are what is pinned.
-
-### Deployment
-
-`infra/deploy.sh` runs `gcloud run deploy --source .` (buildpacks + the root
-`Procfile`), so the deployed artifact is the real FastAPI app serving both
-`/api/*` and `web/static` from one origin — not the ADK dev UI. It also
-provisions the runtime service account (three least-privilege roles, no
-Owner/Editor) and the six Pub/Sub topics. Firestore rules and composite
-indexes are a separate step via the Firebase CLI — see `docs/DEPLOY.md` §5.
-
-**[VERIFIED] Deployed and live**, verified end to end with `make deploy-verify`:
-
-```
-[1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
-[2/5] UI served from the same origin
-[3/5] real cascade: radius 2,594 -> material 78, counter integrity OK
-[4/5] adversarial refusal OK — source_outside_claim_scope, radius 0
-[5/5] real headless-browser check: 4,206 nodes rendered, counter 78 = material 78
-
-DEPLOYMENT VERIFIED — it renders AND it computes.        5/5 PASS, exit 0
-```
-
-Service `unwind`, region `us-central1`, project
-`project-895d4ca8-d301-447d-916`. The current live revision can always be
-confirmed with:
-
-```bash
-gcloud run services describe unwind --project project-895d4ca8-d301-447d-916 \
-  --region us-central1 --format="value(status.url,status.latestReadyRevisionName)"
-```
-
-To redeploy or reverify yourself:
-
-```bash
-gcloud auth login && gcloud auth application-default login
-export UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916
-./infra/deploy.sh                                  # end to end
-make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
-gcloud pubsub topics list --project "$UNWIND_PROJECT_ID"
-```
+Every number in this repository was produced by a committed script
+(`corpus/generate.py` → `corpus/data/stats.json`, or `pytest`). **No latency,
+cost, or benchmark figure is stated anywhere**, because none has been measured.
+The three dollar amounts in the corpus (USD 41,800, USD 12,650 and USD 8,925) are
+invented parameters of a synthetic scenario, not estimates — and residual
+exposure is always reported as a **range with its assumptions**, with any effect
+carrying no recorded amount counted separately rather than priced.
 
 ---
 
 ## Layout
 
 ```
-lib/        config · vertex · firestore · pubsub · telemetry · schema
-agents/     smoke/   one delete-ready ADK 2 agent
-services/   api/     FastAPI + SSE transport
+spine/      the deterministic package boundary — no ADK, no model client
+court/      owners · arbiter · four-turn protocol · team formation
+judgment/   everything that may be wrong; degrades to UNRESOLVED, never a guess
+settle/     irreversibility · cartography · obligation · broker · load rating
+lib/        config · vertex · firestore · pubsub · telemetry · schema · principals
+agents/     cascade/ (ADK 2 Workflow) · smoke/ (one delete-ready LlmAgent)
+services/   api/  FastAPI + SSE, serving web/static from the same origin
+web/static/ the operator field — canvas, 4,206 nodes
 corpus/     generate.py + committed data + measured stats
-evals/      harness · metrics · five empty scenario classes · results
-web/        Next.js 15 skeleton, no UI
+evals/      harness · metrics · 41 scenarios across 5 classes
 infra/      firestore.rules · indexes.json · deploy.sh · emulator.sh · dev.sh
+assets/     architecture.svg · architecture.png
+submission/ demo script · Devpost text · council verdict
+evidence/   timestamped health checks against the deployed service
 ```
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for one justifying sentence per
-component, and the four Google Cloud services with the reason each is present.
+`web/` also contains a Next.js 15 skeleton that is **dead code** — the live UI is
+`web/static/`, served by FastAPI. The skeleton is retained only because deleting
+it is a change with no reviewer, and `web/README.md` says plainly that it is dead.

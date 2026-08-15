@@ -1,6 +1,6 @@
 """The T2 model surface, and the three things that can be behind it.
 
-    VertexT2Model     the real one. [UNVERIFIED] -- never executed, no credentials.
+    VertexT2Model     the real one. [VERIFIED] -- executed live against Vertex.
     ScriptedT2Model   deterministic, for tests and evals. Labelled everywhere.
     UnavailableT2Model what you get when Vertex is off. Returns UNRESOLVED.
 
@@ -116,11 +116,18 @@ class ScriptedT2Model:
 
 @dataclass
 class VertexT2Model:
-    """The real path. [UNVERIFIED] -- written from the documented client surface.
+    """The real path. [VERIFIED] -- executed against live Vertex on 2026-08-13.
 
-    NEVER EXECUTED. No GCP credentials existed in the environment where this was
-    written, so nothing here has been proven against a live endpoint. Treat every
-    line as unproven until `make smoke` runs against a real project.
+    `make verify-live` drove this class against a real endpoint: 60 T2 nodes,
+    **120 model calls** (one re-derivation and one assessment each), **zero
+    exceptions**. The orchestration around the model is therefore proven end to
+    end, and `docs/LIVE-VERIFICATION.md` is the record.
+
+    ⚠ WHAT THAT RUN DID *NOT* PROVE. It resolved **0 of 60**. Every node in the
+    T2 queue carries `committed_lead_days = None`, so `assess()` short-circuits
+    to UNRESOLVED *before* the model's answer is consulted. The outcome was
+    fixed by the corpus, not decided by Gemini. Plumbing: verified. Judgement
+    quality: still unmeasured -- see `docs/T2-MEASUREMENT.md`.
     """
 
     model_id: str
