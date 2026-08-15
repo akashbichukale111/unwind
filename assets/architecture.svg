@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 720" font-family="'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#EDE8DE"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C88A2E"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1440" height="720" fill="#12151A"/>
+
+  <!-- Title -->
+  <text x="32" y="38" fill="#EDE8DE" font-size="20" font-weight="700" letter-spacing="0.04em">UNWIND — architecture</text>
+  <text x="32" y="58" fill="#EDE8DE" opacity="0.62" font-size="12">one request, traced left to right. the vertical stack on the left is where this request sits among the four cards.</text>
+
+  <!-- ============ LEFT: FOUR-CARD OVERLAY ============ -->
+  <text x="32" y="92" fill="#EDE8DE" opacity="0.72" font-size="11" letter-spacing="0.06em">THE FOUR CARDS</text>
+
+  <!-- CARD 0 WARRANT -->
+  <rect x="32" y="104" width="230" height="90" rx="4" fill="none" stroke="#4A535E" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="46" y="126" fill="#EDE8DE" font-size="12" font-weight="700">CARD 0 · WARRANT</text>
+  <text x="46" y="144" fill="#EDE8DE" opacity="0.62" font-size="10">decaying, capability-scoped</text>
+  <text x="46" y="158" fill="#EDE8DE" opacity="0.62" font-size="10">authority. mints only from</text>
+  <text x="46" y="172" fill="#EDE8DE" opacity="0.62" font-size="10">countersigned outcomes.</text>
+  <text x="46" y="188" fill="#8C3A2B" font-size="10" font-weight="700">LOCKED DESIGN — not built</text>
+
+  <!-- connector -->
+  <path d="M147,194 L147,210" stroke="#4A535E" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- CARD 1 UNWIND CORE -->
+  <rect x="32" y="210" width="230" height="90" rx="4" fill="#1A1F26" stroke="#C88A2E" stroke-width="2"/>
+  <text x="46" y="232" fill="#EDE8DE" font-size="12" font-weight="700">CARD 1 · UNWIND CORE</text>
+  <text x="46" y="250" fill="#EDE8DE" opacity="0.62" font-size="10">frozen. the deployed system —</text>
+  <text x="46" y="264" fill="#EDE8DE" opacity="0.62" font-size="10">detailed in the flow at right.</text>
+  <text x="46" y="286" fill="#C88A2E" font-size="10" font-weight="700">BUILT + DEPLOYED · Cloud Run</text>
+
+  <path d="M147,300 L147,316" stroke="#4A535E" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- CARD 2 CONTROL TOWER -->
+  <rect x="32" y="316" width="230" height="104" rx="4" fill="none" stroke="#4A535E" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="46" y="338" fill="#EDE8DE" font-size="12" font-weight="700">CARD 2 · CONTROL TOWER</text>
+  <text x="46" y="356" fill="#EDE8DE" opacity="0.62" font-size="10">registry · identity · gateway ·</text>
+  <text x="46" y="370" fill="#EDE8DE" opacity="0.62" font-size="10">decision memory · durable</text>
+  <text x="46" y="384" fill="#EDE8DE" opacity="0.62" font-size="10">runtime · observability</text>
+  <text x="46" y="400" fill="#8C3A2B" font-size="10" font-weight="700">LOCKED DESIGN — not built</text>
+  <text x="46" y="414" fill="#EDE8DE" opacity="0.55" font-size="9">ADK: registry→coordinator = dynamic pattern</text>
+
+  <path d="M147,420 L147,436" stroke="#4A535E" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- CARD 3 COUNTERSIGN -->
+  <rect x="32" y="436" width="230" height="104" rx="4" fill="none" stroke="#4A535E" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="46" y="458" fill="#EDE8DE" font-size="12" font-weight="700">CARD 3 · COUNTERSIGN</text>
+  <text x="46" y="476" fill="#EDE8DE" opacity="0.62" font-size="10">Gemma, independent-family</text>
+  <text x="46" y="490" fill="#EDE8DE" opacity="0.62" font-size="10">verifier gating warrant mints.</text>
+  <text x="46" y="510" fill="#8C3A2B" font-size="10" font-weight="700">LOCKED DESIGN — not built</text>
+  <text x="46" y="528" fill="#EDE8DE" opacity="0.55" font-size="9">ADK: single-turn AgentTool</text>
+
+  <!-- Legend -->
+  <text x="32" y="580" fill="#EDE8DE" opacity="0.72" font-size="11" letter-spacing="0.06em">LEGEND</text>
+  <rect x="32" y="592" width="18" height="12" fill="#1A1F26" stroke="#C88A2E" stroke-width="2"/>
+  <text x="56" y="602" fill="#EDE8DE" opacity="0.8" font-size="10">built &amp; deployed</text>
+  <rect x="32" y="612" width="18" height="12" fill="none" stroke="#4A535E" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="56" y="622" fill="#EDE8DE" opacity="0.8" font-size="10">locked design, not built</text>
+  <rect x="32" y="632" width="18" height="12" fill="none" stroke="#8C3A2B" stroke-width="2.5"/>
+  <text x="56" y="642" fill="#EDE8DE" opacity="0.8" font-size="10">zero-model boundary</text>
+
+
+  <!-- ============ RIGHT: THE REQUEST FLOW (CARD 1, frozen) ============ -->
+  <text x="330" y="92" fill="#EDE8DE" opacity="0.72" font-size="11" letter-spacing="0.06em">THE REQUEST, TRACED — CARD 1 · UNWIND CORE (frozen, deployed)</text>
+
+  <!-- UI -->
+  <rect x="330" y="112" width="150" height="64" rx="4" fill="#1A1F26" stroke="#EDE8DE" stroke-width="1.5"/>
+  <text x="405" y="138" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">UI</text>
+  <text x="405" y="154" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">field canvas · SSE client</text>
+  <text x="405" y="166" fill="#EDE8DE" opacity="0.5" font-size="9" text-anchor="middle">web/static/*</text>
+
+  <path d="M480,144 L536,144" stroke="#EDE8DE" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- FastAPI / Cloud Run -->
+  <rect x="536" y="102" width="180" height="90" rx="4" fill="#1A1F26" stroke="#EDE8DE" stroke-width="1.5"/>
+  <text x="626" y="130" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">FastAPI</text>
+  <text x="626" y="146" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">Cloud Run · one origin</text>
+  <text x="626" y="160" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">serves /api/* + static UI</text>
+  <text x="626" y="174" fill="#EDE8DE" opacity="0.45" font-size="8.5" text-anchor="middle">ADK: gateway reason codes =</text>
+  <text x="626" y="184" fill="#EDE8DE" opacity="0.45" font-size="8.5" text-anchor="middle" font-style="italic">deterministic router branches [locked]</text>
+
+  <path d="M716,144 L772,144" stroke="#EDE8DE" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Zero-model boundary box: spine -->
+  <rect x="772" y="98" width="270" height="220" rx="6" fill="#171B21" stroke="#8C3A2B" stroke-width="3"/>
+  <text x="907" y="120" fill="#8C3A2B" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="0.04em">ZERO-MODEL BOUNDARY</text>
+
+  <rect x="792" y="132" width="230" height="80" rx="4" fill="#1A1F26" stroke="#C88A2E" stroke-width="1.5"/>
+  <text x="907" y="154" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">spine/</text>
+  <text x="907" y="170" fill="#EDE8DE" opacity="0.68" font-size="9.5" text-anchor="middle">T0 traversal · T1 materiality</text>
+  <text x="907" y="184" fill="#C88A2E" font-size="10" font-weight="700" text-anchor="middle">2,594 → 78, pure arithmetic</text>
+  <text x="907" y="200" fill="#EDE8DE" opacity="0.55" font-size="9" text-anchor="middle">no import can reach a model client</text>
+
+  <rect x="792" y="222" width="230" height="80" rx="4" fill="#1A1F26" stroke="#4A535E" stroke-width="1.5"/>
+  <text x="907" y="244" fill="#EDE8DE" font-size="11" font-weight="700" text-anchor="middle">settle/</text>
+  <text x="907" y="260" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">irreversibility · cartography</text>
+  <text x="907" y="274" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">obligation · broker</text>
+  <text x="907" y="290" fill="#EDE8DE" opacity="0.55" font-size="9" text-anchor="middle">also model-free</text>
+
+  <!-- boundary crossing arrow: only the 174 judgement-bound nodes cross -->
+  <path d="M1042,208 L1098,208" stroke="#EDE8DE" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1070" y="200" fill="#EDE8DE" opacity="0.6" font-size="8.5" text-anchor="middle">174 only</text>
+
+  <!-- court / judgment -->
+  <rect x="1098" y="150" width="180" height="116" rx="4" fill="#1A1F26" stroke="#EDE8DE" stroke-width="1.5"/>
+  <text x="1188" y="174" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">court/ + judgment/</text>
+  <text x="1188" y="192" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">re-derive · assess · arbitrate</text>
+  <text x="1188" y="206" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">T2 — the only tier that may</text>
+  <text x="1188" y="220" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">call a model</text>
+  <text x="1188" y="240" fill="#EDE8DE" opacity="0.45" font-size="8.5" text-anchor="middle">ADK: single-turn AgentTool owners,</text>
+  <text x="1188" y="252" fill="#EDE8DE" opacity="0.45" font-size="8.5" text-anchor="middle">arbiter keeps the gavel</text>
+
+  <path d="M1188,266 L1188,300 L1188,300" stroke="#EDE8DE" stroke-width="1.5"/>
+  <path d="M1188,266 L1188,318" stroke="#C88A2E" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+
+  <!-- Vertex AI -->
+  <rect x="1098" y="330" width="180" height="72" rx="4" fill="#1A1F26" stroke="#C88A2E" stroke-width="2"/>
+  <text x="1188" y="354" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">Vertex AI</text>
+  <text x="1188" y="370" fill="#EDE8DE" opacity="0.68" font-size="9.5" text-anchor="middle">Gemini 3.5-flash-lite / 3.6-flash</text>
+  <text x="1188" y="384" fill="#C88A2E" font-size="9.5" font-weight="700" text-anchor="middle">recall 81.8% → 100.0% (+18.2pp)</text>
+  <text x="1188" y="396" fill="#EDE8DE" opacity="0.5" font-size="8.5" text-anchor="middle">denominator is 8, not 44</text>
+
+  <!-- Firestore, connected to spine + settle + judgment -->
+  <rect x="792" y="360" width="230" height="72" rx="4" fill="#1A1F26" stroke="#3E7A6E" stroke-width="1.5"/>
+  <text x="907" y="384" fill="#EDE8DE" font-size="12" font-weight="700" text-anchor="middle">Firestore</text>
+  <text x="907" y="400" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">documents · reverse index ·</text>
+  <text x="907" y="414" fill="#EDE8DE" opacity="0.62" font-size="9.5" text-anchor="middle">idempotency keys · state</text>
+
+  <path d="M907,302 L907,360" stroke="#3E7A6E" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M1098,395 L1022,395" stroke="#3E7A6E" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+
+  <!-- Response back to UI over SSE -->
+  <path d="M405,176 C 405,470 907,470 907,432" stroke="#EDE8DE" stroke-width="1.2" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="656" y="486" fill="#EDE8DE" opacity="0.5" font-size="9" text-anchor="middle">SSE stream back to the field — node events, then the cull, then the split</text>
+
+  <!-- ============ BOTTOM: the numbers a judge checks ============ -->
+  <rect x="330" y="560" width="948" height="128" rx="6" fill="#171B21" stroke="#4A535E" stroke-width="1"/>
+  <text x="352" y="586" fill="#EDE8DE" opacity="0.72" font-size="11" letter-spacing="0.06em">TRACE IT YOURSELF — 15 SECONDS</text>
+  <text x="352" y="610" fill="#EDE8DE" font-size="11">1. Type a fact that changed in the UI bar.</text>
+  <text x="352" y="628" fill="#EDE8DE" font-size="11">2. FastAPI routes it into spine/ — the hard oxide line is the promise that no model runs here.</text>
+  <text x="352" y="646" fill="#EDE8DE" font-size="11">3. spine/ walks the reverse index (2,594 dependents) and reduces by arithmetic to 78 that need a human.</text>
+  <text x="352" y="664" fill="#EDE8DE" font-size="11">4. Of those, the 174 ambiguous-materiality nodes cross into court/judgment, the only tier that calls Vertex AI.</text>
+  <text x="352" y="682" fill="#C88A2E" font-size="11" font-weight="700">tests/test_zero_model.py walks this exact import graph and fails if spine/ can reach a model client.</text>
+
+  <text x="32" y="704" fill="#EDE8DE" opacity="0.4" font-size="9">UNWIND — Consequence Clearing · Google All Things Agentic Hackathon · Fortified Enterprise Fleet</text>
+  <text x="1130" y="704" fill="#EDE8DE" opacity="0.4" font-size="9">assets/architecture.svg</text>
+</svg>

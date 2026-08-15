@@ -1,0 +1,10 @@
+======================================================================
+UNWIND health check — 2026-08-15T12:55:40Z
+target: https://unwind-hgeodtazqq-uc.a.run.app
+======================================================================
+[1/2] PASS — /api/healthz returned HTTP 200
+      {"status":"ok","stage":"task-5-interface","model":"gemini-3.5-flash-lite","vertex_location":"global","vertex_disabled":false,"firestore":"cloud","pubsub":"cloud","topics":["claim.retracted","node.rederive","node.scored","repair.convened","obligation.raised","unwind.executed"],"telemetry_exporter":"console"}
+[2/2] PASS — cascade counter present: radius=2594 material=78
+======================================================================
+RESULT: PASS  (2026-08-15T12:55:40Z)
+======================================================================

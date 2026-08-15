@@ -20,6 +20,104 @@ world changed after the reasoning was correct.
 **Category:** Consequence Clearing · **Track:** Fortified Enterprise Fleet ·
 Google "All Things Agentic" Hackathon
 
+**The verified cascade:** move one supplier lead time 11→20 days, and reverse-index
+traversal finds **2,594 dependent decisions**. Reducing that to the **78** that need
+a human is **pure arithmetic — zero model calls** (1,468 immaterial · 874
+closed-out · 174 sent to judgement). `tests/test_zero_model.py` walks the import
+graph of every module under `spine/` and fails the build if any of it can reach a
+model client.
+
+---
+
+## Quickstart
+
+```bash
+git clone https://github.com/akashbichukale111/unwind
+cd unwind
+make install && make ui      # http://127.0.0.1:8000 — no GCP account needed
+```
+
+`UNWIND_VERTEX_DISABLED=1` closes the one door to a model (`lib/vertex.py`); the
+full cascade, the whole test suite and the whole UI run with it set, on every CI
+push. See [Running it](#running-it) for the complete sequence, including tests
+and the credentialed path.
+
+## Architecture
+
+![UNWIND architecture — UI to Cloud Run to spine (zero-model boundary) to court/judgment to Vertex AI to Firestore, with the four-card overlay](assets/architecture.svg)
+
+One request, traced left to right: **UI → FastAPI on Cloud Run → `spine/`**
+(T0 traversal + T1 materiality — the zero-model boundary, 2,594 → 78 by pure
+arithmetic) **→** the 174 that need judgement cross into **`court/` +
+`judgment/`**, the only tier allowed to call **Vertex AI** (Gemini) **→
+Firestore** holds state throughout. The vertical stack on the left situates this
+deployed system — **CARD 1 · UNWIND CORE (frozen)** — among the three other
+cards, which are locked design, not yet built: **CARD 0 · WARRANT**,
+**CARD 2 · CONTROL TOWER**, **CARD 3 · COUNTERSIGN**. A judge should be able to
+trace one request through this diagram in under 15 seconds.
+
+**Deployed:** <https://unwind-hgeodtazqq-uc.a.run.app> — Cloud Run, `us-central1`,
+project `project-895d4ca8-d301-447d-916`. Verified live end to end; see
+[Deployment](#deployment) and [`scripts/health_check.sh`](scripts/health_check.sh).
+
+## ADK 2 — the locked construct mapping
+
+This mapping is **locked architecture for the build phase, not a claim that it is
+already running.** Stated honestly: `agents/` is currently ~310 lines
+(`agents/cascade/`, `agents/smoke/`) with **no `LlmAgent` anywhere in it** — the
+cascade graph is `FunctionNode`s and routing, deliberately model-free. The
+constructs below land as the four cards are built; an honest "landing next"
+beats an implied "already done."
+
+| Locked construct | ADK 2 primitive | Card |
+| --- | --- | --- |
+| Gateway reason codes | deterministic router branches | CARD 2 · CONTROL TOWER |
+| Warrant SPEND-or-refuse | `FunctionNode` | CARD 0 · WARRANT |
+| Registry → coordinator selection | dynamic node scheduling | CARD 2 · CONTROL TOWER |
+| Countersign (Gemma verifier) | single-turn `AgentTool` | CARD 3 · COUNTERSIGN |
+| Case pause/resume | durable `LongRunningFunctionTool` runtime | CARD 2 · CONTROL TOWER |
+
+What *is* built and running today uses ADK 2 already: `agents/cascade/workflow.py`
+is a `Workflow` of `FunctionNode`s branching on `ctx.route`, and the repair court
+(`court/owners.py`) runs commitment owners as single-turn agent tools fanned out
+in parallel under one arbiter. See `ARCHITECTURE.md` § "ADK 2 features" for the
+full, currently-true accounting.
+
+## Prior art — what WARRANT is and isn't
+
+WARRANT is object-capability security where the capabilities are earned rather
+than granted: a classical capability is granted and delegable; a warrant is
+minted only from countersigned, human-validated outcomes, is non-transferable
+across principals, decays with idleness, and is scoped per risk class. Nobody
+hands it over; nobody can hand it on. Classical object-capability systems (E,
+Cap'n Proto's RPC, macaroons) answer "who may invoke this" by tracking
+possession of an unforgeable token that can be delegated onward at will; WARRANT
+answers a different question — "has this principal actually earned the right to
+act again" — by minting authority only from a countersigned, human-validated
+outcome, letting it decay with idleness, and refusing it structurally the moment
+a delegation would cross a principal boundary. It is a security primitive for
+agentic systems specifically: the risk classical capabilities don't model is an
+agent that reasons correctly, acts, and is proven wrong by a world that moved —
+WARRANT is what runs out before that agent gets to act on stale authority again.
+
+## Honesty map, at a glance
+
+- **Worst extraction class:** `temporal:absolute-duration` at **66.7%** parser-only
+  recall (see [Live verification](#live-verification)).
+- **The headline delta:** parser+Gemini recall **81.8% → 100.0%, +18.2 pp** — and
+  the model's own denominator is **8, not 44**. Stated that way everywhere in
+  this repository, always.
+- **T2 is a non-test:** the live run attempted 60 nodes and resolved 0 — not a
+  model failure, because all 174 queue nodes carry `committed_lead_days = None`
+  and the assessor returns UNRESOLVED before the model's answer is consulted.
+  See [T2 — attempted, resolved nothing](#t2--attempted-resolved-nothing-and-that-is-a-non-test).
+- **The corpus is synthetic and single-author:** artifacts and the extraction
+  lexicon were written by the same person. `docs/COVERAGE.md` states this at
+  length rather than burying it.
+- **Test count, true today:** `make test` → **261 passed, 11 skipped** (272
+  collected; the 11 skips need a live Firestore emulator) — regenerated by
+  running `pytest -q`, not typed by hand.
+
 ---
 
 ## ⚠ Status: Task 5 of 5 — the interface, the demo, the submission
@@ -55,7 +153,7 @@ overlap in wall-clock time rather than trusting the docstring.
 
 | | Component | Evidence |
 | --- | --- | --- |
-| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 245 passed, 11 skipped |
+| **[BUILT]** | Deterministic spine — traversal, T1, four regimes | `make test` → 261 passed, 11 skipped |
 | **[BUILT]** | **CLOSED-OUT** as a named regime and reason code | 874 nodes in the demo cascade; `tests/test_regimes.py` |
 | **[BUILT]** | **Five-state router** wrapping the authority gate | EXECUTE/ASK_HUMAN/RETRY/DEFER/REFUSE, one vocabulary |
 | **[BUILT]** | **DEFER** on a contested premise | `make cascade --claim <contested>` → defer, both sides named |
@@ -189,7 +287,7 @@ unmeasured, and closing it needs a fixture that does not exist yet — see
   Vertex call OK, 0 model errors, recall **81.8% → 100.0%** (+18.2 pp over
   44 gold claims). T2: 60 attempted, 0 resolved, 0 exceptions — see
   [Live verification](#live-verification).
-- `make test` → **245 passed, 11 skipped** (256 collected; the 11 skips need a
+- `make test` → **261 passed, 11 skipped** (272 collected; the 11 skips need a
   live Firestore emulator). `ruff check` and `ruff format --check` clean.
 - `make eval` → **41 scenarios passed, 0 failed, 0 model calls.**
   False-retraction rate **0.0**.

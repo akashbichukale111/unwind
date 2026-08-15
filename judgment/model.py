@@ -1,6 +1,8 @@
 """The T2 model surface, and the three things that can be behind it.
 
-    VertexT2Model     the real one. [UNVERIFIED] -- never executed, no credentials.
+    VertexT2Model     the real one. [VERIFIED] -- executed live 2026-08-13,
+                      see docs/LIVE-VERIFICATION.md. T2 orchestration confirmed
+                      (0 exceptions over 60 nodes); judgement quality unmeasured.
     ScriptedT2Model   deterministic, for tests and evals. Labelled everywhere.
     UnavailableT2Model what you get when Vertex is off. Returns UNRESOLVED.
 
@@ -116,11 +118,14 @@ class ScriptedT2Model:
 
 @dataclass
 class VertexT2Model:
-    """The real path. [UNVERIFIED] -- written from the documented client surface.
+    """The real path. [VERIFIED] -- run live against Vertex AI on 2026-08-13.
 
-    NEVER EXECUTED. No GCP credentials existed in the environment where this was
-    written, so nothing here has been proven against a live endpoint. Treat every
-    line as unproven until `make smoke` runs against a real project.
+    `make verify-live` executed this class against project
+    `project-895d4ca8-d301-447d-916`: the parser+Gemini recall run (0 model
+    errors) and the T2 queue run (60 nodes, 120 calls, 0 exceptions). See
+    `docs/LIVE-VERIFICATION.md` for the full record. That run establishes the
+    orchestration, not judgement quality -- see `docs/T2-MEASUREMENT.md` for
+    why T2's resolved-0 outcome is a non-test, not a verdict on the model.
     """
 
     model_id: str

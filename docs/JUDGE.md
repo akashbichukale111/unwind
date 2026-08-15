@@ -92,7 +92,7 @@ over 44 gold claims* — not a claim that the model extracts perfectly.
 
 | | |
 | --- | --- |
-| Tests | **245 passed / 11 skipped** |
+| Tests | **261 passed / 11 skipped** |
 | Eval scenarios | **41 passed**, 5 classes |
 | False-retraction rate | **0.0** |
 | Model calls on T0/T1 | **0** |
