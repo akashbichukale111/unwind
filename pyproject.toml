@@ -2,7 +2,13 @@
 name = "unwind"
 version = "0.1.0"
 description = "Retractable decisions: when a premise dies, everything built on it raises its hand."
-requires-python = ">=3.12,<3.13"
+# ⚠ NO UPPER BOUND, DELIBERATELY. `<3.13` here broke the first Cloud Run build:
+# Google's Python buildpack picks the LATEST supported interpreter when the
+# source pins none, and pip then refuses the project outright --
+#   ERROR: Package 'unwind' requires a different Python: 3.13.12 not in '<3.13,>=3.12'
+# -- which exits 1 and fails the build step. The ceiling was never earned: the
+# full suite passes on 3.13 (249 passed, 11 skipped). CI still pins 3.12.
+requires-python = ">=3.12"
 dependencies = [
     "google-adk==2.6.3",
     "google-cloud-firestore>=2.19.0",

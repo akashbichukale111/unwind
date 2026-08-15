@@ -55,6 +55,69 @@ def container_build_plan(repo: Path, docker_on_path: bool) -> str:
     return "build"
 
 
+def gcloudignore_patterns(repo: Path) -> list[str]:
+    """The ACTIVE exclusion patterns, ignoring comments and blanks.
+
+    A plain substring search over the file text is wrong twice over: the file
+    documents what it deliberately KEEPS, so `".python-version" in text` matched
+    the prose explaining that .python-version must never be excluded. That is
+    the third time this preflight has cried wolf at its own documentation.
+    """
+    path = repo / ".gcloudignore"
+    if not path.is_file():
+        return []
+    return [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+
+def python_pin_satisfies(pin: str, requires: str) -> bool:
+    """Does the `.python-version` pin fall inside `requires-python`?
+
+    ⚠ THIS PAIR IS THE FAILED BUILD. `.python-version` decides which interpreter
+    Cloud Build installs; `requires-python` decides whether pip will then accept
+    the project on it. Agreeing separately is not enough -- they must agree with
+    EACH OTHER, and build 89b74d60 is what disagreement costs.
+
+    Deliberately small: handles the `>=`/`>`/`<=`/`<` clauses this project uses
+    rather than pulling `packaging` in, because the preflight must run on a bare
+    interpreter with no dependencies installed.
+    """
+
+    def parts(text: str) -> tuple[int, ...]:
+        return tuple(int(n) for n in re.findall(r"\d+", text)[:3])
+
+    got = parts(pin)
+    if not got:
+        return False
+    for clause in (c.strip() for c in requires.split(",") if c.strip()):
+        found = re.match(r"(>=|<=|==|!=|>|<)\s*(.+)", clause)
+        if not found:
+            continue
+        op, want = found.group(1), parts(found.group(2))
+        if not want:
+            continue
+        # Compare on the digits both sides actually state: `3.13` vs `>=3.12`
+        # must compare as (3,13) >= (3,12), not (3,13) >= (3,12,0).
+        width = min(len(got), len(want))
+        left, right = got[:width], want[:width]
+        if op == ">=" and not left >= right:
+            return False
+        if op == ">" and not left > right:
+            return False
+        if op == "<=" and not left <= right:
+            return False
+        if op == "<" and not left < right:
+            return False
+        if op == "==" and left != right:
+            return False
+        if op == "!=" and left == right:
+            return False
+    return True
+
+
 def main() -> int:
     print("=" * 70)
     print("UNWIND — deploy preflight (no credentials required)")
@@ -180,25 +243,85 @@ def main() -> int:
     if (REPO / "web" / "package.json").is_file() and "next" in (
         REPO / "web" / "package.json"
     ).read_text(encoding="utf-8"):
-        # Not a failure: the skeleton is documented as dead. But a deploy that
-        # accidentally invoked it would be a second build system.
-        if not (REPO / ".dockerignore").is_file():
+        # ⚠ .gcloudignore, NOT .dockerignore. `gcloud run deploy --source .`
+        # never reads .dockerignore, so checking that file was false assurance:
+        # it passed while web/app was being uploaded on every deploy.
+        if not (REPO / ".gcloudignore").is_file():
             fail(
                 "the dead Next.js skeleton is excluded from the build",
-                "web/app exists and there is no .dockerignore, so buildpacks may "
-                "detect a Node app and build the wrong thing",
-                "add .dockerignore excluding web/app/ and node_modules/",
+                "web/app exists and there is no .gcloudignore, so gcloud falls back "
+                "to .gitignore and uploads it -- buildpacks may then detect a Node app",
+                "add .gcloudignore excluding web/app/",
             )
         else:
-            ignore = (REPO / ".dockerignore").read_text(encoding="utf-8")
+            ignore = (REPO / ".gcloudignore").read_text(encoding="utf-8")
             if "web/app" not in ignore:
                 fail(
                     "the dead Next.js skeleton is excluded from the build",
-                    ".dockerignore does not exclude web/app/",
-                    "add 'web/app/' to .dockerignore",
+                    ".gcloudignore does not exclude web/app/",
+                    "add 'web/app/' to .gcloudignore",
                 )
             else:
                 ok("the dead Next.js skeleton is excluded from the build")
+
+    # ---- 5b. ⚠ nothing in the UPLOAD may divert the buildpack ------------
+    # The build that failed was fed the working directory, not the repository.
+    # Google's Python buildpack treats poetry.lock and uv.lock as
+    # high-precedence package-manager markers and switches away from
+    # pip-from-pyproject the moment it sees one.
+    patterns = gcloudignore_patterns(REPO)
+    for marker in ("poetry.lock", "uv.lock", "Pipfile"):
+        present = (REPO / marker).is_file()
+        excluded = marker in patterns
+        if present and not excluded:
+            fail(
+                "no foreign package manager reaches the build",
+                f"{marker} is in the working directory and .gcloudignore does not "
+                f"exclude it, so Cloud Build will receive it",
+                f"delete {marker} (this project uses PEP 621 + hatchling), or exclude it",
+            )
+            break
+    else:
+        ok("no foreign package manager reaches the build", "pip reads pyproject.toml")
+
+    # ---- 5c. ⚠ THE INTERPRETER. Both halves, or the build is a lottery. ---
+    # Left unpinned, the buildpack takes the newest Python it supports, so the
+    # deployed runtime moves under you whenever Google's default moves. Build
+    # 89b74d60 died of exactly that: the default had passed the `<3.13` ceiling
+    # in requires-python and pip refused the project outright.
+    #
+    # Two facts must therefore hold together, and neither is sufficient alone:
+    #   (i)  .python-version pins the interpreter, so the deploy is reproducible
+    #   (ii) requires-python ADMITS that pin, so pip does not refuse it
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    spec = re.search(r'requires-python\s*=\s*"([^"]+)"', pyproject)
+    requires = spec.group(1) if spec else ""
+
+    pin_file = REPO / ".python-version"
+    if not pin_file.is_file():
+        fail(
+            "the buildpack's Python is pinned",
+            "no .python-version, so the buildpack picks the newest Python it supports "
+            "and the deployed runtime changes without a commit",
+            "add a .python-version at the repo root (e.g. 3.13)",
+        )
+    else:
+        pin = pin_file.read_text(encoding="utf-8").strip()
+        if ".python-version" in patterns:
+            fail(
+                "the buildpack's Python is pinned",
+                ".gcloudignore excludes .python-version, so the pin never reaches the build",
+                "remove .python-version from .gcloudignore",
+            )
+        elif not python_pin_satisfies(pin, requires):
+            fail(
+                "the pinned Python satisfies requires-python",
+                f".python-version pins {pin!r} but pyproject requires {requires!r}; "
+                "pip will refuse the project on the interpreter the buildpack installs",
+                "widen requires-python or move the pin inside it",
+            )
+        else:
+            ok("the buildpack's Python is pinned", f".python-version {pin} ⊆ {requires}")
 
     # ---- 6. required env vars are named, not assumed --------------------
     for var in ("UNWIND_PROJECT_ID",):

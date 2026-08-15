@@ -13,6 +13,12 @@ __pycache__/
 node_modules/
 .next/
 
+# ⚠ Poetry is not used here (PEP 621 + hatchling, no [tool.poetry]). A stray
+# poetry.lock is a high-precedence marker that diverts the Cloud Run buildpack
+# onto a Poetry path this project cannot satisfy. Ignored so it can never be
+# committed; also excluded in .gcloudignore so it can never be uploaded.
+poetry.lock
+
 # Local secrets. `adk create` writes .env files; none belongs in this repo.
 .env
 .env.*

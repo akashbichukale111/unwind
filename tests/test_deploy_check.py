@@ -127,8 +127,151 @@ def test_procfile_is_cloud_run_shaped() -> None:
 
 
 def test_the_dead_nextjs_skeleton_is_excluded_from_the_build() -> None:
-    ignore = (REPO / ".dockerignore").read_text(encoding="utf-8")
+    ignore = (REPO / ".gcloudignore").read_text(encoding="utf-8")
     assert "web/app" in ignore, "buildpacks could detect a Node app and build the wrong thing"
+
+
+# ---------------------------------------------------------------------------
+# ⚠ what Cloud Run actually uploads — the defect that killed build 89b74d60
+#
+# `gcloud run deploy --source .` uploads the WORKING DIRECTORY and never reads
+# .dockerignore. Without a .gcloudignore, exclusions fall back to .gitignore,
+# so any untracked non-ignored root file is shipped to Cloud Build.
+# ---------------------------------------------------------------------------
+
+GCLOUDIGNORE = REPO / ".gcloudignore"
+
+
+def test_the_source_upload_has_an_explicit_exclusion_file() -> None:
+    assert GCLOUDIGNORE.is_file(), (
+        ".dockerignore does not govern a source deploy; without .gcloudignore the "
+        "upload set is whatever happens to be untracked in the working directory"
+    )
+
+
+def test_foreign_package_managers_cannot_reach_the_build() -> None:
+    """poetry.lock/uv.lock outrank pyproject.toml in the buildpack's selection."""
+    ignore = GCLOUDIGNORE.read_text(encoding="utf-8")
+    for marker in ("poetry.lock", "Pipfile"):
+        assert marker in ignore, f"{marker} would divert the buildpack off pip"
+
+
+def test_poetry_lock_can_never_be_committed_either() -> None:
+    assert "poetry.lock" in (REPO / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_the_exclusions_do_not_starve_the_running_service() -> None:
+    """VACUITY, in the dangerous direction: an over-broad ignore ships a 500.
+
+    Excluding too much is the failure mode a `.gcloudignore` invites. Each path
+    below is read at request time, so its absence is a runtime error rather than
+    a build error -- exactly the class this file exists to catch early.
+    """
+    ignore = GCLOUDIGNORE.read_text(encoding="utf-8")
+    live = [ln.strip() for ln in ignore.splitlines() if ln.strip() and not ln.startswith("#")]
+    for required in ("corpus/data", "web/static", "Procfile", "pyproject.toml", "evals/golden"):
+        for pattern in live:
+            assert not required.startswith(pattern.rstrip("/")), (
+                f"{required} is read at runtime but {pattern!r} excludes it"
+            )
+
+
+# ---------------------------------------------------------------------------
+# ⚠ the interpreter ceiling — the confirmed cause of the failed build
+# ---------------------------------------------------------------------------
+
+
+def _upper_bounded(pyproject: str) -> bool:
+    """The same rule the preflight uses."""
+    found = re.search(r'requires-python\s*=\s*"([^"]+)"', pyproject)
+    return bool(found and "<" in found.group(1))
+
+
+def test_requires_python_does_not_exclude_the_pinned_interpreter() -> None:
+    """`<3.13` made pip refuse the project on the buildpack's default Python.
+
+    ERROR: Package 'unwind' requires a different Python: 3.13.12 not in '<3.13,>=3.12'
+    """
+    assert not _upper_bounded((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def test_the_upper_bound_guard_is_not_vacuous() -> None:
+    """VACUITY: the exact string that failed must still be caught."""
+    assert _upper_bounded('requires-python = ">=3.12,<3.13"')
+    assert not _upper_bounded('requires-python = ">=3.12"')
+
+
+# ---------------------------------------------------------------------------
+# ⚠ .python-version — the pin, and its agreement with requires-python
+#
+# The pin decides which interpreter Cloud Build installs. requires-python
+# decides whether pip then accepts the project on it. Build 89b74d60 is what
+# happens when those two disagree, so both are asserted, together.
+# ---------------------------------------------------------------------------
+
+satisfies = PREFLIGHT.python_pin_satisfies
+PIN = (REPO / ".python-version").read_text(encoding="utf-8").strip()
+REQUIRES = re.search(
+    r'requires-python\s*=\s*"([^"]+)"', (REPO / "pyproject.toml").read_text(encoding="utf-8")
+).group(1)
+
+
+def test_the_interpreter_is_pinned_in_the_source() -> None:
+    """Unpinned, the buildpack takes the newest Python it supports.
+
+    That makes the deployed runtime a moving target changed by Google's release
+    schedule rather than by a commit in this repository.
+    """
+    assert (REPO / ".python-version").is_file()
+    assert re.fullmatch(r"3\.\d+(\.\d+)?", PIN), f"unusable pin: {PIN!r}"
+
+
+def test_the_pin_reaches_cloud_build() -> None:
+    """A pin excluded from the upload is not a pin, and fails silently."""
+    assert ".python-version" not in PREFLIGHT.gcloudignore_patterns(REPO)
+
+
+def test_the_exclusion_reader_ignores_its_own_documentation(tmp_path: Path) -> None:
+    """VACUITY + the complement, and the bug this check actually had.
+
+    .gcloudignore documents what it deliberately KEEPS, so a substring search
+    over the file text read ".python-version" out of the comment explaining that
+    it must never be excluded -- and the preflight failed a correct repository.
+    Third occurrence of this class here, so it gets a test of its own.
+    """
+    (tmp_path / ".gcloudignore").write_text(
+        "# KEPT ON PURPOSE:\n#   .python-version   pins the interpreter\ntests/\n",
+        encoding="utf-8",
+    )
+    patterns = PREFLIGHT.gcloudignore_patterns(tmp_path)
+    assert patterns == ["tests/"]
+    assert ".python-version" not in patterns  # the false positive
+
+    (tmp_path / ".gcloudignore").write_text(".python-version\n", encoding="utf-8")
+    assert ".python-version" in PREFLIGHT.gcloudignore_patterns(tmp_path)  # the real one
+
+
+def test_the_pin_and_requires_python_agree() -> None:
+    assert satisfies(PIN, REQUIRES), f"{PIN} is outside {REQUIRES}"
+
+
+def test_the_agreement_check_is_not_vacuous() -> None:
+    """VACUITY: reconstruct the exact combination that failed the build.
+
+    A checker that returns True unconditionally would let 89b74d60 through
+    again, so the failing pair must still be rejected.
+    """
+    assert not satisfies("3.13", ">=3.12,<3.13"), "the failed build's pair must be rejected"
+    assert not satisfies("3.11", ">=3.12")
+    assert satisfies("3.13", ">=3.12")
+    assert satisfies("3.12", ">=3.12,<3.13")
+
+
+def test_the_agreement_check_compares_on_stated_precision() -> None:
+    """`3.13` vs `>=3.12` must not become (3,13) >= (3,12,0) and mis-compare."""
+    assert satisfies("3.13.12", ">=3.12")
+    assert satisfies("3.13", ">=3.12.5")
+    assert not satisfies("3.13", "<3.13.0")
 
 
 # ---------------------------------------------------------------------------
