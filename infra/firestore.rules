@@ -8,8 +8,11 @@ rules_version = '2';
 // service identity, which is the only principal that has passed a retraction
 // through the authority gate.
 //
-// [UNVERIFIED] Not deployed. No GCP credentials were available at build time.
-// Deploy with: gcloud firestore rules release infra/firestore.rules
+// [VERIFIED] Deployed 2026-08-15 via `firebase deploy --only firestore:rules`
+// (project project-895d4ca8-d301-447d-916) -- `gcloud firestore rules release`
+// is not a real gcloud subcommand; the Firebase CLI is what actually ships
+// Firestore security rules. See evidence/firestore/deploy-2026-08-15.md.
+// Redeploy with: firebase deploy --project <id> --only firestore:rules
 
 service cloud.firestore {
   match /databases/{database}/documents {

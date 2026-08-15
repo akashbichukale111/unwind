@@ -152,6 +152,18 @@ COLLECTION_AGENT_TRUST = "agent_trust"
 #: Runtime cascade records. Never mutates reverse_index (ruling 1.9).
 COLLECTION_CASCADES = "cascades"
 
+# ---------------------------------------------------------------------------
+# Control Tower collections (Card 2). Separate from the Card 1 collections
+# above: the tower is supporting infrastructure for the write path, not a
+# rename of anything that already existed.
+# ---------------------------------------------------------------------------
+#: The executable agent registry. tower/registry.py.
+COLLECTION_AGENTS = "agents"
+#: Append-only decision-memory chain. tower/memory.py.
+COLLECTION_DECISION_MEMORY = "decision_memory"
+#: Long-running case state (open/paused/awaiting_human/resumed/closed). tower/runtime.py.
+COLLECTION_CASES = "cases"
+
 #: Subcollection under reverse_index/{claim_id}
 SUBCOLLECTION_DEPENDENTS = "dependents"
 #: Subcollection under cascades/{cascade_id}
@@ -166,6 +178,9 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_SOURCES,
     COLLECTION_AGENT_TRUST,
     COLLECTION_CASCADES,
+    COLLECTION_AGENTS,
+    COLLECTION_DECISION_MEMORY,
+    COLLECTION_CASES,
 )
 
 

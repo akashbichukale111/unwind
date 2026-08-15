@@ -8,8 +8,10 @@
     "`dependents` subcollection and it needs a composite index; without it the",
     "first cascade over the hub claim's 704 direct dependents fails at runtime.",
     "",
-    "[UNVERIFIED] Not deployed. No GCP credentials were available at build time.",
-    "Deploy with: gcloud firestore indexes create --index-file=infra/indexes.json"
+    "[VERIFIED] Deployed 2026-08-15 via `firebase deploy --only firestore:indexes`",
+    "(project project-895d4ca8-d301-447d-916). See evidence/firestore/deploy-2026-08-15.md",
+    "for the transcript and `gcloud firestore indexes composite list` output.",
+    "Redeploy with: firebase deploy --project <id> --only firestore:indexes"
   ],
   "indexes": [
     {

@@ -144,13 +144,13 @@ beats an implied "already done".
 | ADK 2 construct | Where it sits | Status |
 | --- | --- | --- |
 | `Workflow` + `FunctionNode` + `Edge` / `DEFAULT_ROUTE` | the cascade graph; the four-regime split is `ctx.route`, not a prompt | **IN USE** — `agents/cascade/workflow.py` |
-| Deterministic router | Gateway reason codes, incl. `WORKER_FAULT` (Card 2) | **LOCKED DESIGN** — not built |
-| `FunctionNode` — warrant SPEND | spend-or-refuse on every delegated act (Card 0) | **LOCKED DESIGN** — not built |
-| Dynamic pattern | registry → coordinator selection (Card 2) | **LOCKED DESIGN** — not built |
+| Deterministic router | Gateway reason codes — `PRINCIPAL_VIOLATION` → `SCOPE_EXCEEDED` → `BUDGET_EXCEEDED` → `WARRANT_INSUFFICIENT`, plus the `WORKER_FAULT` supervisor branch (Card 2) | **IN USE** — `tower/gateway.py:gateway_workflow`, a real `Workflow` of `FunctionNode`s, each check its own routed edge; `tests/test_tower_gateway.py` |
+| `FunctionNode` — warrant SPEND | spend-or-refuse on every delegated act (Card 0) | **LOCKED DESIGN** — not built; the slot (`tower/schema.py:WarrantSlot`) and the refusal code path (`WARRANT_INSUFFICIENT`, currently a stub that always passes) exist |
+| Dynamic pattern | registry → coordinator selection (Card 2) | **IN USE** — `tower/registry.py:compose_capability_workflow` builds a real ADK `Workflow` whose node set is read from Firestore at call time; flipping one registry field changes the actual graph object, proven in `tests/test_tower_registry.py::test_flipping_a_registry_field_changes_the_composed_graph` |
 | Single-turn `AgentTool` | Countersign / Gemma gating warrant mints (Card 3) | **LOCKED DESIGN** — not built |
-| Durable long-running runtime | case pause/resume — a human may sign on Tuesday | **LOCKED DESIGN** — not built |
+| Durable long-running runtime | case pause/resume — a human may sign on Tuesday | **IN USE** — `tower/runtime.py:case_pause_tool`, a real `google.adk.tools.long_running_tool.LongRunningFunctionTool`; durability proven across a genuine process restart with a simulated one-week gap in `tests/test_tower_runtime.py::test_case_resumes_after_a_simulated_one_week_gap_and_a_process_restart` |
 
-### Status of `agents/`, stated plainly
+### Status of `agents/` and `tower/`, stated plainly
 
 `agents/` is **310 lines** today. It contains:
 
@@ -160,19 +160,34 @@ beats an implied "already done".
 - `agents/smoke/` — one `LlmAgent`, marked delete-ready, which exists only to
   prove ADK 2 + Vertex + `lib.config` are wired to each other.
 
-So: one ADK 2 construct is genuinely load-bearing today, and the remaining five
-are design that lands in the build phase. **The court's parallelism is real and
-measured** — `tests/test_court.py` asserts N owners' pleas overlap in wall-clock
-time — but it is implemented with a thread pool, **not** with `AgentTool`, and
-this README will not claim otherwise until the code does.
+`tower/` (Card 2, this prompt) is **1,103 lines**: `registry.py`,
+`gateway.py`, `memory.py`, `runtime.py`, `schema.py`. **No `LlmAgent`
+anywhere in it either** — `tests/test_tower_zero_model.py` walks its
+authority-deciding modules (`registry.py`, `gateway.py`) against the same
+forbidden-model-client list `spine/` is walked against, and confirms
+separately that ADK itself is still present (a router with no framework
+underneath it would be a different, false claim).
+
+Three of the six ADK 2 constructs in the table above are now genuinely
+load-bearing (the router, the dynamic registry composition, the durable
+runtime), and two remain design that lands with Cards 0 and 3. **The court's
+parallelism is real and measured** — `tests/test_court.py` asserts N owners'
+pleas overlap in wall-clock time — but it is implemented with a thread pool,
+**not** with `AgentTool`, and this README will not claim otherwise until the
+code does.
+
+**44 new tests this prompt, all passing**: `make test` → **316 passed** with
+the Firestore emulator running (0 skipped), **290 passed / 26 skipped**
+without it (the tower tests that need Firestore skip the same way the
+existing emulator-gated tests always have).
 
 ### The four cards
 
 | | | |
 | --- | --- | --- |
-| **CARD 0 — WARRANT** | deterministic, decaying, capability-scoped authority; minted only from countersigned human-validated outcomes, debited on every delegated act; insufficient warrant is a structural refusal that routes to a human | locked design, not built |
+| **CARD 0 — WARRANT** | deterministic, decaying, capability-scoped authority; minted only from countersigned human-validated outcomes, debited on every delegated act; insufficient warrant is a structural refusal that routes to a human | locked design, not built — the slot exists (`tower/schema.py:WarrantSlot`), the arithmetic does not |
 | **CARD 1 — UNWIND CORE** | everything above the fold in this README | **built · frozen · 261 tests** |
-| **CARD 2 — CONTROL TOWER** | registry · identity · gateway · decision memory · durable runtime · observability | locked design, not built |
+| **CARD 2 — CONTROL TOWER** | registry · identity · gateway · decision memory · durable runtime · observability | **built · 44 tests** — see `tower/DESIGN.md`; Model Armor and Cloud Trace export verified live against a real GCP project, evidence in `evidence/armor/`, `evidence/observability/`, `evidence/firestore/` |
 | **CARD 3 — COUNTERSIGN** | Gemma as an independent-family verifier gating warrant mints | locked design, not built |
 
 **Models: Gemini and Gemma only.** Veo and Lyria were evaluated and **cut** for

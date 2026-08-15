@@ -38,16 +38,32 @@ class PrincipalSeparationError(RuntimeError):
     """
 
 
+class NonTransferableError(RuntimeError):
+    """A warrant balance was accessed by a principal it is not keyed to.
+
+    Card 2 (Control Tower) registers the slot this guards; Card 0 (WARRANT)
+    fills in the mint/burn/decay arithmetic in a later prompt. The guard
+    exists now because "balances are per principal and cannot move" is a
+    property of WHO may touch a balance, not of the numbers inside it -- so it
+    is enforceable before a single unit of warrant has ever been minted.
+    """
+
+
 class Role(str, Enum):
     """The roles whose separation is load-bearing.
 
-    OWNER is plural: a repair has N of them, discovered at runtime.
+    OWNER is plural: a repair has N of them, discovered at runtime. AGENT is
+    Card 2's addition: every registry entry (tower/registry.py) binds to a
+    principal, and that principal must never collide with a court or
+    judgment role -- an agent that is also the arbiter it answers to is the
+    same hollowing-out ruling 1.10 already forbids, one layer up.
     """
 
     REDERIVER = "rederiver"
     ASSESSOR = "assessor"
     ARBITER = "arbiter"
     OWNER = "owner"
+    AGENT = "agent"
 
 
 #: Pairs that must never collapse into one principal, with the reason each
@@ -72,6 +88,22 @@ _WHY: dict[frozenset[Role], str] = {
     ),
     frozenset({Role.REDERIVER, Role.OWNER}): (
         "an owner re-deriving its own commitment will re-derive the answer it already holds"
+    ),
+    frozenset({Role.AGENT, Role.ARBITER}): (
+        "a delegated worker that is also the arbiter grades its own dispatch, "
+        "which is ruling 1.10's failure one layer up the stack"
+    ),
+    frozenset({Role.AGENT, Role.OWNER}): (
+        "a delegated worker acting as the commitment owner it was dispatched to "
+        "serve has an interest in its own task succeeding"
+    ),
+    frozenset({Role.AGENT, Role.ASSESSOR}): (
+        "a delegated worker grading its own output is the same self-consistency "
+        "failure as an assessor re-deriving its own commitment"
+    ),
+    frozenset({Role.AGENT, Role.REDERIVER}): (
+        "a delegated worker that is also the re-deriver it was meant to check "
+        "collapses two roles the blindness boundary requires apart"
     ),
 }
 
@@ -126,3 +158,50 @@ def assert_arbiter_is_third(
     if rederiver is not None:
         bench[Role.REDERIVER] = rederiver
     assert_separate_principals(bench)
+
+
+def assert_agent_is_distinct(
+    agent: str,
+    *,
+    arbiter: str | None = None,
+    owners: Iterable[str] = (),
+    assessor: str | None = None,
+    rederiver: str | None = None,
+) -> None:
+    """Card 2: a registry entry's principal must hold no other role.
+
+    Called at registration time (`tower/registry.py`) and again at dispatch
+    time, because a registry entry that was clean when it was created and
+    later gets assigned an arbiter's principal is exactly the drift ruling
+    1.10 exists to catch -- checking once at creation is not the same
+    guarantee as checking on every use.
+    """
+    bench: dict[Role, str | Iterable[str]] = {Role.AGENT: agent}
+    if arbiter is not None:
+        bench[Role.ARBITER] = arbiter
+    if owners:
+        bench[Role.OWNER] = list(owners)
+    if assessor is not None:
+        bench[Role.ASSESSOR] = assessor
+    if rederiver is not None:
+        bench[Role.REDERIVER] = rederiver
+    assert_separate_principals(bench)
+
+
+def assert_warrant_access(*, balance_principal: str, acting_principal: str) -> None:
+    """Card 0's balances are keyed by principal and MUST NEVER move.
+
+    This is not warrant arithmetic -- there is none yet, CARD 0 mints and
+    burns in a later prompt. It is the access guard those balances will sit
+    behind: a warrant slot belongs to exactly the principal it was minted
+    for, so reading or spending it as any other principal is not a transfer
+    request to evaluate, it is a request that cannot be well-formed. Raising
+    here means the non-transferability is enforced before there is a single
+    unit of warrant to steal.
+    """
+    if balance_principal != acting_principal:
+        raise NonTransferableError(
+            f"warrant balance held by {balance_principal!r} cannot be accessed or "
+            f"moved by {acting_principal!r}: warrants are non-transferable across "
+            "principals by construction, not by policy."
+        )
