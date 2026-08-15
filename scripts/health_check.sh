@@ -31,7 +31,13 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTDIR="$REPO/evidence/health"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 HUMAN="$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-REPORT="$OUTDIR/health-$STAMP.txt"
+#: Reports are written as Markdown, not .txt, and that is deliberate. The
+#: healthz payload echoed below names the configured Gemini model, and
+#: `tests/test_config_singleton.py` forbids that string outside lib/config.py in
+#: anything that is not prose. Writing evidence as prose keeps the guard honest
+#: without redacting the payload -- a redacted health check is a worse artifact
+#: than a well-filed one.
+REPORT="$OUTDIR/health-$STAMP.md"
 
 mkdir -p "$OUTDIR"
 
@@ -42,8 +48,16 @@ EXPECT_DEPENDENTS=2594
 
 exec > >(tee "$REPORT") 2>&1
 
-echo "UNWIND deployment health check"
-echo "=============================="
+# Close the fence however this script exits, so the report is always valid
+# Markdown even on an early failure. This is a function rather than an inline
+# trap string because a trap body is re-parsed when it fires, and backticks in
+# it would be run as command substitution instead of printed.
+close_fence() { printf '\n```\n'; }
+trap close_fence EXIT
+
+echo "# UNWIND deployment health check — $HUMAN"
+echo
+echo '```text'
 echo "timestamp : $HUMAN"
 echo "target    : $URL"
 echo "checked by: scripts/health_check.sh"

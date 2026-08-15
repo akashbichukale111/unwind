@@ -110,10 +110,11 @@ must sign it. That last step is the difference between this and a lineage tool.
   instead of in the bill.
 - **Python 3.12**, FastAPI, canvas.
 
-Deliberately **not** used: GKE, Cloud SQL, Spanner, BigQuery, Dataflow, Redis —
-each with a one-sentence reason in `ARCHITECTURE.md`. **Veo and Lyria were
-evaluated and cut** for failing a five-point necessity test. A model added to a
-submission for the sake of breadth is a model the architecture does not need.
+Four Google Cloud services, each justified in one sentence. Everything else is
+deliberately **NOT USED** — the full list, with a one-sentence reason for each
+exclusion, is in `ARCHITECTURE.md`. **Veo and Lyria were evaluated and cut** for
+failing a five-point necessity test. A model added to a submission for the sake
+of breadth is a model the architecture does not need.
 
 ### Data sources
 
