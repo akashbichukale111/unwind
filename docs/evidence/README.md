@@ -160,3 +160,92 @@ on the demo machine will differ; re-run `make ui-check` there.
 | `evals/golden/court.txt` | the court transcript; CI fails on drift |
 | `docs/COVERAGE.md` | the confusion matrix; CI regenerates and diffs |
 | `corpus/data/MANIFEST.sha256` | the corpus is byte-reproducible from its seed |
+
+---
+
+## 4. Cloud Run deployment — verified live
+
+**Command run** (on the maintainer's authenticated GitHub Codespace):
+
+```bash
+export UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916
+make deploy-check                                  # preflight, no credentials
+./infra/deploy.sh                                   # gcloud run deploy --source .
+make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
+```
+
+Preflight screenshot: [`deploy-preflight-passed.png`](deploy-preflight-passed.png)
+— `make deploy-check`, 19/19 `PASS`, before any credentialed step ran.
+
+### Configuration
+
+| | |
+| --- | --- |
+| Service | `unwind` |
+| Project | `project-895d4ca8-d301-447d-916` |
+| Region | `us-central1` |
+| URL | `https://unwind-hgeodtazqq-uc.a.run.app` |
+| Traffic | 100% to the latest ready revision |
+
+### deploy-verify result: 5/5 PASS, exit code 0
+
+```
+[1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
+      model=gemini-3.5-flash-lite  location=global  vertex_disabled=False
+[2/5] UI served from the same origin (canvas + 2 static assets)
+[3/5] running one real cascade against the deployed API ...
+      radius announced : 2594
+      node events sent : 2594
+      done.sent        : 2594
+      material         : 78
+      model calls      : 0
+[3/5] counter integrity OK — announced = delivered = reported
+[4/5] adversarial refusal OK — source_outside_claim_scope, radius 0
+[5/5] driving the deployed UI in a real browser ...
+      nodes rendered   : 4206
+      counter on screen: 78
+      cascade material : 78
+
+DEPLOYMENT VERIFIED — it renders AND it computes.
+```
+
+### What step 1 found, and the fix
+
+The first live run of `deploy-verify` failed at step 1: `/healthz` returned a
+Google-branded 404 with no `Google Frontend` response header, while every
+sibling path (`/`, `/api/*`, `/health`, `/_ah/health`) reached the FastAPI app
+correctly. Cloud Run request logs confirmed the request never arrived at the
+container — Cloud Run's Knative queue-proxy reserves the exact literal path
+`/healthz` for its own internal platform health checking and intercepts public
+requests to it before they reach user code. The endpoint was moved to
+`/api/healthz` (matching the existing `/api/*` convention); every caller —
+`deploy_verify.py`, `tests/test_api.py`, `measure_ui.py`, `infra/dev.sh`,
+this README, `docs/DEPLOY.md` — was updated to match, and the fix redeployed
+cleanly. This is a Cloud Run platform constraint, not a defect in
+`infra/deploy.sh`'s IAM, API-enablement, or build configuration.
+
+### Step 5's browser
+
+The headless-browser check needs a local Chromium the deploy-verify script can
+launch; `services/api/main.py` and the deployed service are unaffected by
+whether it's present. It is not vendored in this repository (no binaries, no
+`node_modules`) — install it locally with:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers .venv/bin/playwright install chromium
+sudo .venv/bin/playwright install-deps chromium     # OS shared libraries
+```
+
+`scripts/deploy_verify.py` and `scripts/measure_ui.py` locate it via the
+`UNWIND_CHROME` env var (default `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`);
+the exact revision folder name depends on the installed `playwright` package
+version, so set `UNWIND_CHROME` to the path Playwright actually reports if it
+differs. Step 5 is `SKIPPED`, not failed, when no browser is found — it never
+reports a false pass.
+
+### What this proves
+
+The deployed service is the real FastAPI app, not a fixture: the cascade
+numbers in step 3 and the on-screen counter in step 5 both come from one real
+traversal over the committed corpus, and step 5 asserts they agree with each
+other rather than trusting either in isolation.

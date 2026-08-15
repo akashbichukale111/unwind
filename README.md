@@ -88,7 +88,7 @@ overlap in wall-clock time rather than trusting the docstring.
 | **[DESIGNED]** | Model Armor on the extraction path | **[UNVERIFIED]** — see below |
 | **[DESIGNED]** | Contractual/regulatory/relational extractors | Their claims come from the corpus |
 | **[DESIGNED]** | Firestore rules + composite indexes | Written; **never deployed**, no project state changed |
-| **[DESIGNED]** | `infra/deploy.sh` → Cloud Run | Written; **never run, there is no URL** |
+| **[VERIFIED]** | `infra/deploy.sh` → Cloud Run | **Deployed and live** — `make deploy-verify` reports **5/5 PASS** |
 | **[BUILT]** | **The field** — 4,206 nodes, canvas | **60 fps measured** (`make ui-check`), depth axis = time |
 | **[BUILT]** | **Load-bearing lines** — thickness ∝ dependents | from the reverse index; slack on retraction is a spring |
 | **[BUILT]** | **The cull** — 2,594 → 78 on real events | counter asserted equal to the cascade's own count |
@@ -97,7 +97,7 @@ overlap in wall-clock time rather than trusting the docstring.
 | **[BUILT]** | Court, load-rating drop, honesty panel | dissent shown; worst class highlighted |
 | **[VERIFIED]** | `make verify-live` — the credentialed runner | **executed**; refuses stubs; wrote `docs/LIVE-VERIFICATION.md` |
 | **[DESIGNED]** | `docs/RETRACTION-FEED.md` — the protocol | schema fields exist; no feed published |
-| **[FUTURE]** | Video, Devpost entry, deployed URL | — |
+| **[FUTURE]** | Video, Devpost entry | — |
 
 ## Live verification
 
@@ -217,9 +217,13 @@ unmeasured, and closing it needs a fixture that does not exist yet — see
 **Run elsewhere, not here:** the Vertex smoke test — reported passing by the
 maintainer on their own machine. Recorded as evidence, not reproduced.
 
-**Never run:** any Vertex AI call *from this repository*, any Cloud Run deploy,
-any real Pub/Sub topic, any Firestore rules or index deployment, Model Armor,
-`npm install` in `web/`. **There is no deployed URL.**
+**Never run:** any Firestore rules or index deployment, Model Armor,
+`npm install` in `web/`.
+
+**Cloud Run deployment is live and verified.** `infra/deploy.sh` provisioned
+the runtime service account, the six Pub/Sub topics, and the Cloud Run service
+itself; `make deploy-verify` reports **5/5 PASS** (exit 0) against the deployed
+URL — see [Deployment](#deployment) below.
 
 ### The interface
 
@@ -270,6 +274,11 @@ Stated as facts about this repository, not as a roadmap.
 - Parser vs parser+Gemini recall: **81.8% → 100.0%**, **+18.2 pp**, 44 gold claims.
 - Interface: **60 fps** at 4,206 nodes; cull counter equals the cascade's own count.
 - 41 eval scenarios, **0 model calls** on the T0/T1 path, false-retraction rate **0.0**.
+- **Cloud Run deployment**: `make deploy-verify URL=...` reports **5/5 PASS**,
+  exit 0, against the live service — healthz, same-origin UI, a real cascade
+  (radius 2,594 → material 78, counter-integrity confirmed), the adversarial
+  refusal (`source_outside_claim_scope`, radius 0), and a real headless-browser
+  check (4,206 nodes rendered, on-screen counter 78 = cascade material 78).
 
 ### Built, executes live, but the result proves nothing about quality
 - **T2 judgement.** 60 nodes, 120 model calls, **0 exceptions** — but **0
@@ -282,12 +291,6 @@ Stated as facts about this repository, not as a roadmap.
   [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md).
 
 ### Never executed
-- **Cloud Run deployment.** **There is no deployed URL.** `infra/deploy.sh` was
-  rewritten after a review found four defects — including a Cloud Run `--region`
-  derived from the Vertex location, where the verified value `global` is not a
-  valid Cloud Run region. `make deploy-check` now passes 16 preflight checks
-  without credentials, but **a passing preflight is not a deployment**.
-  `make deploy-verify URL=...` is what would prove one, and it has not run.
 - **Firestore rules and composite indexes.** Written under `infra/`, never
   deployed; no GCP project state has been changed by this repository.
 - **Model Armor.** Never configured, so it has never blocked anything. The
@@ -434,20 +437,42 @@ than silently worked around:
 
 ### Deployment
 
-`infra/deploy.sh` wraps `adk deploy cloud_run` and additionally creates the six
-Pub/Sub topics, the composite indexes and the rules — the things `adk deploy`
-does not own. Flag names were verified against `adk deploy cloud_run --help` on
-2.6.3.
+`infra/deploy.sh` runs `gcloud run deploy --source .` (buildpacks + the root
+`Procfile`), so the deployed artifact is the real FastAPI app serving both
+`/api/*` and `web/static` from one origin — not the ADK dev UI. It also
+provisions the runtime service account (three least-privilege roles, no
+Owner/Editor) and the six Pub/Sub topics. Firestore rules and composite
+indexes are a separate step via the Firebase CLI — see `docs/DEPLOY.md` §5.
 
-**[UNVERIFIED] It has never been executed.** No credentials existed in the build
-environment. To verify it yourself:
+**[VERIFIED] Deployed and live**, verified end to end with `make deploy-verify`:
+
+```
+[1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
+[2/5] UI served from the same origin
+[3/5] real cascade: radius 2,594 -> material 78, counter integrity OK
+[4/5] adversarial refusal OK — source_outside_claim_scope, radius 0
+[5/5] real headless-browser check: 4,206 nodes rendered, counter 78 = material 78
+
+DEPLOYMENT VERIFIED — it renders AND it computes.        5/5 PASS, exit 0
+```
+
+Service `unwind`, region `us-central1`, project
+`project-895d4ca8-d301-447d-916`. The current live revision can always be
+confirmed with:
+
+```bash
+gcloud run services describe unwind --project project-895d4ca8-d301-447d-916 \
+  --region us-central1 --format="value(status.url,status.latestReadyRevisionName)"
+```
+
+To redeploy or reverify yourself:
 
 ```bash
 gcloud auth login && gcloud auth application-default login
-export UNWIND_PROJECT_ID=your-project
+export UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916
 ./infra/deploy.sh                                  # end to end
+make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
 gcloud pubsub topics list --project "$UNWIND_PROJECT_ID"
-gcloud firestore indexes composite list --project "$UNWIND_PROJECT_ID"
 ```
 
 ---

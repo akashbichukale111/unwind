@@ -1,11 +1,29 @@
 # Deploying UNWIND
 
-**Status: NOT DEPLOYED.** No command below has been executed. `infra/deploy.sh`
-was rewritten in Task 6 after a line-by-line review found four defects, and the
-inputs are now checked by `make deploy-check` — but a passing preflight is not a
-deployment. Until `make deploy-verify` prints VERIFIED, there is no URL.
+**Status: DEPLOYED AND VERIFIED — 5/5 PASS.** `infra/deploy.sh` was rewritten
+in Task 6 after a line-by-line review found four defects (below), and has now
+run end to end. `make deploy-verify` confirms all five checks against the live
+service, exit code 0:
 
-Run the steps in order. Each says what it should print when it works.
+```
+Service   : unwind
+Region    : us-central1
+Project   : project-895d4ca8-d301-447d-916
+URL       : https://unwind-hgeodtazqq-uc.a.run.app
+Result    : 5/5 PASS — healthz, same-origin UI, real cascade
+            (radius 2,594 -> material 78), adversarial refusal, and a real
+            headless-browser check (4,206 nodes rendered, counter 78 = 78)
+```
+
+The current live revision can be confirmed at any time with:
+
+```bash
+gcloud run services describe unwind --project project-895d4ca8-d301-447d-916 \
+  --region us-central1 --format="value(status.url,status.latestReadyRevisionName)"
+```
+
+Run the steps below in order to redeploy or reverify. Each says what it should
+print when it works.
 
 ---
 
