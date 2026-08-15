@@ -168,8 +168,9 @@ class VertexClient:
     def generate_text(self, prompt: str, **kwargs: Any) -> str:
         """Single-shot generation. T2 only, and traced as such.
 
-        [UNVERIFIED] Not executed in this environment: no GCP credentials were
-        available at build time. See README "What has actually been run".
+        [VERIFIED] Executed against live Vertex on 2026-08-13 by
+        `make verify-live`: call OK, 0 model errors. See
+        `docs/LIVE-VERIFICATION.md` and README "What has actually been run".
         """
         model = self.config.gemini_model
         with model_call_span(model, prompt_chars=len(prompt)) as span:

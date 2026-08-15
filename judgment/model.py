@@ -1,8 +1,6 @@
 """The T2 model surface, and the three things that can be behind it.
 
-    VertexT2Model     the real one. [VERIFIED] -- executed live 2026-08-13,
-                      see docs/LIVE-VERIFICATION.md. T2 orchestration confirmed
-                      (0 exceptions over 60 nodes); judgement quality unmeasured.
+    VertexT2Model     the real one. [VERIFIED] -- executed live against Vertex.
     ScriptedT2Model   deterministic, for tests and evals. Labelled everywhere.
     UnavailableT2Model what you get when Vertex is off. Returns UNRESOLVED.
 
@@ -118,14 +116,18 @@ class ScriptedT2Model:
 
 @dataclass
 class VertexT2Model:
-    """The real path. [VERIFIED] -- run live against Vertex AI on 2026-08-13.
+    """The real path. [VERIFIED] -- executed against live Vertex on 2026-08-13.
 
-    `make verify-live` executed this class against project
-    `project-895d4ca8-d301-447d-916`: the parser+Gemini recall run (0 model
-    errors) and the T2 queue run (60 nodes, 120 calls, 0 exceptions). See
-    `docs/LIVE-VERIFICATION.md` for the full record. That run establishes the
-    orchestration, not judgement quality -- see `docs/T2-MEASUREMENT.md` for
-    why T2's resolved-0 outcome is a non-test, not a verdict on the model.
+    `make verify-live` drove this class against a real endpoint: 60 T2 nodes,
+    **120 model calls** (one re-derivation and one assessment each), **zero
+    exceptions**. The orchestration around the model is therefore proven end to
+    end, and `docs/LIVE-VERIFICATION.md` is the record.
+
+    ⚠ WHAT THAT RUN DID *NOT* PROVE. It resolved **0 of 60**. Every node in the
+    T2 queue carries `committed_lead_days = None`, so `assess()` short-circuits
+    to UNRESOLVED *before* the model's answer is consulted. The outcome was
+    fixed by the corpus, not decided by Gemini. Plumbing: verified. Judgement
+    quality: still unmeasured -- see `docs/T2-MEASUREMENT.md`.
     """
 
     model_id: str

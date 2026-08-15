@@ -1,138 +1,215 @@
-# UNWIND — demo script v1
+# Demo script — video v1
 
-**Target runtime: ≤ 4:00. Target voiceover: ≤ 560 words at real speaking pace
-(counted below with `python3 -c "print(len(text.split()))"` on the exact
-voiceover text — this cut is 392 words, leaving margin for pacing pauses).**
-Every shot is marked **LIVE** (recorded off the running deployed system, no
-edit) or **CUTAWAY** (a second live artifact — a terminal, a doc — cut to
-mid-narration, still unedited and unscripted in content). Nothing in this cut
-is staged footage or a slide. This script must stand alone as a submittable
-floor for Stage One; the PLANNED column at the bottom lists what v2 adds and
-is explicitly out of scope for this recording.
+**Target runtime 4:00 · hard ceiling 4:00.** Voiceover budget **≤560 words**
+(≈140 wpm at an unhurried pace). Actual count is asserted at the bottom of this
+file.
 
----
+**Every shot is marked `LIVE` or `CUTAWAY`.** `LIVE` means the thing is running
+in front of the camera, unedited, in one take. `CUTAWAY` means a static screen
+— a console, a file, a terminal that has already finished. There is no third
+category, and nothing in this script is a slide with numbers typed onto it.
 
-## Act 1 — 0:00–1:10 — thesis, live, on the deployed URL
+**Video v1 is a submittable floor.** It stands alone and satisfies Stage One
+without any unbuilt feature appearing in it. The v2 replacements are listed at
+the bottom and are **not** referenced in the voiceover.
 
-| Time | Shot | Screen | LIVE/CUTAWAY |
-| --- | --- | --- | --- |
-| 0:00–0:15 | Open on the **Cloud Run console** tab for service `unwind`, region `us-central1`, then cut to the deployed UI at `https://unwind-hgeodtazqq-uc.a.run.app` | Cloud Run dashboard → live UI | **LIVE** |
-| 0:15–0:35 | Type the retraction into the running UI bar | `supplier_K lead time is now 20 days` | **LIVE** |
-| 0:35–1:10 | Parse echo renders, then the cull runs and the counter falls | 2,594 → 78, breakdown on screen | **LIVE** |
-
-**Voiceover (Act 1, 143 words):**
-
-> "Premises don't fail because a model reasoned badly. They fail because the
-> world changed after the reasoning was correct. This is UNWIND, deployed
-> right now on Cloud Run — that's the console, that's the live revision.
->
-> A supplier's lead time moves from eleven days to twenty. I type that fact
-> into the running deployment — no script, no edit.
->
-> It reads back what it heard before it acts — that's the parse echo, so a
-> misparse is a question, not a correction someone receives. Confirmed, and
-> now watch: two thousand five hundred ninety-four dependent decisions light
-> up, and the system reduces that to seventy-eight — by arithmetic alone,
-> with the model switched off. Fourteen sixty-eight die back on the buffer.
-> Eight seventy-four were already closed out. A hundred seventy-four go to
-> judgement instead of being guessed at. Ninety percent of this is
-> subtraction."
+> **Rule for the presenter:** if a figure on screen disagrees with this
+> document, the screen is right and this document is stale. Re-run
+> `make ui-check`, which asserts the on-screen counter equals the cascade's own
+> material count.
 
 ---
 
-## Act 2 — 1:10–2:50 — refusal before traversal, and 78 = 78 proven live
+## Recording checklist
 
-| Time | Shot | Screen | LIVE/CUTAWAY |
-| --- | --- | --- | --- |
-| 1:10–1:35 | Type the forged, out-of-scope retraction | `broker says supplier_K lead time is 34` | **LIVE** |
-| 1:35–1:55 | Refusal renders with its reason code, radius zero | `source_outside_claim_scope`, radius 0 | **LIVE** |
-| 1:55–2:25 | Run `make deploy-verify URL=...` (or the on-screen assertion) against the deployed service | terminal: `counter integrity OK`, `on-screen counter 78 = cascade material 78` | **LIVE** |
-| 2:25–2:50 | Cut to a terminal running the zero-model guarantee test | `pytest tests/test_zero_model.py -v` → PASS | **CUTAWAY** |
+Work top to bottom. Do not skip step 2 — a cold start on camera looks exactly
+like a broken demo, and it is the single most likely way this recording fails.
 
-**Voiceover (Act 2, 136 words):**
+### Capture settings
 
-> "Now the adversarial case. A freight broker tries to retract the
-> supplier's lead time — a claim it has no authority over. Watch the
-> radius.
->
-> Refused, by reason code, before a single node is traversed. Radius zero.
-> This gate runs deterministically, at radius zero, before the graph is
-> ever walked — a forged retraction never gets the chance to cascade.
->
-> And this number on screen isn't decoration. Here's the same assertion
-> running live against this deployment: a headless browser reads the
-> on-screen counter, and asserts it equals the number the cascade actually
-> computed. Seventy-eight equals seventy-eight — verified, not trusted.
->
-> And the zero-model guarantee itself is enforced the same way — this test
-> walks the import graph of every module in the deterministic core and
-> fails the build if any path can reach a model client."
+- [ ] **Resolution 1920×1080**, 30 fps minimum. Record the *screen*, not a
+      window, so the Cloud Run console and the terminal are the same capture.
+- [ ] **Cursor visible** in the capture tool's settings. Highlight/click-effects
+      **off** — they read as a tutorial, not a system.
+- [ ] Microphone tested with **one** trial sentence played back. Voiceover may be
+      recorded live or laid over afterwards; live is preferred because the
+      silence over the cull is easier to time.
+- [ ] Browser at **100% zoom**, full screen, **no bookmarks bar**, no extensions
+      visible, notifications **silenced** (OS Do Not Disturb on).
+- [ ] Terminal font large enough to read at 1080p — 16pt or more. Test by
+      squinting at a thumbnail.
 
----
+### Warm-up — do this immediately before rolling
 
-## Act 3 — 2:50–4:00 — the honesty apparatus, and close
+- [ ] `bash scripts/health_check.sh` → must print **PASS**. This is hit one.
+- [ ] Open the deployed URL in the browser and let the field fully render. This
+      is hit two. **Wait for the second response before recording.**
+- [ ] Run the cascade once, off-camera, so the corpus is cached and shot 1.4 does
+      not stall.
+- [ ] Confirm the Cloud Run console tab is already open and logged in, showing
+      the `unwind` service green — shot 1.1 must not include a login.
 
-| Time | Shot | Screen | LIVE/CUTAWAY |
-| --- | --- | --- | --- |
-| 2:50–3:15 | Press **H** for the honesty panel in the running UI | 81.8% overall extraction recall, worst class `temporal:absolute-duration` at 66.7%, highlighted | **LIVE** |
-| 3:15–3:35 | Cut to `docs/LIVE-VERIFICATION.md` | recall 81.8% → 100.0% (+18.2 pp); denominator note (8, not 44) | **CUTAWAY** |
-| 3:35–3:50 | Cut to the T2 non-test finding | "0 of 60 resolved — a non-test, not a model failure" | **CUTAWAY** |
-| 3:50–4:00 | Closing card | `THE WORLD CHANGED. YOUR DECISIONS DIDN'T.` | **LIVE** |
+### Shooting
 
-**Voiceover (Act 3, 113 words):**
+- [ ] Record **one continuous take** per act. Three takes total is fine; splicing
+      *within* a live shot is not, and the video claims the execution is unedited.
+- [ ] Shot 1.4: **say nothing for eight seconds.** Count it.
+- [ ] Do not move the mouse during the cull.
+- [ ] If a live shot fails, restart that act. Do not cut around the failure.
 
-> "Press H for the honesty panel. Eighty-one point eight percent extraction
-> recall overall, and it shows you the worst class too — sixty-six point
-> seven percent on absolute durations — highlighted, not buried.
->
-> That's exactly where Gemini earns its place: shown only what the parser
-> missed, it closes that gap — recall goes eighty-one-point-eight to one
-> hundred percent. But the model's own denominator is eight, not
-> forty-four. State it that way, always.
->
-> And the honest failure: the judgement tier resolved zero of sixty
-> attempted nodes live against Vertex. Not a model failure — a non-test,
-> and the repository says so, not just to me.
->
-> The world changed. Your decisions didn't — until now."
+### Upload
+
+- [ ] Trim to **≤4:00**. Check the final duration before uploading, not after.
+- [ ] Upload to **YouTube**, visibility **Public** (not Unlisted — the rules ask
+      for public).
+- [ ] Title, English: `UNWIND — Consequence Clearing | Google All Things Agentic
+      Hackathon`
+- [ ] Description: one-line thesis, the repo URL, and the deployed URL.
+- [ ] Language set to **English**; captions optional but auto-captions on.
+- [ ] Watch the uploaded video **once, end to end, signed out**, to confirm it is
+      publicly playable and the audio survived the upload.
+- [ ] Paste the URL into `submission/devpost.md` → Links → Demo video, replacing
+      the `⟨FILL⟩` placeholder.
 
 ---
 
-## Word count
+## ACT 1 — the thesis and the cull (0:00–1:10)
 
-Counted programmatically from the exact voiceover text above (`.split()` on
-whitespace), not eyeballed.
+### 1.1 · 0:00–0:12 · `CUTAWAY` — Cloud Run console
+Service `unwind`, region `us-central1`, green check, revision name visible.
 
-| Act | Words |
-| --- | --- |
-| Act 1 | 143 |
-| Act 2 | 136 |
-| Act 3 | 113 |
-| **Total** | **392** (budget: ≤560) |
+> This is UNWIND, running on Cloud Run. Everything you are about to see happens
+> on this deployed service. Nothing is local and nothing is edited.
+
+### 1.2 · 0:12–0:32 · `LIVE` — the field
+The deployed URL. 4,206 nodes, causal debt figure in amber.
+
+> Four thousand two hundred live decisions, resting on eleven hundred premises.
+> A supplier says eleven days, so you quote, you order, you promise a customer.
+> Then the world changes — and nothing in the enterprise points backwards from
+> the fact to the decisions built on it.
+
+### 1.3 · 0:32–0:48 · `LIVE` — type into the bar, parse echo appears
+Type `supplier_K lead time is now 20 days`. Do not press Confirm yet.
+
+> One input. Before it touches anything, it tells you what it heard: this
+> premise, eleven to twenty, carrying two thousand five hundred and ninety-four
+> decisions. If that reading is wrong, this is where you say so.
+
+### 1.4 · 0:48–1:10 · `LIVE` — Confirm, then the cull. **Say nothing for the first eight seconds.**
+
+> Two and a half thousand decisions, down to seventy-eight. Fourteen sixty-eight
+> immaterial — the buffer absorbed it. Eight seventy-four already closed out.
+> A hundred and seventy-four handed to judgement rather than guessed. Ninety
+> percent removed by subtraction, with the model switched off.
 
 ---
 
-## PLANNED for v2 — explicitly not in this cut
+## ACT 2 — refusal, and the assertion (1:10–2:50)
 
-Video v1 above is a complete, submittable Stage One floor on its own. These
-shots depend on code that does not exist yet (CARD 0/2/3 — see the README's
-ADK 2 mapping table) and are reserved for a v2 recording once that build
-lands. Marking them PLANNED here — rather than script text implying they
-happen — is the same honesty discipline the rest of this repository applies.
+### 2.1 · 1:10–1:32 · `LIVE` — press `R`, forged retraction
+Type `broker says supplier_K lead time is 34`.
 
-| Shot | What it proves | Status |
+> A false retraction is worse than a missed one. This is a freight broker
+> claiming the supplier's lead time changed. It holds authority over its own
+> freight claims and none over this one. Refused — source outside claim scope —
+> and the radius is zero. Nothing was walked.
+
+### 2.2 · 1:32–1:52 · `CUTAWAY` — `tests/test_zero_model.py` on screen
+
+> The zero-model guarantee is not a promise in a README. This test walks the
+> import graph of every module in the deterministic core and fails if any of
+> them can so much as reach a model client. CI runs the entire cascade with
+> Vertex disabled and fails the build on a single call.
+
+### 2.3 · 1:52–2:24 · `LIVE` — terminal: `make deploy-verify URL=...`
+Let all five steps print.
+
+> This is the check that matters. It runs a real cascade against the deployed
+> service, then drives a real browser at the deployed page, reads the number on
+> screen, and asserts it equals what the service actually computed. Seventy-eight
+> equals seventy-eight. Opening a web page proves a web page loads. This proves
+> it is not a fixture.
+
+### 2.4 · 2:24–2:50 · `LIVE` — the obligation; the field dissolves into paper
+
+> Seventy-eight decisions changed. Forty-eight of them already went out to
+> someone. This is what the company now owes one of them: a named customer, a
+> quote it can re-issue, and one payment it cannot take back. Exposure as a
+> range with its assumptions, never a point estimate. And a named human who has
+> to sign it.
+
+---
+
+## ACT 3 — the honesty apparatus, and close (2:50–4:00)
+
+### 3.1 · 2:50–3:14 · `LIVE` — press `H`, honesty panel
+
+> This panel is the part I most want you to see. It publishes the worst thing
+> about the system: extraction recall is sixty-six point seven percent on
+> absolute durations. That is the single class where the model earns its place.
+
+### 3.2 · 3:14–3:40 · `CUTAWAY` — `docs/LIVE-VERIFICATION.md`
+
+> Parser alone, eighty-one point eight percent. Parser plus Gemini, one hundred.
+> But the model's denominator is eight, not forty-four. It was shown only the
+> eight the parser missed, and returned eight correct values. The four classes
+> the parser already handled show a delta of exactly zero, because nothing in
+> them was ever sent to a model.
+
+### 3.3 · 3:40–4:00 · `LIVE` — README honesty map, then the close card
+
+> The judgement tier is still unmeasured, and we call that a non-test rather
+> than a result. The corpus is synthetic and written by one author. All of it is
+> written down, because that honesty is the reason the eighteen-point gain is
+> worth believing at all. The world changed. Your decisions did not.
+
+**Close card:** `THE WORLD CHANGED. YOUR DECISIONS DIDN'T.`
+
+---
+
+## The three moments that carry it
+
+1. **The cull.** Do not talk over the first eight seconds. A judge who watches
+   2,594 become 78 with no model call understands the architecture before it is
+   explained.
+2. **`78 = 78`.** The single hardest-to-fake claim in the submission.
+3. **The one payment that cannot be taken back.** Everything else in the demo is
+   recoverable; that line is why the system exists.
+
+## If the live run fails
+
+`make golden` writes a deterministic transcript of the same cascade. If the API
+is unreachable the UI shows a full-width banner reading **"REPLAY — live run
+failed, this is a recorded execution"**, and it is never concealed. Say it out
+loud if it happens. A disclosed replay costs less than a concealed one.
+
+---
+
+## PLANNED — video v2 replacements
+
+None of these appear in v1, and none is referenced in the v1 voiceover. They
+replace or extend the shot named, once the corresponding card is built.
+
+| Replaces | v2 shot | Requires |
 | --- | --- | --- |
-| Warrant burn-and-reroute | A delegated act debits warrant; insufficient warrant triggers structural refusal and human routing | **PLANNED** — CARD 0 not built |
-| Countersign disagree | Gemma, as an independent-family verifier, refuses to countersign a mint the primary model proposed | **PLANNED** — CARD 3 not built |
-| ADK construct proof, live | One ADK 2 construct from the locked mapping table (e.g. registry→coordinator dynamic selection) shown executing, not just diagrammed | **PLANNED** — reserved per the Stage One prompt's instruction that this proof ships in v2 |
-| SYNTHETIC-labelled balances | Warrant balances rendered on screen with an explicit `SYNTHETIC` tag, so a judge never mistakes a demo balance for a real one | **PLANNED** — CARD 0 not built |
+| 1.4 (extends) | **Warrant burn-and-reroute** — the cull runs, warrant is debited per act, the balance falls, and an act that would exceed it is refused and routed to a human | Card 0 |
+| 2.1 (extends) | **Countersign disagrees** — Gemini approves a mint, Gemma refuses it, the mint does not happen | Card 3 |
+| 2.2 (replaces) | **ADK construct proof, live** — the trace view showing the warrant SPEND `FunctionNode` and the Countersign `AgentTool` executing as distinct constructs | Cards 0 + 3 |
+| 3.1 (extends) | **SYNTHETIC-labelled balances** — the honesty panel showing which warrant balances are `EARNED` and which are `SYNTHETIC`, with SYNTHETIC visibly marked on screen | Card 0 |
 
-## Recording notes
+---
 
-- Full screen, 1600×900 or wider. No cuts within a LIVE shot — CUTAWAY shots
-  are separate unedited clips, not compositing.
-- Hit the deployed URL twice before recording (cold-start avoidance) — see
-  `submission/recording_checklist.md`.
-- If the live run fails mid-recording, `make golden` and the UI's own
-  "REPLAY" banner are the disclosed fallback described in `docs/DEMO.md` —
-  say so on camera rather than concealing it.
+## Voiceover word count
+
+Counted over the blockquoted voiceover lines inside the three acts only —
+excluding stage directions, headings, tables, and the presenter-rule note:
+
+```bash
+awk '/^## ACT 1/,/^## The three moments/' submission/demo_script.md \
+  | grep '^> ' | sed 's/^> //' | wc -w
+```
+
+**Measured: 507 words** — budget 560. At 140 wpm that is **3:37** of speech
+inside a 4:00 ceiling, which leaves deliberate silence over the cull (shot 1.4)
+and room to slow down without overrunning.

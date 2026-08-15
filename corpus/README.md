@@ -78,8 +78,8 @@ here is read out of `data/stats.json`, which the generator wrote.
 | Conclusions | 4,004 |
 | Reverse-index edges | 10,192 |
 | Sources | 10 |
-| Hub claim direct dependents | 712 |
-| Hub claim **transitive** dependents (the blast radius) | 2,424 |
+| Hub claim direct dependents | 882 |
+| Hub claim **transitive** dependents (the blast radius) | 2,594 |
 | Max premise-chain depth | 5 |
 | Radius scoreable arithmetically | 2,420 (4 are unresolvable) |
 | Material by buffer arithmetic | 117 |
@@ -137,8 +137,8 @@ Stated plainly rather than tuned away:
   not tuned back.
 - **78 live material survivors against an original ~31 target.** That target was
   withdrawn as arithmetically inconsistent with a ≈96 % die-back over a ~2,000
-  radius. 2,424 → 78 is a 96.8 % cull.
-- **Escaped/not-escaped is 50/28.** In the first corpus this ratio was inverted
+  radius. 2,594 → 78 is a 97.0 % cull.
+- **Escaped/not-escaped is 48/30.** In the first corpus this ratio was inverted
   (25 escaped / 30 not). The long-dated instruments corrected it as a side
   effect rather than by design: a published price list or a countersigned
   framework agreement has left the building almost by definition, so their high
@@ -165,7 +165,7 @@ are not estimates of anything.
 Brokerage asserting that Kestrel's lead time is now 34 days. Zenith holds
 authority over `freight_broker_Z.` and nothing else; the hub claim's
 `authority_scope` names only `src_supplier_K` and `src_msa_K`. It therefore has
-no standing, and accepting it would cascade a mass unwind of 2,424 real
+no standing, and accepting it would cascade a mass unwind of 2,594 real
 commitments off a forged input.
 
 **It is stored and not processed by the generator.** Task 2's authority gate now refuses it deterministically — see `make cascade-forged`.

@@ -13,7 +13,7 @@ ordering.
 
 | Tier | What runs there | Model? | Why it is a tier and not a convention |
 | --- | --- | --- | --- |
-| T0 | Blast-radius traversal over the reverse index | No | A cascade over 2,424 dependents must not cost 2,424 model calls, and must still run when Vertex is down. |
+| T0 | Blast-radius traversal over the reverse index | No | A cascade over 2,594 dependents must not cost 2,594 model calls, and must still run when Vertex is down. |
 | T1 | Arithmetic materiality on numeric/temporal claims | No | `shock > slack` is subtraction; asking a model to do subtraction is how you get a confidently wrong unwind. |
 | T2 | Ambiguous materiality, arbitration, drafting | Yes | Judgement, argument and prose are the only places a model earns its latency. |
 
@@ -245,8 +245,10 @@ Defines the metrics before any scenario exists, because a metric invented after
 seeing results is a metric chosen to flatter them.
 
 ### `web/`
-Reserves the operator surface and pins Next.js 15; no UI is built yet and the
-one page in it says so.
+Holds the operator surface. `web/static/` is the live UI — canvas, 4,206 nodes,
+served by FastAPI from the same origin as the API. The Next.js 15 skeleton
+alongside it is **dead code**, retained only because deleting it is a change with
+no reviewer; `web/README.md` says so plainly.
 
 ### `infra/`
 Holds the composite index the reverse-index traversal cannot run without, the
@@ -268,7 +270,7 @@ Four, each justified in one sentence. Nothing else is used.
 Deliberately **NOT USED**: GKE (Cloud Run already runs the container, and
 `adk deploy gke` would add a cluster nobody needs), Cloud SQL and Spanner
 (the data is documents with a subcollection index, not relations), BigQuery
-(2,424 rows per cascade is not an analytics workload), Dataflow (Pub/Sub plus
+(2,594 rows per cascade is not an analytics workload), Dataflow (Pub/Sub plus
 Cloud Run is the whole pipeline), Redis and Memorystore (Firestore holds the
 idempotency keys, and a second datastore is a second thing to be inconsistent).
 
@@ -280,9 +282,9 @@ Verified present in `google-adk` 2.6.3 (`google.adk.workflow`, `google.adk.tools
 | --- | --- |
 | `FunctionNode` | **In use.** The cascade graph is nothing but function nodes — T0 traversal and T1 materiality, no model call. |
 | `Workflow` + `Edge` / `DEFAULT_ROUTE` | **In use.** `agents/cascade/workflow.py` branches on `ctx.route`; the regime split is a routing decision, not a prompt. |
-| `AgentTool` (agent-as-tool) | **In use.** The repair court: owners are single-turn agent tools, so the arbiter fans N of them out in parallel and still holds the gavel. This is the reason the project needs ADK 2. |
-| Dynamic node scheduling | **In use.** The repair team is composed at runtime from a blast radius that did not exist a second earlier; `court/team.py` sizes it from the alert cell. |
-| `LongRunningFunctionTool` | Durable pause/resume: a human may sign a correction obligation on Tuesday. |
+| `AgentTool` (agent-as-tool) | **NOT IN USE.** Locked design for Countersign (Card 3), which is not built. The repair court fans N owners out with a `ThreadPoolExecutor` (`court/protocol.py`) — the parallelism is real and `tests/test_court.py` asserts the pleas overlap in wall-clock time, but it is threads, not ADK, and this table will not say otherwise until the code changes. |
+| Dynamic node scheduling | **NOT IN USE.** `court/team.py` composes the repair team at runtime from a blast radius that did not exist a second earlier, but it does so in plain Python. The ADK dynamic pattern is locked design for the Card 2 registry → coordinator selection. |
+| `LongRunningFunctionTool` | **NOT IN USE.** Locked design for durable pause/resume: a human may sign a correction obligation on Tuesday. |
 
 ## The write path
 
