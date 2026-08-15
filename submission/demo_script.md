@@ -210,6 +210,6 @@ awk '/^## ACT 1/,/^## The three moments/' submission/demo_script.md \
   | grep '^> ' | sed 's/^> //' | wc -w
 ```
 
-**Measured: 507 words** — budget 560. At 140 wpm that is **3:37** of speech
+**Measured: 511 words** — budget 560. At 140 wpm that is **3:39** of speech
 inside a 4:00 ceiling, which leaves deliberate silence over the cull (shot 1.4)
 and room to slow down without overrunning.
