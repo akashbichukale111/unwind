@@ -20,15 +20,56 @@ the bottom and are **not** referenced in the voiceover.
 
 ---
 
-## Before recording
+## Recording checklist
 
-1. **Warm the service.** Hit the deployed URL **twice** and wait for the second
-   response. Cloud Run scales to zero; a cold start on camera looks like a
-   broken demo. `bash scripts/health_check.sh` counts as one hit.
-2. Full screen, **1920×1080**, browser zoom 100%, no bookmarks bar, no
-   notifications.
-3. Cursor visible and slow. The cull is the star; do not move the mouse during
-   it.
+Work top to bottom. Do not skip step 2 — a cold start on camera looks exactly
+like a broken demo, and it is the single most likely way this recording fails.
+
+### Capture settings
+
+- [ ] **Resolution 1920×1080**, 30 fps minimum. Record the *screen*, not a
+      window, so the Cloud Run console and the terminal are the same capture.
+- [ ] **Cursor visible** in the capture tool's settings. Highlight/click-effects
+      **off** — they read as a tutorial, not a system.
+- [ ] Microphone tested with **one** trial sentence played back. Voiceover may be
+      recorded live or laid over afterwards; live is preferred because the
+      silence over the cull is easier to time.
+- [ ] Browser at **100% zoom**, full screen, **no bookmarks bar**, no extensions
+      visible, notifications **silenced** (OS Do Not Disturb on).
+- [ ] Terminal font large enough to read at 1080p — 16pt or more. Test by
+      squinting at a thumbnail.
+
+### Warm-up — do this immediately before rolling
+
+- [ ] `bash scripts/health_check.sh` → must print **PASS**. This is hit one.
+- [ ] Open the deployed URL in the browser and let the field fully render. This
+      is hit two. **Wait for the second response before recording.**
+- [ ] Run the cascade once, off-camera, so the corpus is cached and shot 1.4 does
+      not stall.
+- [ ] Confirm the Cloud Run console tab is already open and logged in, showing
+      the `unwind` service green — shot 1.1 must not include a login.
+
+### Shooting
+
+- [ ] Record **one continuous take** per act. Three takes total is fine; splicing
+      *within* a live shot is not, and the video claims the execution is unedited.
+- [ ] Shot 1.4: **say nothing for eight seconds.** Count it.
+- [ ] Do not move the mouse during the cull.
+- [ ] If a live shot fails, restart that act. Do not cut around the failure.
+
+### Upload
+
+- [ ] Trim to **≤4:00**. Check the final duration before uploading, not after.
+- [ ] Upload to **YouTube**, visibility **Public** (not Unlisted — the rules ask
+      for public).
+- [ ] Title, English: `UNWIND — Consequence Clearing | Google All Things Agentic
+      Hackathon`
+- [ ] Description: one-line thesis, the repo URL, and the deployed URL.
+- [ ] Language set to **English**; captions optional but auto-captions on.
+- [ ] Watch the uploaded video **once, end to end, signed out**, to confirm it is
+      publicly playable and the audio survived the upload.
+- [ ] Paste the URL into `submission/devpost.md` → Links → Demo video, replacing
+      the `⟨FILL⟩` placeholder.
 
 ---
 
