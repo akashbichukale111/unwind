@@ -22,11 +22,29 @@ ORDER MATTERS, AND IT IS FIXED
 -------------------------------
 PRINCIPAL_VIOLATION -> SCOPE_EXCEEDED -> BUDGET_EXCEEDED -> WARRANT_INSUFFICIENT.
 Each refuses BEFORE any work happens -- `evaluate_gateway` returns the first
-refusal it finds and never proceeds past it. WARRANT_INSUFFICIENT is last and
-currently a stub that always passes (`tower/schema.py:WarrantSlot` has no
-arithmetic yet; Card 0 fills it in). The code path, the reason code, and the
-test asserting it exists NOW, so wiring in real warrant arithmetic later is a
-one-function change, not a new code path.
+refusal it finds and never proceeds past it.
+
+WARRANT_INSUFFICIENT IS NOW REAL (Card 0)
+-------------------------------------------
+`check_warrant` used to be a stub that always passed -- that was the whole
+point of shipping the reason code and the code path before the arithmetic
+existed. Card 0 (`warrant/ledger.py`) now fills it in: `check_warrant` calls
+`warrant.ledger.spend_or_refuse`, an ATOMIC SPEND-or-refuse operation that
+reads the agent's LIVE warrant ledger (no cache -- a `BURN` committed a
+moment ago is visible to the very next call, see
+`warrant/ledger.py:spend_or_refuse`'s docstring) and either debits the
+registry-fixed cost for this risk class or refuses before any work happens.
+A cold-start agent (no warrant ever minted) refuses by construction: the
+fold of zero events is zero, and zero never covers a positive cost.
+
+WHY THE ATOMIC SPEND IS AN ADK 2 FunctionNode HERE, NOT PLAIN CODE
+-----------------------------------------------------------------------
+`warrant_check` below (the `FunctionNode` wrapping `_warrant_node`, which
+calls `check_warrant`) is where the framework's own guarantee -- a
+`FunctionNode` contains no model, by construction of the framework -- turns
+"zero model calls in the authority path" into a property the graph itself
+enforces, not a convention this file has to be trusted to uphold. See
+`warrant/DESIGN.md` for the fuller note.
 
 FAILURE-TOLERANT ROUTING (rubric-quoted: "how does the system recover if a
 worker agent loops or returns a hallucination") IS ALSO A ROUTE
@@ -50,6 +68,7 @@ from lib.config import Tier
 from lib.principals import PrincipalSeparationError, assert_agent_is_distinct
 from lib.telemetry import policy_gate_span
 from tower.schema import AgentRegistryEntry, GatewayDecision, GatewayReasonCode, RegistryStatus
+from warrant.ledger import spend_or_refuse
 
 #: A worker gets this many steps before the supervisor calls it a loop. Small
 #: on purpose: the point is to prove the branch routes, not to tune a real
@@ -165,18 +184,63 @@ def check_budget(
 
 
 def check_warrant(
-    agent: AgentRegistryEntry, *, task: str, risk_class: str
+    agent: AgentRegistryEntry,
+    *,
+    task: str,
+    risk_class: str,
+    capability: str | None = None,
+    case_id: str | None = None,
 ) -> GatewayDecision | None:
-    """[STUB] Always passes. Card 0 (a later prompt) fills this in.
+    """None if the agent's LIVE warrant balance covers this delegation's
+    registry-fixed cost; a `WARRANT_INSUFFICIENT` refusal otherwise.
 
-    The code path, the reason code (WARRANT_INSUFFICIENT), and
-    `tests/test_tower_gateway.py::test_warrant_check_stub_always_passes` all
-    exist now so that wiring in real balance arithmetic is a change to THIS
-    function's body, not a new branch threaded through the router.
-    `agent.warrant.balances` is read (not ignored) so the stub's shape
-    matches what the real check will look at.
+    `capability` defaults to the agent's sole registered capability when it
+    has exactly one -- most registry entries in this codebase (and every
+    existing caller of `evaluate_gateway`) register a single capability, so
+    this keeps the common case a one-line call while a multi-capability
+    agent must say which capability the task is exercising, since warrant is
+    scoped per (principal, capability, risk_class), never collapsed to one
+    number.
+
+    This function reads `warrant.ledger.spend_or_refuse`, NOT
+    `agent.warrant.balances` -- that field is Card 2's display snapshot
+    (`tower/schema.py:WarrantSlot`), and reading it here would be exactly
+    the cache the revocation-latency guarantee forbids. Every call to this
+    function that reaches ALLOWED has already durably SPENT the cost; a
+    refusal spends nothing.
     """
-    _ = agent.warrant.balances.get(risk_class, 0)  # touched, not yet enforced
+    resolved_capability = capability
+    if resolved_capability is None:
+        if len(agent.capabilities) == 1:
+            resolved_capability = agent.capabilities[0]
+        else:
+            return _decision(
+                allowed=False,
+                reason_code=GatewayReasonCode.WARRANT_INSUFFICIENT,
+                reason=(
+                    f"agent {agent.agent_id!r} registers {len(agent.capabilities)} capabilities "
+                    f"({agent.capabilities!r}); warrant is scoped per capability, so a specific "
+                    "one must be named for this task rather than assumed."
+                ),
+                agent_id=agent.agent_id,
+                task=task,
+            )
+    result = spend_or_refuse(
+        agent=agent,
+        capability=resolved_capability,
+        risk_class=risk_class,
+        task=task,
+        case_id=case_id,
+        acting_principal=agent.principal,
+    )
+    if not result.allowed:
+        return _decision(
+            allowed=False,
+            reason_code=GatewayReasonCode.WARRANT_INSUFFICIENT,
+            reason=result.reason,
+            agent_id=agent.agent_id,
+            task=task,
+        )
     return None
 
 
@@ -191,9 +255,16 @@ def evaluate_gateway(
     owners: tuple[str, ...] = (),
     assessor: str | None = None,
     rederiver: str | None = None,
+    capability: str | None = None,
+    case_id: str | None = None,
 ) -> GatewayDecision:
     """The one choke point. Runs all four checks in the fixed order and
     returns the FIRST refusal -- nothing after it runs.
+
+    `capability` and `case_id` feed `check_warrant` alone; see its docstring
+    for the single-capability default. `case_id` is the Memory Bank case
+    this delegation belongs to, recorded on the resulting SPEND event so a
+    later BURN or audit can point back at exactly which task consumed it.
     """
     with policy_gate_span(
         "agent_gateway", Tier.T0, agent_id=agent.agent_id, task=task, risk_class=risk_class
@@ -210,7 +281,10 @@ def evaluate_gateway(
             ),
             (check_scope, {"requested_scope": requested_scope}),
             (check_budget, {"requested_cost": requested_cost, "risk_class": risk_class}),
-            (check_warrant, {"risk_class": risk_class}),
+            (
+                check_warrant,
+                {"risk_class": risk_class, "capability": capability, "case_id": case_id},
+            ),
         ):
             with policy_gate_span(
                 f"agent_gateway.{check.__name__}", Tier.T0, agent_id=agent.agent_id, task=task
@@ -337,8 +411,22 @@ def _budget_node(ctx: Context, node_input: Any = None) -> dict[str, Any]:
 
 
 def _warrant_node(ctx: Context, node_input: Any = None) -> dict[str, Any]:
+    """The ADK 2 `FunctionNode` body for the atomic SPEND-or-refuse check.
+
+    A `FunctionNode` is a framework guarantee, not a convention: `google.adk`
+    defines it as containing no model, so "this node makes zero model calls"
+    is provable by inspecting the node's TYPE, the same way
+    `test_gateway_workflow_is_a_real_adk_workflow` inspects the graph's
+    shape rather than trusting a comment. See `warrant/DESIGN.md`.
+    """
     agent: AgentRegistryEntry = ctx.state["agent"]
-    decision = check_warrant(agent, task=ctx.state["task"], risk_class=ctx.state["risk_class"])
+    decision = check_warrant(
+        agent,
+        task=ctx.state["task"],
+        risk_class=ctx.state["risk_class"],
+        capability=ctx.state.get("capability"),
+        case_id=ctx.state.get("case_id"),
+    )
     ctx.route = "refused" if decision else DEFAULT_ROUTE
     if decision:
         ctx.state["decision"] = decision
@@ -380,6 +468,11 @@ principal_check = FunctionNode(
 )
 scope_check = FunctionNode(func=_scope_node, name="scope_check", parameter_binding="state")
 budget_check = FunctionNode(func=_budget_node, name="budget_check", parameter_binding="state")
+#: The atomic SPEND-or-refuse operation (Card 0), as an ADK 2 FunctionNode --
+#: not plain code wired to look like one. `FunctionNode` is the framework's
+#: own guaranteed-no-model node type, so "zero model calls in the authority
+#: path" is a property of the graph ADK constructs, not a convention this
+#: module has to be trusted to uphold. See warrant/DESIGN.md.
 warrant_check = FunctionNode(func=_warrant_node, name="warrant_check", parameter_binding="state")
 dispatch = FunctionNode(func=_dispatch_node, name="dispatch", parameter_binding="state")
 refuse = FunctionNode(func=_refuse_node, name="refuse", parameter_binding="state")

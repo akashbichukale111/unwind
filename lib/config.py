@@ -46,6 +46,25 @@ MODEL_DEEP = "gemini-3.6-flash"
 #: that silently wanted the expensive model should have to say so.
 GEMINI_MODEL = MODEL_FAST
 
+# ---------------------------------------------------------------------------
+# Gemma (Card 3, Countersign). A SEPARATE model family, deliberately -- the
+# whole point of Countersign is that its verdict comes from a family that
+# cannot share Gemini's blind spots. `warrant/ledger.py`'s MINT precondition
+# refuses a same-family countersign outright (see `family_root` below), so a
+# Gemma string quietly drifting to a Gemini one would be self-defeating in a
+# way none of the other model config in this file is.
+#
+# [UNVERIFIED — NOT RE-CHECKED AGAINST LIVE VERTEX MODEL GARDEN LISTINGS IN
+# THIS SESSION.] `gemma-3-27b-it` is the instruction-tuned, largest-available
+# open-weight Gemma 3 checkpoint as commonly published on Vertex AI Model
+# Garden. Unlike MODEL_FAST/MODEL_DEEP above, this string has NOT been
+# re-verified against a live GA listing in this environment (no GCP
+# credentials were available -- see `docs/LIVE-VERIFICATION.md` and
+# `countersign/DESIGN.md`). Treat it the same way as any other unverified
+# claim in this repository: re-check before a live demo, and the honesty
+# panel says so rather than implying otherwise.
+GEMMA_MODEL = "gemma-3-27b-it"
+
 # Vertex AI location. Pinned, not inferred from ambient environment, so a cascade
 # cannot silently move jurisdictions between runs.
 #
@@ -90,6 +109,7 @@ class Config:
     gemini_model: str
     model_fast: str
     model_deep: str
+    gemma_model: str
 
     firestore_emulator_host: str | None
     firestore_database: str
@@ -164,6 +184,16 @@ COLLECTION_DECISION_MEMORY = "decision_memory"
 #: Long-running case state (open/paused/awaiting_human/resumed/closed). tower/runtime.py.
 COLLECTION_CASES = "cases"
 
+# ---------------------------------------------------------------------------
+# WARRANT (Card 0): a fully separate ledger from settle/loadrating.py.
+# Deliberately its own collection, not a reuse of COLLECTION_AGENT_TRUST or
+# anything settle/ touches -- warrant/DESIGN.md and
+# tests/test_warrant_separation.py assert this ledger shares no storage and
+# no code path with source standing.
+# ---------------------------------------------------------------------------
+#: Append-only warrant events: MINT, BURN, SPEND, DECAY, CHALLENGE. warrant/ledger.py.
+COLLECTION_WARRANT_LEDGER = "warrant_ledger"
+
 #: Subcollection under reverse_index/{claim_id}
 SUBCOLLECTION_DEPENDENTS = "dependents"
 #: Subcollection under cascades/{cascade_id}
@@ -181,6 +211,7 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_AGENTS,
     COLLECTION_DECISION_MEMORY,
     COLLECTION_CASES,
+    COLLECTION_WARRANT_LEDGER,
 )
 
 
@@ -203,6 +234,7 @@ def get_config() -> Config:
         gemini_model=GEMINI_MODEL,
         model_fast=MODEL_FAST,
         model_deep=MODEL_DEEP,
+        gemma_model=GEMMA_MODEL,
         firestore_emulator_host=emulator_host,
         firestore_database=os.environ.get("UNWIND_FIRESTORE_DATABASE", "(default)"),
         vertex_disabled=_env_flag("UNWIND_VERTEX_DISABLED", default=False),

@@ -647,6 +647,274 @@ async def honesty() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# THE INSTRUMENT -- Card 0 (WARRANT) spanning Cards 1-3 (Card 3, this prompt)
+# ---------------------------------------------------------------------------
+# Cards 1's numbers here are the SAME real computation `/api/field` and
+# `/api/honesty` already use -- no second, UI-only source of truth. Cards 0
+# and 2 need the Firestore emulator (`tower/`, `warrant/`'s own storage);
+# unlike every other endpoint above, this one says so plainly and returns
+# `available: false` rather than fabricating a bar when the emulator is not
+# reachable -- `make ui` remains credential-free for the field, and the
+# instrument is honest about the one thing it additionally needs.
+
+_DEMO_AGENT_CONFIG = dict(
+    capabilities=["extract"],
+    max_budget=10_000,
+    authority_scope=["claim.read"],
+    risk_class_thresholds={"LOW": 5000, "HIGH": 1000},
+    warrant_mint_schedule={"LOW": 500, "HIGH": 150},
+    warrant_spend_schedule={"LOW": 100, "HIGH": 120},
+)
+#: Two demo agents: a seeded veteran (SYNTHETIC history, for the BURN moment)
+#: and a cold-start rookie (zero history, for the earn-up moment). Neither
+#: agent_id is invented for the UI alone -- both are the same ones
+#: `scripts/demo_warrant.py` stages for the terminal version of this demo.
+_DEMO_AGENT_IDS = ("extractor_veteran", "extractor_rookie")
+
+
+def _emulator_up() -> bool:
+    import os
+    import socket
+
+    host = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
+    hostname, _, port = host.partition(":")
+    try:
+        with socket.create_connection((hostname, int(port or 8080)), timeout=0.75):
+            return True
+    except OSError:
+        return False
+
+
+def _ensure_demo_agents() -> None:
+    from tower.registry import get_agent, make_entry, put_agent
+
+    for agent_id in _DEMO_AGENT_IDS:
+        if get_agent(agent_id) is not None:
+            continue
+        put_agent(make_entry(agent_id, **_DEMO_AGENT_CONFIG))
+
+
+def _seed_veteran_if_empty() -> None:
+    """[SYNTHETIC] The same fabricated eight-week history
+    `scripts/demo_warrant.py` seeds, written once (idempotent: only fires
+    when both risk classes are still at zero, so repeated page loads never
+    pile up duplicate events)."""
+    from datetime import timedelta
+
+    from tower.registry import get_agent
+    from warrant.ledger import EventKind, current_balance, write_synthetic_seed_event
+
+    agent = get_agent("extractor_veteran")
+    if agent is None:
+        return
+    if current_balance(agent.principal, "extract", "HIGH") or current_balance(
+        agent.principal, "extract", "LOW"
+    ):
+        return
+    now = datetime.now(UTC)
+    week = timedelta(days=7)
+    for kind, risk_class, amount, at, reason in [
+        (EventKind.MINT, "LOW", 500, now - 8 * week, "week 1: validated extraction, LOW"),
+        (EventKind.MINT, "HIGH", 150, now - 7 * week, "week 2: validated extraction, HIGH"),
+        (EventKind.SPEND, "LOW", 100, now - 6 * week, "week 3: routine LOW delegation"),
+        (EventKind.MINT, "HIGH", 150, now - 5 * week, "week 4: validated extraction, HIGH"),
+        (EventKind.MINT, "LOW", 500, now - 4 * week, "week 5: validated extraction, LOW"),
+        (EventKind.MINT, "HIGH", 150, now - 3 * week, "week 6: validated extraction, HIGH"),
+    ]:
+        write_synthetic_seed_event(
+            principal=agent.principal,
+            capability="extract",
+            risk_class=risk_class,
+            kind=kind,
+            amount_bp=amount,
+            case_id=None,
+            reason=reason,
+            at=at,
+        )
+
+
+def _warrant_bars() -> list[dict[str, Any]]:
+    """Card 0's surface: bars per (agent x capability x risk_class), never
+    collapsed into one reputation number. `threshold_bp` is what the
+    Gateway's `check_warrant` actually spends per delegation -- the line
+    that matters for routing, not the flat registration ceiling.
+    """
+    from tower.registry import get_agent
+    from warrant.ledger import balance_key, current_balance, provenance_for_fold, read_events
+
+    bars = []
+    for agent_id in _DEMO_AGENT_IDS:
+        agent = get_agent(agent_id)
+        if agent is None:
+            continue
+        for risk_class in ("LOW", "HIGH"):
+            events = read_events(
+                principal=agent.principal, capability="extract", risk_class=risk_class
+            )
+            bars.append(
+                {
+                    "agent_id": agent_id,
+                    "capability": "extract",
+                    "risk_class": risk_class,
+                    "key": balance_key("extract", risk_class),
+                    "balance_bp": current_balance(agent.principal, "extract", risk_class),
+                    "threshold_bp": agent.warrant_spend_schedule.get(risk_class, 0),
+                    "provenance": provenance_for_fold(events).value,
+                    "n_events": len(events),
+                }
+            )
+    return bars
+
+
+def _countersign_evidence() -> dict[str, Any] | None:
+    path = REPO / "evidence" / "countersign" / "results.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@app.get("/api/instrument")
+async def instrument() -> dict[str, Any]:
+    if not _emulator_up():
+        return {
+            "available": False,
+            "reason": "Firestore emulator not reachable. Start it with `make emulator`.",
+        }
+    _ensure_demo_agents()
+    _seed_veteran_if_empty()
+
+    from tower.registry import list_agents
+    from tower.schema import GatewayReasonCode
+
+    countersign = _countersign_evidence()
+    agents = [a for a in list_agents() if a.agent_id in _DEMO_AGENT_IDS]
+
+    return {
+        "available": True,
+        "card0": {"bars": _warrant_bars()},
+        "card1": {"debt": _debt_figure(), "counts": _stats()["counts"]},
+        "card2": {
+            "agents": [
+                {"agent_id": a.agent_id, "status": a.status.value, "capabilities": a.capabilities}
+                for a in agents
+            ],
+            "reason_codes": [c.value for c in GatewayReasonCode],
+        },
+        "card3": countersign
+        or {
+            "agreement_rate": None,
+            "note": "run `python scripts/run_countersign_eval.py` to produce evidence/countersign/results.json",
+        },
+    }
+
+
+@app.post("/api/instrument/burn")
+async def instrument_burn() -> dict[str, Any]:
+    """The demo moment: a human overturns `extractor_veteran`'s HIGH-risk
+    judgement. Real BURN (`warrant/ledger.py`), then a real Gateway
+    re-check (`tower/gateway.py`) proving the very next case of that class
+    routes to a human -- no cache, live fold.
+    """
+    if not _emulator_up():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    _ensure_demo_agents()
+    _seed_veteran_if_empty()
+
+    from tower.gateway import evaluate_gateway
+    from tower.registry import get_agent
+    from warrant.ledger import burn, current_balance
+
+    agent = get_agent("extractor_veteran")
+    before = current_balance(agent.principal, "extract", "HIGH")
+    if before > 0:
+        burn(
+            agent=agent,
+            capability="extract",
+            risk_class="HIGH",
+            amount_bp=before,
+            case_id="demo_burn_case",
+            reason="human overturned the HIGH-risk judgement (UI demo)",
+            acting_principal=agent.principal,
+        )
+    after = current_balance(agent.principal, "extract", "HIGH")
+    decision = evaluate_gateway(
+        agent,
+        task="next HIGH-risk case after the overturn",
+        requested_scope=["claim.read"],
+        requested_cost=1,
+        risk_class="HIGH",
+        capability="extract",
+        case_id="demo_burn_next_case",
+    )
+    return {
+        "before_bp": before,
+        "after_bp": after,
+        "reason_code": decision.reason_code.value,
+        "allowed": decision.allowed,
+        "bars": _warrant_bars(),
+    }
+
+
+@app.post("/api/instrument/earn")
+async def instrument_earn() -> dict[str, Any]:
+    """The cold-start demo moment: `extractor_rookie` earns its first
+    delegation live -- human concurrence, a labelled SIMULATED countersign
+    (live Gemma is unreachable in this environment; see
+    `countersign/DESIGN.md`), MINT, then the Gateway re-check.
+    """
+    if not _emulator_up():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    _ensure_demo_agents()
+
+    import os
+    import uuid
+
+    os.environ.setdefault("UNWIND_COUNTERSIGN_SIMULATED", "1")
+    from tower.gateway import evaluate_gateway
+    from tower.registry import get_agent
+    from warrant.ledger import current_balance, mint, record_countersign, record_human_concurrence
+
+    agent = get_agent("extractor_rookie")
+    before = current_balance(agent.principal, "extract", "LOW")
+    case_id = f"demo_earn_{uuid.uuid4().hex[:8]}"
+    if before == 0:
+        record_human_concurrence(
+            case_id, principal="human::demo_operator", note="Approved on camera, live run."
+        )
+        record_countersign(
+            case_id,
+            agrees=True,
+            family="gemma-simulated",
+            simulated=True,
+            note="on-camera demo run",
+        )
+        mint(
+            agent=agent,
+            capability="extract",
+            risk_class="LOW",
+            case_id=case_id,
+            reason="first validated outcome",
+        )
+    after = current_balance(agent.principal, "extract", "LOW")
+    decision = evaluate_gateway(
+        agent,
+        task="first LOW-risk delegation",
+        requested_scope=["claim.read"],
+        requested_cost=1,
+        risk_class="LOW",
+        capability="extract",
+        case_id=case_id,
+    )
+    return {
+        "before_bp": before,
+        "after_bp": after,
+        "reason_code": decision.reason_code.value,
+        "allowed": decision.allowed,
+        "bars": _warrant_bars(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # STATIC UI -- mounted last so it cannot shadow an API route
 # ---------------------------------------------------------------------------
 

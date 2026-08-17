@@ -140,6 +140,8 @@ def make_entry(
     data_scope: list[str] | None = None,
     tools: list[str] | None = None,
     risk_class_thresholds: dict[str, int] | None = None,
+    warrant_mint_schedule: dict[str, int] | None = None,
+    warrant_spend_schedule: dict[str, int] | None = None,
     status: RegistryStatus = RegistryStatus.ACTIVE,
 ) -> AgentRegistryEntry:
     """Convenience constructor with the `agent::` principal convention applied."""
@@ -152,6 +154,8 @@ def make_entry(
         tools=tools or [],
         max_budget=max_budget,
         risk_class_thresholds=risk_class_thresholds or {},
+        warrant_mint_schedule=warrant_mint_schedule or {},
+        warrant_spend_schedule=warrant_spend_schedule or {},
         status=status,
         principal=f"agent::{agent_id}",
         registered_at=datetime.now(UTC),

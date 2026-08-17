@@ -632,9 +632,121 @@
     show("honesty");
   }
 
+  // ── the instrument (Card 0 spanning Cards 1-3) ─────────────────────
+
+  /* Bars are updated IN PLACE, never re-rendered wholesale, after the
+   * first paint -- the BURN/earn demo moment is the amber fill actually
+   * animating across a CSS `width` transition, which only fires when the
+   * same DOM node's style changes, not when a fresh node is inserted
+   * already at its target width. */
+  function barRow(b) {
+    const max = Math.max(b.balance_bp, b.threshold_bp, 1) * 1.4;
+    const fillPct = Math.min(100, (b.balance_bp / max) * 100);
+    const thresholdPct = Math.min(100, (b.threshold_bp / max) * 100);
+    const earned = b.provenance !== "SYNTHETIC";
+    return (
+      `<div class="warrant-row" data-agent="${b.agent_id}" data-risk="${b.risk_class}">` +
+      `<span class="wr-label mono">${b.agent_id} · ${b.capability} · ${b.risk_class}</span>` +
+      `<div class="wr-track"><div class="wr-fill" style="width:${fillPct}%"></div>` +
+      `<div class="wr-threshold" style="left:${thresholdPct}%"></div></div>` +
+      `<span class="wr-value mono">${b.balance_bp.toLocaleString()}bp</span>` +
+      `<span class="wr-synthetic mono ${earned ? "earned" : ""}">${earned ? "EARNED" : "SYNTHETIC"}</span>` +
+      `</div>`
+    );
+  }
+
+  function updateBar(b) {
+    const row = document.querySelector(
+      `.warrant-row[data-agent="${b.agent_id}"][data-risk="${b.risk_class}"]`
+    );
+    if (!row) return;
+    const max = Math.max(b.balance_bp, b.threshold_bp, 1) * 1.4;
+    const fillPct = Math.min(100, (b.balance_bp / max) * 100);
+    row.querySelector(".wr-fill").style.width = fillPct + "%";
+    row.querySelector(".wr-value").textContent = b.balance_bp.toLocaleString() + "bp";
+    const earned = b.provenance !== "SYNTHETIC";
+    const syn = row.querySelector(".wr-synthetic");
+    syn.classList.toggle("earned", earned);
+    syn.textContent = earned ? "EARNED" : "SYNTHETIC";
+  }
+
+  function renderInstrument(d) {
+    $("instr-bars").innerHTML = d.card0.bars.map(barRow).join("");
+    $("instr-route").hidden = true;
+
+    $("instr-c1").innerHTML =
+      `<div>causal debt <span class="amber">${d.card1.debt.total.toLocaleString()}</span></div>` +
+      `<div>conclusions ${d.card1.counts.conclusions.toLocaleString()}</div>` +
+      `<div>claims ${d.card1.counts.claims.toLocaleString()}</div>`;
+
+    $("instr-c2").innerHTML =
+      d.card2.agents
+        .map((a) => `<div>${a.agent_id} · ${a.status} · [${a.capabilities.join(", ")}]</div>`)
+        .join("") + `<div style="margin-top:8px">${d.card2.reason_codes.join(" → ")}</div>`;
+
+    const c3 = d.card3;
+    let c3html;
+    if (c3.agreement_rate != null) {
+      c3html =
+        `<div>agreement rate <span class="amber">${(c3.agreement_rate * 100).toFixed(1)}%</span> ` +
+        `(${c3.agreed}/${c3.decided})</div>` +
+        `<div>${c3.simulated_run ? "SIMULATED — live Gemma unreachable this session" : "LIVE"}</div>` +
+        (c3.disagreed > 0
+          ? `<div class="instr-freeze-mark"><span class="lbl">CHALLENGE ×${c3.disagreed}</span></div>`
+          : "");
+    } else {
+      c3html = `<div>${c3.note || "not yet measured"}</div>`;
+    }
+    $("instr-c3").innerHTML = c3html;
+  }
+
+  function applyInstrumentAction(d) {
+    d.bars.forEach(updateBar);
+    const route = $("instr-route");
+    route.hidden = false;
+    route.classList.remove("refused", "allowed");
+    route.classList.add(d.allowed ? "allowed" : "refused");
+    route.innerHTML =
+      `<span class="code">${d.reason_code}</span> — ${d.before_bp}bp → ${d.after_bp}bp` +
+      (d.allowed
+        ? " · delegation permitted"
+        : " · routed to a human, no cache, visible on the very next call");
+    document.querySelectorAll(".instr-feed-line").forEach((l) => l.classList.add("active"));
+    setTimeout(
+      () => document.querySelectorAll(".instr-feed-line").forEach((l) => l.classList.remove("active")),
+      reduced ? 0 : 900
+    );
+  }
+
+  async function showInstrument() {
+    const res = await fetch("/api/instrument");
+    const d = await res.json();
+    const offline = $("instr-offline");
+    const body = $("instr-body");
+    if (!d.available) {
+      offline.hidden = false;
+      body.hidden = true;
+      show("instrument");
+      return;
+    }
+    offline.hidden = true;
+    body.hidden = false;
+    renderInstrument(d);
+    show("instrument");
+  }
+
+  $("instr-burn").addEventListener("click", async () => {
+    const res = await fetch("/api/instrument/burn", { method: "POST" });
+    applyInstrumentAction(await res.json());
+  });
+  $("instr-earn").addEventListener("click", async () => {
+    const res = await fetch("/api/instrument/earn", { method: "POST" });
+    applyInstrumentAction(await res.json());
+  });
+
   // ── screen orchestration ──────────────────────────────────────────
 
-  const SCREENS = ["split", "obligation", "court", "loadrating", "honesty"];
+  const SCREENS = ["split", "obligation", "court", "loadrating", "honesty", "instrument"];
 
   function show(name) {
     SCREENS.forEach((s) => { $(s).hidden = s !== name; });
@@ -694,6 +806,10 @@
     if (ev.key === "h" || ev.key === "H") {
       if (state.screen === "honesty") { hideAll(); return; }
       showHonesty();
+    } else if (ev.key === "t" || ev.key === "T") {
+      if (document.activeElement === $("bar")) return;
+      if (state.screen === "instrument") { hideAll(); return; }
+      showInstrument();
     } else if (ev.key === "r" || ev.key === "R") {
       if (document.activeElement !== $("bar")) restart();
     } else if (ev.key === "Escape") {

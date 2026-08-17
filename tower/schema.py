@@ -56,17 +56,28 @@ class WarrantProvenance(str, Enum):
 
 
 class WarrantSlot(_Base):
-    """Empty now. Card 0 mints, burns and decays this in a later prompt.
+    """Card 0 fills this in as a DISPLAY SNAPSHOT of `warrant/ledger.py`'s
+    append-only log -- it is never the source of truth and the Gateway never
+    reads it for the SPEND-or-refuse decision (that reads the live fold; see
+    `tower/gateway.py:_warrant_node`). This field exists so a dashboard can
+    show a balance without folding the whole log on every render, and
+    `scripts/rederive_warrant.py` is the tool that proves this snapshot has
+    not drifted from the ledger it was taken from.
 
-    This prompt builds the SLOT, not the arithmetic: `balances` starts empty,
-    `provenance` starts SYNTHETIC, and nothing in Card 2 writes a nonzero
-    value here. The gateway's WARRANT_INSUFFICIENT check therefore always
-    passes today (there is nothing to be insufficient yet) -- see
-    `tower/gateway.py:check_warrant`.
+    `balances` is keyed by the COMPOSITE STRING `f"{capability}::{risk_class}"`
+    -- never risk class alone -- because warrant/DESIGN.md's balance identity
+    is the 3-tuple (principal, capability, risk_class) and a bare risk-class
+    key would silently collapse two different capabilities' warrant into one
+    number. `warrant.ledger.balance_key(capability, risk_class)` builds it.
+
+    `provenance` is SYNTHETIC if the fold behind ANY key in `balances` used
+    even one SYNTHETIC-provenance event -- contamination is not diluted away.
     """
 
     balances: dict[str, int] = Field(default_factory=dict)
     provenance: WarrantProvenance = WarrantProvenance.SYNTHETIC
+    #: When this snapshot was taken. None until Card 0 first materializes it.
+    snapshot_as_of: datetime | None = None
 
 
 class AgentRegistryEntry(_Base):
@@ -91,6 +102,16 @@ class AgentRegistryEntry(_Base):
     status: RegistryStatus = RegistryStatus.ACTIVE
     principal: str
     warrant: WarrantSlot = Field(default_factory=WarrantSlot)
+    #: Card 0's issuance policy: how many warrant basis points MINT credits
+    #: per validated outcome, fixed PER RISK CLASS, e.g. {"LOW": 500, "HIGH": 50}.
+    #: This is the only place issuance amounts live -- no agent, model or
+    #: prompt sets them; editing this dict changes a future mint's SIZE, never
+    #: an existing balance (warrant/ledger.py's fold never reads this field).
+    warrant_mint_schedule: dict[str, int] = Field(default_factory=dict)
+    #: How many warrant basis points one delegated task SPENDs, fixed per risk
+    #: class. Same anti-laundering property: editing this changes what future
+    #: delegation costs, never what has already been folded into a balance.
+    warrant_spend_schedule: dict[str, int] = Field(default_factory=dict)
     registered_at: datetime
 
     @property
@@ -142,6 +163,14 @@ class MemoryEntryKind(str, Enum):
     HUMAN_DECISION = "human_decision"
     OUTCOME = "outcome"
     CONSEQUENCE = "consequence"
+    #: Card 0's addition. A non-Gemini-family verifier's agreement (or
+    #: disagreement) with a human/agent decision -- one of the two records
+    #: `warrant.ledger.mint` requires before it will credit anything. Real
+    #: Gemma verification is a later prompt; until then every entry of this
+    #: kind carries `payload["simulated"] = True` and is refused as a mint
+    #: precondition unless UNWIND_COUNTERSIGN_SIMULATED=1 is set -- see
+    #: `warrant/ledger.py`.
+    COUNTERSIGN = "countersign"
 
 
 class MemoryEntry(_Base):

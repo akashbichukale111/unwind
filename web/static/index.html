@@ -41,6 +41,7 @@
   <span class="tag built">BUILT</span> cascade · regimes · court · obligations
   <span class="tag designed">DESIGNED</span> vertex T2 · model armor · deploy
   <span class="sep">·</span> <span class="key">H</span> honesty panel
+  <span class="sep">·</span> <span class="key">T</span> the instrument
   <span class="sep">·</span> <span class="key">R</span> restart
 </div>
 
@@ -172,6 +173,53 @@
       <div id="h-built" class="mono h-built"></div>
     </div>
   </div>
+  <button class="btn btn-advance" data-next="field" type="button">Back to the field</button>
+</section>
+
+<!-- ─────────── THE INSTRUMENT (Card 0 spanning Cards 1-3) ─────────── -->
+<section id="instrument" class="overlay instrument" hidden>
+  <h2 class="cond overlay-h">THE INSTRUMENT</h2>
+
+  <div id="instr-offline" class="mono instr-offline" hidden>
+    WARRANT LEDGER UNREACHABLE — start the Firestore emulator (<span class="cond">make emulator</span>) and reopen this panel.
+  </div>
+
+  <div id="instr-body" hidden>
+    <div class="instr-card0">
+      <div class="instr-card-head">
+        <span class="instr-label cond">CARD 0 — WARRANT</span>
+        <span class="instr-sub mono">capability × risk class, never one number</span>
+      </div>
+      <div id="instr-bars" class="instr-bars"></div>
+      <div id="instr-route" class="mono instr-route" hidden></div>
+      <div class="instr-actions">
+        <button id="instr-burn" type="button" class="btn">Overturn a HIGH-risk judgement (BURN)</button>
+        <button id="instr-earn" type="button" class="btn">Earn the rookie's first delegation</button>
+      </div>
+    </div>
+
+    <svg class="instr-feed" viewBox="0 0 1000 90" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M170,88 C170,40 320,40 420,4" class="instr-feed-line" />
+      <path d="M500,88 C500,40 500,40 500,4" class="instr-feed-line" />
+      <path d="M830,88 C830,40 680,40 580,4" class="instr-feed-line" />
+    </svg>
+
+    <div class="instr-row">
+      <div class="instr-card">
+        <span class="instr-label cond">CARD 1 — UNWIND CORE</span>
+        <div id="instr-c1" class="mono instr-body-text"></div>
+      </div>
+      <div class="instr-card">
+        <span class="instr-label cond">CARD 2 — CONTROL TOWER</span>
+        <div id="instr-c2" class="mono instr-body-text"></div>
+      </div>
+      <div class="instr-card">
+        <span class="instr-label cond">CARD 3 — COUNTERSIGN</span>
+        <div id="instr-c3" class="mono instr-body-text"></div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn btn-advance" data-next="field" type="button">Back to the field</button>
 </section>
 
