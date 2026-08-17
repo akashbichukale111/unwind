@@ -20,23 +20,19 @@ the 2,594 decisions built on it.
 
 ---
 
-## ⚠ Read this before clicking anything
+## All four cards are live on the deployed URL
 
-**The deployed URL runs Card 1 only.** Cards 0 (WARRANT), 2 (CONTROL TOWER)
-and 3 (COUNTERSIGN) — including the four-card instrument this file
-describes below — are built, tested (369 passing), and committed, but the
-Cloud Run service has not been redeployed since they landed. A fresh health
-check (`bash scripts/health_check.sh`) confirms the live service still
-answers `"stage":"task-5-interface"`, the pre-Card-2 build tag — that is the
-honest, current state, not an oversight. **The 10-minute path below tells
-you exactly which parts are on the deployed URL and which need a two-command
-local run.**
+Redeployed and verified 2026-08-17 (`evidence/deploy/`,
+`evidence/firestore/deploy-2026-08-17.md`). Everything below runs directly
+against `https://unwind-hgeodtazqq-uc.a.run.app` — no local setup needed.
+(A local run still works too, and is documented in `README.md`, for
+rehearsal without touching the shared demo agents' live state.)
 
 ---
 
 ## The 10-minute judge path
 
-### Minutes 0–3: the deployed URL (Card 1, live)
+### Minutes 0–3: the cascade
 
 1. Open `https://unwind-hgeodtazqq-uc.a.run.app`. Wait for the field to
    render (4,206 points).
@@ -46,14 +42,9 @@ local run.**
 3. Press `H` for the honesty panel. The worst extraction class (66.7%) is
    on screen, highlighted, not buried.
 
-### Minutes 3–7: the four-card instrument (Cards 0–3, local — two commands)
+### Minutes 3–7: the four-card instrument (Cards 0–3)
 
-```bash
-make emulator          # terminal 1
-make dev                # terminal 2 — http://127.0.0.1:8000
-```
-
-4. Open `http://127.0.0.1:8000`, wait for the field, press `T`.
+4. Press `T`.
 5. Read Card 0's bars: every one is labelled `SYNTHETIC` in dim mono text —
    this is seeded demo history, not a real earned balance, and the UI says
    so on every bar, not just in a caption.
@@ -131,11 +122,14 @@ make emulator && make dev                 # + the four-card instrument, press T
 
 ## Final verdict, self-assessed
 
-All four architectural cards are built and tested (369 passing), not three
-of four still locked. The deployment has not caught up to the code — that
-gap is disclosed above rather than papered over with a demo that quietly
-runs against localhost while implying Cloud Run. Weakest points, unchanged
-in kind from the Card-1-only submission and still true: T2 judgement quality
+All four architectural cards are built, tested (369 passing), and deployed —
+not three of four still locked, and not code that only runs on someone's
+laptop. Redeploying itself surfaced one real, previously-undetected gap (a
+missing Firestore composite index, `evidence/firestore/deploy-2026-08-17.md`)
+that no local test could have caught, because the local test suite runs
+against the emulator, which does not enforce it; that gap is disclosed and
+fixed, not smoothed over. Weakest points, unchanged in kind from the
+Card-1-only submission and still true: T2 judgement quality
 is unmeasured, the corpus is synthetic and single-author, live Gemma
 verification is blocked by a Model Garden access gap this environment could
 not clear, and warrant's Goodhart/Sybil risks are named, not solved.

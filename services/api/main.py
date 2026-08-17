@@ -27,7 +27,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from lib.config import ALL_TOPICS, get_config
+from lib.config import ALL_TOPICS, COLLECTION_AGENTS, get_config
 from lib.telemetry import configure_telemetry
 
 BUILD_STAGE = "task-5-interface"
@@ -672,16 +672,42 @@ _DEMO_AGENT_CONFIG = dict(
 _DEMO_AGENT_IDS = ("extractor_veteran", "extractor_rookie")
 
 
-def _emulator_up() -> bool:
-    import os
-    import socket
+def _firestore_available() -> bool:
+    """True if Firestore is actually reachable right now.
 
-    host = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-    hostname, _, port = host.partition(":")
+    Two real cases, not one: the local emulator in dev (checked by a raw
+    socket connect, cheap and instant), or REAL Firestore with real
+    credentials in production -- Cloud Run's runtime service account
+    already holds `roles/datastore.user` (`infra/deploy.sh`), and there is
+    no local TCP listener to probe there at all. A check that only ever
+    tested for the emulator would report the instrument "unavailable" on
+    every deployed request, forever, which is not a Firestore outage, it is
+    this function asking the wrong question. `_ensure_demo_agents` and the
+    warrant reads below are unaffected either way -- this only gates
+    whether `/api/instrument` bothers to try them.
+    """
+    import os
+
+    emulator_host = os.environ.get("FIRESTORE_EMULATOR_HOST")
+    if emulator_host:
+        import socket
+
+        hostname, _, port = emulator_host.partition(":")
+        try:
+            with socket.create_connection((hostname, int(port or 8080)), timeout=0.75):
+                return True
+        except OSError:
+            return False
+
+    # No emulator configured: either a real deployment, or a local run with
+    # no Firestore backing configured at all. A cheap, real, read-only probe
+    # is the only honest way to tell those two apart.
     try:
-        with socket.create_connection((hostname, int(port or 8080)), timeout=0.75):
-            return True
-    except OSError:
+        from lib.firestore import get_client
+
+        next(iter(get_client().collection(COLLECTION_AGENTS).limit(1).stream()), None)
+        return True
+    except Exception:
         return False
 
 
@@ -775,7 +801,7 @@ def _countersign_evidence() -> dict[str, Any] | None:
 
 @app.get("/api/instrument")
 async def instrument() -> dict[str, Any]:
-    if not _emulator_up():
+    if not _firestore_available():
         return {
             "available": False,
             "reason": "Firestore emulator not reachable. Start it with `make emulator`.",
@@ -815,7 +841,7 @@ async def instrument_burn() -> dict[str, Any]:
     re-check (`tower/gateway.py`) proving the very next case of that class
     routes to a human -- no cache, live fold.
     """
-    if not _emulator_up():
+    if not _firestore_available():
         raise HTTPException(503, "Firestore emulator not reachable.")
     _ensure_demo_agents()
     _seed_veteran_if_empty()
@@ -862,7 +888,7 @@ async def instrument_earn() -> dict[str, Any]:
     (live Gemma is unreachable in this environment; see
     `countersign/DESIGN.md`), MINT, then the Gateway re-check.
     """
-    if not _emulator_up():
+    if not _firestore_available():
         raise HTTPException(503, "Firestore emulator not reachable.")
     _ensure_demo_agents()
 

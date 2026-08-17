@@ -104,24 +104,17 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Deployed
 
-⚠ **THE DEPLOYED URL RUNS CARD 1 ONLY, AS OF THIS WRITING.** Cards 0
-(WARRANT), 2 (CONTROL TOWER), 3 (COUNTERSIGN) and the four-card instrument UI
-are built, tested (369 passing) and committed to this repository, but
-`infra/deploy.sh` has not been re-run since they landed — redeploying Cloud
-Run infrastructure is a real, external, hard-to-reverse action this
-close-out pass does not take without it being asked for separately. A fresh
-health check just now (`bash scripts/health_check.sh`, 2026-08-17 02:06:14
-UTC) confirms the live service answers and still computes **2,594**
-dependents, `"stage":"task-5-interface"` — the pre-Card-2 build tag, proving
-this is not a stale claim. **To see the four-card instrument, run it
-locally** (below) until redeployment happens; `submission/CHECKLIST.md`
-lists redeployment as a required pre-submission step.
+**All four cards are live on the deployed URL, as of 2026-08-17.** Cards 0
+(WARRANT), 2 (CONTROL TOWER) and 3 (COUNTERSIGN), plus the four-card
+instrument UI, were redeployed and verified against the running service —
+press `T` on the URL below, today, no local setup required.
 
 | | |
 | --- | --- |
 | URL | `https://unwind-hgeodtazqq-uc.a.run.app` |
-| Serves today | **Card 1 (UNWIND CORE) only** — the cascade, the field, the honesty panel |
+| Serves today | **All four cards** — the cascade, the field, the honesty panel, and the instrument (`T`) |
 | Service / region | `unwind` · `us-central1` |
+| Revision | `unwind-00005-2bl` |
 | Project | `project-895d4ca8-d301-447d-916` |
 | Artifact | `gcloud run deploy --source .` — buildpacks + root `Procfile` |
 | Serving | the real FastAPI app, `/api/*` **and** `web/static` from one origin |
@@ -129,7 +122,24 @@ lists redeployment as a required pre-submission step.
 `infra/deploy.sh` also provisions the runtime service account (three
 least-privilege roles, no Owner/Editor) and the six Pub/Sub topics.
 
-### Running Cards 0–3 and the instrument, locally, today
+**Redeploying it surfaced one real, previously-undetected gap, and it is
+disclosed rather than smoothed over:** `POST /api/instrument/earn` returned
+a real `500` on first live use — `tower/memory.py`'s Memory Bank query
+(`decision_memory`, filtered by `case_id`, ordered by `seq`) needs a
+Firestore composite index that predates Cards 0/2/3 and was never added to
+`infra/indexes.json`. The Firestore emulator (everything this repository's
+own test suite runs against) does not enforce that requirement, so no local
+test could have caught it. Fixed by adding the index
+(`gcloud firestore indexes composite create`, verified `READY`) and
+committing it to `infra/indexes.json` for the next fresh deploy — full
+transcript in `evidence/firestore/deploy-2026-08-17.md`. A second real bug
+surfaced alongside it: the instrument's own Firestore-availability check
+(`services/api/main.py`) only ever tested for a local emulator, so it would
+have silently reported the instrument "unavailable" on every production
+request forever, real Firestore or not — fixed to probe real Firestore too
+when no emulator is configured.
+
+### Running Cards 0–3 and the instrument locally (still works, no credentials)
 
 ```bash
 make emulator                         # terminal 1: Firestore emulator
@@ -141,10 +151,13 @@ Then open `http://127.0.0.1:8000`, wait for the field to render, and press
 **`T`**. The bars are seeded live by the same demo the terminal script just
 ran — `SYNTHETIC` labels are visible on every seeded bar; the "Overturn a
 HIGH-risk judgement" and "Earn the rookie's first delegation" buttons drive
-the same real `warrant/ledger.py` code path the terminal demo does.
+the same real `warrant/ledger.py` code path the terminal demo does. This
+is the same instrument now also live at the deployed URL — running it
+locally is no longer required, only optional (e.g. for a rehearsal without
+touching the shared demo agents' live production state).
 
-**Last verified deployed-URL check 2026-08-13** by `make deploy-verify`,
-**5/5 PASS, exit 0** (Card 1 only, as above):
+**Last verified 2026-08-17** by `make deploy-verify`, **5/5 PASS, exit 0**,
+plus a direct live check of every `/api/instrument*` route:
 
 ```
 [1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
@@ -155,6 +168,16 @@ the same real `warrant/ledger.py` code path the terminal demo does.
 
 DEPLOYMENT VERIFIED — it renders AND it computes.
 ```
+
+Card 0–3 instrument, checked directly against the live URL the same day:
+`GET /api/instrument` → `available: true`, four real warrant bars (labelled
+`SYNTHETIC`/`EARNED`, never a single global number), real Card 2 registry
+data, real Card 3 agreement rate; `POST /api/instrument/burn` → a real
+balance drop to 0bp and `WARRANT_INSUFFICIENT` on the next check; `POST
+/api/instrument/earn` → a real cold-start mint, `0bp → 500bp`, `ALLOWED`.
+Screenshots: `evidence/deploy/shots/01-deployed-field.png`,
+`02-deployed-instrument.png`, `03-deployed-burn.png` — all captured against
+`unwind-hgeodtazqq-uc.a.run.app` itself, not localhost.
 
 Step 5 is the one that matters: a real browser reads the number **on screen** and
 asserts it equals what the deployed cascade actually **computed**. Opening a page
@@ -286,7 +309,7 @@ script or labelled as not measured. There is no third category.
 | **Countersign agreement rate** | **75.6% (31/41 scenarios), SIMULATED.** Live Gemma was attempted first this session and reported unreachable (`404` — the project lacks access to the `gemma-3-27b-it` publisher model; see `countersign/DESIGN.md` for the full escalation, including a successful real-auth Vertex round-trip). The run fell back to the SAME scripted simulator the tests use, labelled `simulated=True` on every record. The 10 disagreements are exactly the 10 `adversarial`-class scenarios — the simulator's designed behaviour, not a finding about Gemma |
 | **SYNTHETIC-seed policy** | The warrant demo corpus is fabricated and single-author. Every seeded ledger event carries `provenance=SYNTHETIC`, permanently; a balance is labelled `SYNTHETIC` if **even one** event folded into it is — contamination is never diluted by real events sitting alongside it. `scripts/rederive_warrant.py` proves SYNTHETIC and EARNED events fold through the identical arithmetic (`fold_balance` never reads `.provenance`); the demo mints one balance live, on camera, so at least one number is genuinely earned, not seeded |
 | **Residual Goodhart risk** | Warrant issuance is fixed per risk class, but nothing measures CASE DIFFICULTY — an agent (or its operator) routing many trivially-easy validated cases through the mint flow accrues warrant at the same rate as one handling genuinely marginal cases. Per-class isolation and decay bound the damage window; neither eliminates it. Named, not solved, in `warrant/FAILURE_MODES.md`, alongside the same document's Sybil-resistance gap (principal binding proves a balance cannot move between registered identities; it does not prove one registered identity is one real actor) |
-| **Never executed** | Firestore rules and composite indexes (written, never deployed) · Model Armor (never configured, so it has never blocked anything) · compensation-path synthesis (`synthesise()` raises rather than emitting a path that looks executable) · the retraction feed · a live Gemma call from this repository (attempted, blocked by Model Garden access — see above) · redeployment of Cards 0–3 to the live Cloud Run URL (built and tested; not yet deployed — see "Deployed", above) |
+| **Never executed** | Model Armor (never configured, so it has never blocked anything) · compensation-path synthesis (`synthesise()` raises rather than emitting a path that looks executable) · the retraction feed · a live Gemma call from this repository (attempted, blocked by Model Garden access — see above). Firestore rules and composite indexes ARE deployed (`evidence/firestore/deploy-2026-08-15.md`, `deploy-2026-08-17.md` — the second index was missing until redeployment surfaced it, see "Deployed" above) |
 
 Why the T2 fixture was **deliberately not built**: mechanical answer-withholding
 is achievable, but the clause text and the scoring key would be written by the
@@ -316,7 +339,7 @@ emulator-gated Firestore infrastructure — `tower/`, `warrant/`,
 | `bash scripts/health_check.sh` | **PASS**, 2026-08-17 02:06:14 UTC — deployed service answers, hub dependents = 2,594 |
 | `make ui-check` | real Chromium: **60 fps median** at 4,206 nodes, on-screen counter **78 = 78**, no horizontal scroll at 380px, 0 app-origin console errors |
 | `make deploy-check` | **20/20 PASS** — preflight only; checks inputs, not the deploy |
-| `make deploy-verify` | **5/5 PASS**, exit 0, against the live URL |
+| `make deploy-verify` | **5/5 PASS**, exit 0, against the live URL — re-verified 2026-08-17 after redeploying Cards 0–3 |
 | `make court` | 4 turns, converged, 12 owners seated from 48 eligible, 12 obligations raised, Vertex disabled |
 | `make obligation` | one full correction obligation — named counterparty, exposure **USD 8,925.00** as a range with its assumptions, routed to a `human::` signatory |
 | `make adversarial` | both attacks refused — `source_outside_claim_scope`, radius **0**. Enforced in CI by reason code |

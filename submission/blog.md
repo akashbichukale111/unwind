@@ -122,14 +122,17 @@ away.
 
 ## What I'd do differently with another week
 
-Redeploy. Cards 0–3 are built, tested (369 passing), and committed — the
-live Cloud Run URL still serves the Card-1-only build, because
-redeployment is real infrastructure change and this pass didn't take it
-without being asked to. That gap is disclosed everywhere it matters
-(`README.md`, `docs/JUDGE.md`) rather than implied away with a demo shot
-that quietly cuts to localhost.
+**Update, 2026-08-17: redeployed.** Cards 0–3 are now live on the same
+Cloud Run URL as Card 1 — and redeploying immediately surfaced a real bug
+neither the emulator-backed local test suite nor the earlier local
+Playwright runs could have caught: a missing Firestore composite index for
+the Memory Bank, which real Firestore enforces and the emulator does not.
+Fixed and documented rather than quietly worked around
+(`evidence/firestore/deploy-2026-08-17.md`) — the honesty apparatus this
+whole post is about doesn't get to stop applying to the deployment step
+just because the code was already merged.
 
-Second: get real Model Garden access and re-run
+Next: get real Model Garden access and re-run
 `scripts/run_countersign_eval.py` against live Gemma. The mechanism is
 proven; the actual model's agreement rate isn't measured yet, and that's
 the honest state to end this post on.

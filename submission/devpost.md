@@ -183,7 +183,7 @@ claim about production supplier email.
 | Warrant re-derivation | **4/4 balances bit-equal** to a fresh fold of the ledger (`scripts/rederive_warrant.py`) |
 | Countersign agreement rate | **75.6% (31/41 scenarios), SIMULATED** — live Gemma attempted, blocked by a real `404` |
 | ADK 2 construct mapping | **10/10 PASS** — every construct this page claims, verified present at its cited `file:line` |
-| Deployment verification (Card 1 only — see below) | **5/5 PASS**, exit 0, against the live service, 2026-08-13 |
+| Deployment verification, all four cards | **5/5 PASS**, exit 0, against the live service, re-verified 2026-08-17 after redeploying Cards 0–3 |
 | Deploy preflight | **20/20 PASS** |
 
 **How to read the 100% honestly: the model's denominator is 8, not 44.** The
@@ -208,14 +208,14 @@ rather than argued.
 - **Model Armor** was never configured, so it has never blocked anything. The
   extraction quarantine is the real defence and does not depend on it.
 - **Firestore rules and composite indexes** are written and deployed —
-  verified live against a real GCP project (`evidence/firestore/deploy-2026-08-15.md`).
-- **The live Cloud Run URL still serves Card 1 only.** Cards 0, 2 and 3 and
-  the four-card instrument UI are built, tested (369 passing) and
-  committed, but redeploying is real infrastructure change this pass did
-  not take without it being asked for separately. A fresh health check
-  (`bash scripts/health_check.sh`) confirms the live service still reports
-  the pre-Card-2 build tag. Run the full four-card system locally with
-  `make emulator && make dev`, documented in `README.md` and `docs/JUDGE.md`.
+  verified live against a real GCP project
+  (`evidence/firestore/deploy-2026-08-15.md`, `deploy-2026-08-17.md`).
+- **All four cards are live on the deployed Cloud Run URL**, redeployed
+  2026-08-17. Redeploying itself surfaced a real gap — a Firestore
+  composite index the Memory Bank needed that predated Cards 0/2/3 and had
+  never been added — fixed and documented rather than hidden
+  (`evidence/firestore/deploy-2026-08-17.md`). The full system also still
+  runs locally with `make emulator && make dev`, no credentials needed.
 - **Live Gemma verification** is blocked by a Model Garden access gap —
   wiring proven (real auth, real API round-trip), the model call itself
   returns a real `404`. `countersign/DESIGN.md` has the full escalation.

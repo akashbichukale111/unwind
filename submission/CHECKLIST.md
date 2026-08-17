@@ -57,16 +57,18 @@ failure, a Devpost outage, or a last-minute fix.]
 
 ## Hosted URL
 
+- [x] **Redeployed 2026-08-17.** Cards 0–3 and the four-card instrument are
+      live at `https://unwind-hgeodtazqq-uc.a.run.app`, revision
+      `unwind-00005-2bl`. Redeploying surfaced and fixed a real gap (a
+      missing Firestore composite index) — see
+      `evidence/firestore/deploy-2026-08-17.md`.
 - [ ] Live: `bash scripts/health_check.sh` against
       `https://unwind-hgeodtazqq-uc.a.run.app` — must print **PASS**.
-      Timestamp of last PASS: **2026-08-17 02:06:14 UTC**
-      (`evidence/health/health-20260817T020614Z.md`). Re-run within one
+      Timestamp of last PASS: **2026-08-17 02:31:33 UTC**
+      (`evidence/health/health-20260817T023133Z.md`). Re-run within one
       hour of submitting and record the new timestamp: `⟨FILL⟩`.
-- [ ] **Decision required before submitting:** redeploy Cards 0–3 +
-      instrument (`./infra/deploy.sh`), or submit with the disclosed
-      Card-1-only deployment and the local-run instructions in
-      `README.md` / `docs/JUDGE.md`. Either is honest; leaving this
-      undecided is not. Record the choice: `⟨FILL⟩`.
+- [ ] `make deploy-verify` against the same URL — must print **5/5 PASS**.
+      Last verified: **2026-08-17**, this pass (`evidence/deploy/deploy-verify-*.log`).
 
 ## Devpost
 

@@ -4,21 +4,20 @@
 (≈140 wpm at an unhurried pace). Actual count is asserted at the bottom of
 this file, by the same command that measured it.
 
-**Every shot is marked `LIVE (deployed)`, `LIVE (local)`, or `CUTAWAY`.**
-`LIVE (deployed)` runs against the Cloud Run URL, unedited, in one take.
-`LIVE (local)` runs against `make dev` on `127.0.0.1`, unedited, in one
-take — used ONLY where the deployed service does not yet have the feature
-(see the disclosure below). `CUTAWAY` means a static screen — a console, a
-file, a terminal that already finished. There is no fourth category, and
-nothing here is a slide with numbers typed onto it.
+**Every shot is marked `LIVE (deployed)` or `CUTAWAY`.** `LIVE (deployed)`
+runs against the Cloud Run URL, unedited, in one take — as of 2026-08-17,
+ALL FOUR CARDS are live there (revision `unwind-00005-2bl`,
+`evidence/deploy/deploy-20260817T022816Z.log`), so nothing in this script
+needs to fall back to localhost. `CUTAWAY` means a static screen — a
+console, a file, a terminal that already finished. There is no third
+category, and nothing here is a slide with numbers typed onto it.
 
-> ⚠ **DISCLOSURE, SAID ON CAMERA, NOT EDITED AROUND.** As of recording, the
-> deployed Cloud Run URL serves Card 1 (UNWIND CORE) only. Cards 0
-> (WARRANT), 2 (CONTROL TOWER) and 3 (COUNTERSIGN) are built and tested
-> (369 passing) but not yet redeployed. Act 2 therefore runs locally, on
-> screen, with the terminal and `127.0.0.1` visibly proving that — never
-> presented as if it were the deployed URL. This is stated in the
-> voiceover at 1:12, not just in this file.
+> Superseded disclosure, kept for the record rather than deleted: an
+> earlier draft of this script ran Act 2 against `127.0.0.1` because the
+> deployed URL served Card 1 only at the time. Redeploying Cards 0–3
+> (`evidence/firestore/deploy-2026-08-17.md`) closed that gap before
+> recording — re-verify with `bash scripts/health_check.sh` immediately
+> before rolling, same as always, in case the service has drifted since.
 
 > **Rule for the presenter:** if a figure on screen disagrees with this
 > document, the screen is right and this document is stale. Re-run
@@ -54,11 +53,10 @@ exactly like a broken demo.
 - [ ] Run the cascade once, off-camera, so shot 1.4 does not stall.
 - [ ] Confirm the Cloud Run console tab is already open, logged in, `unwind`
       service green — shot 1.1 must not include a login.
-- [ ] Start `make emulator` and `make dev` in two terminals, off-camera,
-      before rolling Act 2. Confirm `http://127.0.0.1:8000` renders once,
-      off-camera, so the on-camera load is not the first one.
-- [ ] Run `bash scripts/demo_warrant.sh` once, off-camera, so the Firestore
-      demo agents exist before the on-camera clicks in shot 2.2.
+- [ ] Act 2 now runs against the SAME deployed URL as Act 1 — no local
+      server needed. Off-camera, once: press `T` on the deployed URL and
+      confirm the instrument renders with real bars, so the on-camera load
+      in shot 2.1 is not the first one against production.
 
 ### Shooting
 
@@ -76,8 +74,7 @@ exactly like a broken demo.
 - [ ] Upload to **YouTube**, visibility **Public**.
 - [ ] Title, English: `UNWIND — Consequence Clearing | Google All Things
       Agentic Hackathon`
-- [ ] Description: one-line thesis, repo URL, deployed URL, and the note
-      "Cards 0–3 run locally in this recording; see README for why."
+- [ ] Description: one-line thesis, repo URL, deployed URL.
 - [ ] Language **English**; auto-captions on.
 - [ ] Watch the uploaded video **once, end to end, signed out**.
 - [ ] Paste the URL into `submission/devpost.md` → Links → Demo video and
@@ -113,19 +110,17 @@ Type `supplier_K lead time is now 20 days`. Do not press Confirm yet.
 
 ---
 
-## ACT 2 — WARRANT and COUNTERSIGN, live and local (1:05–2:55)
+## ACT 2 — WARRANT and COUNTERSIGN, on the deployed service (1:05–2:55)
 
-### 2.1 · 1:05–1:22 · `CUTAWAY` — terminal, disclosure
-Terminal showing `README.md`'s deployment-status note, or the note read
-aloud over the terminal prompt.
+### 2.1 · 1:05–1:22 · `LIVE (deployed)` — press `T`
+Still `unwind-hgeodtazqq-uc.a.run.app`. The four-card instrument opens.
 
-> Three more cards exist — Warrant, Control Tower, Countersign — three
-> hundred sixty-nine tests passing. Not yet redeployed. So this next part
-> runs locally, on this machine, right now — the URL bar will prove it.
+> Three more cards live on this same deployed service — Warrant, Control
+> Tower, Countersign. Three hundred sixty-nine tests passing, and this is
+> the real thing, not a local rehearsal.
 
-### 2.2 · 1:22–1:47 · `LIVE (local)` — the instrument, press `T`, BURN
-`127.0.0.1:8000`, four-card instrument. Every warrant bar reads
-`SYNTHETIC`. Click "Overturn a HIGH-risk judgement."
+### 2.2 · 1:22–1:47 · `LIVE (deployed)` — the instrument, BURN
+Every warrant bar reads `SYNTHETIC`. Click "Overturn a HIGH-risk judgement."
 
 > Every bar here is labelled synthetic — seeded history, and it says so on
 > screen, not just in a caption. Watch this one. A human overturns a
@@ -133,7 +128,7 @@ aloud over the terminal prompt.
 > kind is refused and routed to a person. No cache. This is the twenty-five
 > second version of the whole warrant system.
 
-### 2.3 · 1:47–2:08 · `LIVE (local)` — cold-start agent earns its first delegation
+### 2.3 · 1:47–2:08 · `LIVE (deployed)` — cold-start agent earns its first delegation
 Click "Earn the rookie's first delegation."
 
 > This agent started at zero — no seeding at all. A human concurs, an
@@ -150,7 +145,7 @@ Scroll to the escalation table: 403, then a real 404.
 > is from a labelled simulator, not a live model. We say so everywhere it
 > appears.
 
-### 2.5 · 2:30–2:55 · `LIVE (local)` — Card 3 panel, agreement rate, freeze mark
+### 2.5 · 2:30–2:55 · `LIVE (deployed)` — Card 3 panel, agreement rate, freeze mark
 
 > Seventy-five point six percent agreement across forty-one scenarios,
 > simulated. Ten disagreements — each one froze a mint with a challenge
@@ -172,7 +167,7 @@ Scroll to the escalation table: 403, then a real 404.
 > but the model's denominator is eight, not forty-four. Judgement quality
 > is still unmeasured, and we call that a non-test, not a result.
 
-### 3.3 · 3:38–4:00 · `LIVE (local or deployed)` — close card
+### 3.3 · 3:38–4:00 · `LIVE (deployed)` — close card
 
 > We evaluated Veo and Lyria and cut both — they failed our own necessity
 > test. A model added for the sake of breadth is a model this architecture
@@ -207,8 +202,11 @@ the click sequence.
 
 | Replaces | v3 shot | Requires |
 | --- | --- | --- |
-| 2.1–2.5 (all local shots become deployed) | Cards 0–3 and the instrument running on the live Cloud Run URL, no local disclosure needed | Redeployment via `./infra/deploy.sh` |
 | 2.4–2.5 | A genuine live Gemma verdict replacing the simulated agreement rate | Model Garden access to `gemma-3-27b-it` granted on the project |
+
+(The redeployment item that used to be here is done — Cards 0–3 and the
+instrument have been live on the Cloud Run URL since 2026-08-17. This
+script's ACT 2 already reflects that.)
 
 ---
 
@@ -222,8 +220,8 @@ awk '/^## ACT 1/,/^## The three moments/' submission/demo_script.md \
   | grep '^> ' | sed 's/^> //' | wc -w
 ```
 
-**Measured: 414 words** — budget 560, well inside it. At 140 wpm that is
-**2:57** of speech inside a 4:00 ceiling, leaving substantial room for the
+**Measured: 407 words** — budget 560, well inside it. At 140 wpm that is
+**2:54** of speech inside a 4:00 ceiling, leaving substantial room for the
 silent beat (shot 1.4), the two full-take reaction pauses in Act 2 (shots
 2.2 and 2.3, where the animation and the label flip need a second or two of
 unforced silence to read on screen), and pacing slower than 140 wpm without

@@ -95,7 +95,21 @@ here):
 - Live Gemini T2 judgement quality — **unmeasured**, `docs/T2-MEASUREMENT.md` explains why a fixture was deliberately not built.
 - Live Gemma countersign verdicts — **attempted, blocked by a real 404** (Model Garden access), `countersign/DESIGN.md`.
 - Firestore rules/composite indexes deployment, Model Armor probe, Cloud Trace capture — all real, all evidenced above, all from an EARLIER credentialed run, not this pass.
-- Redeployment of Cards 0–3 and the four-card instrument to the live Cloud Run URL — **not done this pass**; the deployed URL still serves Card 1 only (`evidence/health/health-20260817T020614Z.md` shows `"stage":"task-5-interface"`).
+- ~~Redeployment of Cards 0–3~~ — **done 2026-08-17**, see §8 below. (Struck through rather than deleted: this row was accurate when written minutes earlier in the same day, and the honest move is to show the state changed, not to erase that an earlier statement existed.)
+
+## 8. Redeployment of Cards 0–3 to the live Cloud Run URL — 2026-08-17
+
+| Claim | File | Reproduction command |
+| --- | --- | --- |
+| Cards 0–3 + instrument deployed to `unwind-hgeodtazqq-uc.a.run.app`, revision `unwind-00005-2bl` | `evidence/deploy/deploy-20260817T022816Z.log` | `UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916 UNWIND_RUN_REGION=us-central1 UNWIND_VERTEX_LOCATION=global bash infra/deploy.sh` |
+| Fresh health check post-deploy | `evidence/health/health-20260817T023133Z.md` | `bash scripts/health_check.sh` |
+| `make deploy-verify` 5/5 PASS post-deploy, incl. real headless-browser 78=78 | `evidence/deploy/deploy-verify-*.log` (second run, with `UNWIND_CHROME` set) | `UNWIND_CHROME=/opt/pw-browsers/chromium-1234/chrome-linux64/chrome python scripts/deploy_verify.py https://unwind-hgeodtazqq-uc.a.run.app` |
+| `/api/instrument` returns `available: true` with real Card 0–3 data, live | raw JSON captured during this pass (not separately saved to a tracked path) | `curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/instrument` |
+| `POST /api/instrument/burn` and `/earn` both work live, real Firestore | `evidence/deploy/shots/03-deployed-burn.png` | `curl -s -X POST https://unwind-hgeodtazqq-uc.a.run.app/api/instrument/burn` (and `/earn`) |
+| Root cause + fix: missing Firestore composite index (`decision_memory`, `case_id`+`seq`) | `evidence/firestore/deploy-2026-08-17.md`, `infra/indexes.json` | `gcloud firestore indexes composite list --project project-895d4ca8-d301-447d-916 --format=json \| python3 -c "import json,sys; [print(i) for i in json.load(sys.stdin) if any(f['fieldPath']=='case_id' for f in i['fields'])]"` |
+| Root cause + fix: `_firestore_available` only checked for a local emulator, never real prod Firestore | `services/api/main.py` (function docstring explains the bug); no test caught it since the local suite always runs against an emulator | code review — `git show <this-pass's-commit> -- services/api/main.py` |
+| Frozen dirs still untouched after this fix pass | this pass's own transcript | `git diff --stat stage-one-floor -- spine/ court/ judgment/ settle/` |
+| Full suite still 369 passed after the fix | this pass's own transcript | `FIRESTORE_EMULATOR_HOST=localhost:8080 python -m pytest -q` |
 
 ## 7. Screenshot inventory (each proves exactly its caption)
 
@@ -106,3 +120,6 @@ here):
 | `docs/shots/09-honesty.png` | The honesty panel is reachable and renders | The numbers on it are current — cross-check against `docs/COVERAGE.md` |
 | `docs/evidence/deploy-preflight-passed.png` | `make deploy-check` passed at capture time | The deploy itself — preflight checks inputs, not a running service |
 | `evidence/observability/trace_view.png` | A captured Cloud Trace waterfall existed on 2026-08-15 | That a trace exists FOR THIS SESSION's Card 0/3 work — it is Card 2 evidence only |
+| `evidence/deploy/shots/01-deployed-field.png` | The field renders on the DEPLOYED URL (not localhost) — 4,206 nodes, `T` key hint visible in the legend | The cull itself — that's shot 05-split.png / `make ui-check` |
+| `evidence/deploy/shots/02-deployed-instrument.png` | All four cards render on the DEPLOYED URL with real data — SYNTHETIC/EARNED labels, real agreement rate, real CHALLENGE mark | Nothing about the BURN animation itself — that's shot 03 |
+| `evidence/deploy/shots/03-deployed-burn.png` | A live BURN action against the deployed service, `WARRANT_INSUFFICIENT` refusal rendered with the oxide border | The exact before/after balance at first-ever click — this capture ran after prior test clicks in this same pass already zeroed that bar; see `evidence/firestore/deploy-2026-08-17.md` for the fresh 0→500bp mint that WAS captured on a first call |

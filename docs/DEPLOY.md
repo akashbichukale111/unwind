@@ -1,19 +1,29 @@
 # Deploying UNWIND
 
-**Status: DEPLOYED AND VERIFIED — 5/5 PASS.** `infra/deploy.sh` was rewritten
-in Task 6 after a line-by-line review found four defects (below), and has now
-run end to end. `make deploy-verify` confirms all five checks against the live
-service, exit code 0:
+**Status: DEPLOYED AND VERIFIED — 5/5 PASS, ALL FOUR CARDS.** `infra/deploy.sh`
+was rewritten in Task 6 after a line-by-line review found four defects
+(below), and has run end to end twice: 2026-08-13 (Card 1 only) and
+2026-08-17 (Cards 0–3 redeployed on top). `make deploy-verify` confirms all
+five checks against the live service, exit code 0:
 
 ```
 Service   : unwind
 Region    : us-central1
+Revision  : unwind-00005-2bl
 Project   : project-895d4ca8-d301-447d-916
 URL       : https://unwind-hgeodtazqq-uc.a.run.app
 Result    : 5/5 PASS — healthz, same-origin UI, real cascade
             (radius 2,594 -> material 78), adversarial refusal, and a real
             headless-browser check (4,206 nodes rendered, counter 78 = 78)
 ```
+
+**The 2026-08-17 redeploy found one real gap, fixed, not hidden:** the
+Memory Bank's Firestore query needed a composite index
+(`decision_memory`, `case_id` + `seq`) that predated Cards 0/2/3 and had
+never been added to `infra/indexes.json` — the local test suite runs
+against the emulator, which does not enforce this, so nothing local could
+have caught it. Full root-cause and fix transcript:
+`evidence/firestore/deploy-2026-08-17.md`.
 
 The current live revision can be confirmed at any time with:
 
