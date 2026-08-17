@@ -88,14 +88,47 @@ must sign it. That last step is the difference between this and a lineage tool.
   signatory. The system may request approval and cannot grant it.
 - **An honesty apparatus** — the interface publishes the system's own worst
   extraction class, on screen, during the demo.
+- **WARRANT (Card 0)** — a deterministic, decaying, capability-scoped
+  authority ledger. An agent's delegated act is spent atomically, inside a
+  single Firestore transaction, against a balance minted only from a
+  human-concurrence record plus an independent-family countersign.
+  Cold-start agents refuse `WARRANT_INSUFFICIENT` by construction — there
+  is no code path from "insufficient" to "proceed anyway."
+- **CONTROL TOWER (Card 2)** — an executable agent registry that drives ADK
+  2's dynamic-composition pattern (flip one registry field, the actual
+  workflow graph object changes), a deterministic-router Gateway with a
+  `WORKER_FAULT` supervisor branch, an append-only causal decision memory
+  (not a vector store — "what happened because of X" is a graph walk over
+  an explicit parent edge), and a durable runtime proven across a genuine
+  process restart.
+- **COUNTERSIGN (Card 3)** — Gemma, a genuinely different model family,
+  verifies a case's material as a single-turn ADK 2 `AgentTool` before any
+  warrant mints. A collusion guard rejects a countersign whose family or
+  principal matches the judging side. Disagreement freezes minting for that
+  case, permanently.
 
 ### Technologies
 
-- **Google ADK 2** (`google-adk==2.6.3`) — the cascade is an ADK 2 `Workflow` of
-  `FunctionNode`s. The four-regime split is a routing decision (`ctx.route`),
-  not a paragraph in a prompt.
+- **Google ADK 2** (`google-adk==2.6.3`) — six constructs, all verified
+  against the actual code by a committed script
+  (`scripts/verify_adk_mapping.sh`, 10/10 pass): `Workflow`+`FunctionNode`
+  (cascade graph, `agents/cascade/workflow.py`); a deterministic router
+  (Gateway reason codes, `tower/gateway.py`); a second `FunctionNode` for
+  the atomic warrant SPEND-or-refuse (`tower/gateway.py:476`); the dynamic
+  pattern (registry → coordinator, `tower/registry.py`); a single-turn
+  `AgentTool` (Countersign/Gemma, `countersign/agent.py`); and a durable
+  `LongRunningFunctionTool` (case pause/resume, `tower/runtime.py`).
 - **Gemini via Vertex AI** (`gemini-3.5-flash-lite`, `gemini-3.6-flash`, both
   GA) — the *second pass* only, on what a deterministic parser cannot read.
+- **Gemma via Vertex AI** — the independent-family verifier gating warrant
+  mints (Card 3). Live wiring verified this session (real Vertex round-trip,
+  real `404` — the project lacks Model Garden access to
+  `gemma-3-27b-it`; full escalation in `countersign/DESIGN.md`). The
+  mechanism is proven with a labelled scripted simulator over all 41 eval
+  scenarios: **75.6% agreement (31/41)**. **Veo and Lyria were evaluated
+  and cut** for failing the same five-point necessity test Gemma passed —
+  a model added for the sake of breadth is a model the architecture does
+  not need.
 - **Cloud Run** — the deployed service, serving the API and the UI from one
   origin. A cascade is bursty work that should scale to zero between retractions.
 - **Firestore** — document-shaped decisions with a subcollection reverse index,
@@ -137,7 +170,7 @@ claim about production supplier email.
 
 | | |
 | --- | --- |
-| Tests | **261 passed, 11 skipped** |
+| Tests | **369 passed** with the Firestore emulator running · **325 passed, 44 skipped** without |
 | Eval scenarios | **41 passed**, 5 classes, **0 model calls** |
 | False-retraction rate | **0.0** |
 | Blast radius → survivors | **2,594 → 78** |
@@ -146,8 +179,11 @@ claim about production supplier email.
 | Extraction recall, parser + Gemini | **100.0%** (44/44) |
 | Delta | **+18.2 percentage points** |
 | Worst extraction class | `temporal:absolute-duration`, **66.7%** |
-| Interface | **60 fps median** at 4,206 nodes; on-screen counter asserted equal to the cascade's own count (**78 = 78**) |
-| Deployment verification | **5/5 PASS**, exit 0, against the live service |
+| Interface | **60 fps median** at 4,206 nodes, both idle and under a scripted pan; on-screen counter asserted equal to the cascade's own count (**78 = 78**) |
+| Warrant re-derivation | **4/4 balances bit-equal** to a fresh fold of the ledger (`scripts/rederive_warrant.py`) |
+| Countersign agreement rate | **75.6% (31/41 scenarios), SIMULATED** — live Gemma attempted, blocked by a real `404` |
+| ADK 2 construct mapping | **10/10 PASS** — every construct this page claims, verified present at its cited `file:line` |
+| Deployment verification (Card 1 only — see below) | **5/5 PASS**, exit 0, against the live service, 2026-08-13 |
 | Deploy preflight | **20/20 PASS** |
 
 **How to read the 100% honestly: the model's denominator is 8, not 44.** The
@@ -171,10 +207,20 @@ rather than argued.
   rather than emitting a reverse path that looks executable.
 - **Model Armor** was never configured, so it has never blocked anything. The
   extraction quarantine is the real defence and does not depend on it.
-- **Firestore rules and composite indexes** are written and never deployed.
-- **Three of the four architectural cards** — WARRANT, CONTROL TOWER,
-  COUNTERSIGN — are locked design and **not built**. They are drawn dashed in the
-  architecture diagram for exactly that reason.
+- **Firestore rules and composite indexes** are written and deployed —
+  verified live against a real GCP project (`evidence/firestore/deploy-2026-08-15.md`).
+- **The live Cloud Run URL still serves Card 1 only.** Cards 0, 2 and 3 and
+  the four-card instrument UI are built, tested (369 passing) and
+  committed, but redeploying is real infrastructure change this pass did
+  not take without it being asked for separately. A fresh health check
+  (`bash scripts/health_check.sh`) confirms the live service still reports
+  the pre-Card-2 build tag. Run the full four-card system locally with
+  `make emulator && make dev`, documented in `README.md` and `docs/JUDGE.md`.
+- **Live Gemma verification** is blocked by a Model Garden access gap —
+  wiring proven (real auth, real API round-trip), the model call itself
+  returns a real `404`. `countersign/DESIGN.md` has the full escalation.
+- **Warrant's Goodhart and Sybil risks** are named, not solved —
+  `warrant/FAILURE_MODES.md`.
 
 ### What I learned
 
@@ -195,7 +241,7 @@ cost one failed deployment verification and is now written down in the repo.
 ## Built with
 
 ```
-python, google-adk, gemini, vertex-ai, cloud-run, firestore, pub-sub, cloud-trace, opentelemetry, fastapi, javascript, canvas
+python, google-adk, gemini, gemma, vertex-ai, cloud-run, firestore, pub-sub, cloud-trace, opentelemetry, fastapi, javascript, canvas
 ```
 
 ---
@@ -218,14 +264,6 @@ in this repository supplies that.
 
 ## Pre-submit checklist
 
-- [ ] Video is **public** (not unlisted-only if the rules require public), in
-      English, **≤4:00**
-- [ ] Video shows **live unedited execution** and **visual Google Cloud proof**
-      (Cloud Run console or a `.run.app` URL visible on screen)
-- [ ] Repository is **public** and the default branch contains the work
-- [ ] Architecture diagram is reachable from the README **and** linked on Devpost
-- [ ] `README.md` spin-up instructions verified in a **clean clone**
-- [ ] Every number in this text still matches `pytest` and
-      `corpus/data/stats.json`
-- [ ] `bash scripts/health_check.sh` returns **PASS** against the deployed URL
-      within an hour of submitting
+Superseded by the dedicated, exact-command checklist:
+[`submission/CHECKLIST.md`](CHECKLIST.md). Do not check items off here —
+that file is the one source of truth for submission readiness.

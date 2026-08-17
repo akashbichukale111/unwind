@@ -19,25 +19,25 @@
   <!-- ================= FOUR-CARD OVERLAY ================= -->
   <text x="40" y="106" font-size="11.5" font-weight="700" fill="#6E6E6E" letter-spacing="1.2">THE FOUR CARDS</text>
 
-  <rect x="40" y="116" width="290" height="62" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.6" stroke-dasharray="7 4"/>
-  <text x="54" y="138" font-size="13.5" font-weight="700" fill="#A03C1E">CARD 0 — WARRANT</text>
+  <rect x="40" y="116" width="290" height="62" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="2.2"/>
+  <text x="54" y="138" font-size="13.5" font-weight="700" fill="#2E6B5E">CARD 0 — WARRANT</text>
   <text x="54" y="155" font-size="11" fill="#4A4A4A">Decaying, capability-scoped authority.</text>
-  <text x="54" y="170" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN · NOT BUILT</text>
+  <text x="54" y="170" font-size="10.5" font-weight="700" fill="#2E6B5E">BUILT · 37 TESTS · warrant/ledger.py</text>
 
   <rect x="340" y="116" width="290" height="62" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="2.2"/>
   <text x="354" y="138" font-size="13.5" font-weight="700" fill="#2E6B5E">CARD 1 — UNWIND CORE</text>
   <text x="354" y="155" font-size="11" fill="#4A4A4A">Reverse-index traversal · 2,594 → 78.</text>
   <text x="354" y="170" font-size="10.5" font-weight="700" fill="#2E6B5E">BUILT · FROZEN · 261 TESTS</text>
 
-  <rect x="640" y="116" width="290" height="62" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.6" stroke-dasharray="7 4"/>
-  <text x="654" y="138" font-size="13.5" font-weight="700" fill="#A03C1E">CARD 2 — CONTROL TOWER</text>
+  <rect x="640" y="116" width="290" height="62" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="2.2"/>
+  <text x="654" y="138" font-size="13.5" font-weight="700" fill="#2E6B5E">CARD 2 — CONTROL TOWER</text>
   <text x="654" y="155" font-size="11" fill="#4A4A4A">Registry · gateway · memory · runtime.</text>
-  <text x="654" y="170" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN · NOT BUILT</text>
+  <text x="654" y="170" font-size="10.5" font-weight="700" fill="#2E6B5E">BUILT · 44 TESTS · tower/</text>
 
-  <rect x="940" y="116" width="300" height="62" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.6" stroke-dasharray="7 4"/>
-  <text x="954" y="138" font-size="13.5" font-weight="700" fill="#A03C1E">CARD 3 — COUNTERSIGN</text>
+  <rect x="940" y="116" width="300" height="62" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="2.2"/>
+  <text x="954" y="138" font-size="13.5" font-weight="700" fill="#2E6B5E">CARD 3 — COUNTERSIGN</text>
   <text x="954" y="155" font-size="11" fill="#4A4A4A">Gemma gates every warrant mint.</text>
-  <text x="954" y="170" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN · NOT BUILT</text>
+  <text x="954" y="170" font-size="10.5" font-weight="700" fill="#2E6B5E">BUILT · 16 TESTS · countersign/</text>
 
   <!-- ================= REQUEST PATH ================= -->
   <text x="40" y="214" font-size="11.5" font-weight="700" fill="#6E6E6E" letter-spacing="1.2">REQUEST PATH — follow the arrows left to right</text>
@@ -123,40 +123,40 @@
   <line x1="972" y1="376" x2="972" y2="504" stroke="#6E6E6E" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrowLight)"/>
 
   <!-- ================= ADK 2 CONSTRUCT MAPPING ================= -->
-  <text x="40" y="612" font-size="11.5" font-weight="700" fill="#6E6E6E" letter-spacing="1.2">ADK 2 CONSTRUCT MAPPING — locked architecture</text>
+  <text x="40" y="612" font-size="11.5" font-weight="700" fill="#6E6E6E" letter-spacing="1.2">ADK 2 CONSTRUCT MAPPING — verified against code by scripts/verify_adk_mapping.sh</text>
 
   <rect x="40" y="624" width="238" height="60" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="1.8"/>
   <text x="52" y="643" font-size="11.5" font-weight="700" fill="#2E6B5E">Workflow + FunctionNode</text>
   <text x="52" y="659" font-size="10.5" fill="#4A4A4A">cascade graph, four-regime route</text>
   <text x="52" y="675" font-size="10.5" font-weight="700" fill="#2E6B5E">IN USE — agents/cascade/workflow.py</text>
 
-  <rect x="292" y="624" width="238" height="60" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.4" stroke-dasharray="6 4"/>
-  <text x="304" y="643" font-size="11.5" font-weight="700" fill="#A03C1E">Deterministic router</text>
+  <rect x="292" y="624" width="238" height="60" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="1.8"/>
+  <text x="304" y="643" font-size="11.5" font-weight="700" fill="#2E6B5E">Deterministic router</text>
   <text x="304" y="659" font-size="10.5" fill="#4A4A4A">Gateway reason codes (Card 2)</text>
-  <text x="304" y="675" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN — lands in build</text>
+  <text x="304" y="675" font-size="10.5" font-weight="700" fill="#2E6B5E">IN USE — tower/gateway.py:491</text>
 
-  <rect x="544" y="624" width="238" height="60" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.4" stroke-dasharray="6 4"/>
-  <text x="556" y="643" font-size="11.5" font-weight="700" fill="#A03C1E">FunctionNode — warrant SPEND</text>
+  <rect x="544" y="624" width="238" height="60" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="1.8"/>
+  <text x="556" y="643" font-size="11.5" font-weight="700" fill="#2E6B5E">FunctionNode — warrant SPEND</text>
   <text x="556" y="659" font-size="10.5" fill="#4A4A4A">spend-or-refuse (Card 0)</text>
-  <text x="556" y="675" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN — lands in build</text>
+  <text x="556" y="675" font-size="10.5" font-weight="700" fill="#2E6B5E">IN USE — tower/gateway.py:476</text>
 
-  <rect x="796" y="624" width="220" height="60" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.4" stroke-dasharray="6 4"/>
-  <text x="808" y="643" font-size="11.5" font-weight="700" fill="#A03C1E">Dynamic pattern</text>
+  <rect x="796" y="624" width="220" height="60" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="1.8"/>
+  <text x="808" y="643" font-size="11.5" font-weight="700" fill="#2E6B5E">Dynamic pattern</text>
   <text x="808" y="659" font-size="10.5" fill="#4A4A4A">registry → coordinator (Card 2)</text>
-  <text x="808" y="675" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN — lands in build</text>
+  <text x="808" y="675" font-size="10.5" font-weight="700" fill="#2E6B5E">IN USE — tower/registry.py:93</text>
 
-  <rect x="1030" y="624" width="210" height="60" rx="4" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.4" stroke-dasharray="6 4"/>
-  <text x="1042" y="643" font-size="11.5" font-weight="700" fill="#A03C1E">Single-turn AgentTool</text>
+  <rect x="1030" y="624" width="210" height="60" rx="4" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="1.8"/>
+  <text x="1042" y="643" font-size="11.5" font-weight="700" fill="#2E6B5E">Single-turn AgentTool</text>
   <text x="1042" y="659" font-size="10.5" fill="#4A4A4A">Countersign / Gemma (Card 3)</text>
-  <text x="1042" y="675" font-size="10.5" font-weight="700" fill="#A03C1E">LOCKED DESIGN — lands in build</text>
+  <text x="1042" y="675" font-size="9.8" font-weight="700" fill="#2E6B5E">IN USE — countersign/agent.py:110</text>
+
+  <text x="40" y="700" font-size="10" fill="#4A4A4A">A sixth construct, not boxed above for space — <tspan font-weight="700">durable long-running runtime</tspan> (case pause/resume): IN USE — tower/runtime.py:203, a real <tspan font-style="italic">LongRunningFunctionTool</tspan>.</text>
 
   <!-- ================= LEGEND / MOATS ================= -->
   <line x1="40" y1="708" x2="1240" y2="708" stroke="#D8D2C6" stroke-width="1.4"/>
 
   <rect x="40" y="726" width="16" height="12" rx="2" fill="#EAF3EF" stroke="#2E6B5E" stroke-width="2"/>
-  <text x="64" y="737" font-size="11.5" fill="#4A4A4A">solid = built and tested today</text>
-  <rect x="292" y="726" width="16" height="12" rx="2" fill="#FFFFFF" stroke="#A03C1E" stroke-width="1.6" stroke-dasharray="4 3"/>
-  <text x="316" y="737" font-size="11.5" fill="#4A4A4A">dashed = locked design, not built — stated, not implied</text>
+  <text x="64" y="737" font-size="11.5" fill="#4A4A4A">solid = built and tested today — every box on this page is solid; nothing is drawn dashed</text>
   <text x="700" y="737" font-size="11.5" fill="#4A4A4A">boundary enforced by <tspan font-weight="700">tests/test_zero_model.py</tspan> — an AST walk of spine/ imports</text>
 
   <text x="40" y="766" font-size="11.5" font-weight="700" fill="#6E6E6E" letter-spacing="1.2">THE FIVE MOATS</text>

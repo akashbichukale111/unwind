@@ -50,12 +50,20 @@ Nothing here needs a Google Cloud account.
 git clone https://github.com/akashbichukale111/unwind.git
 cd unwind
 make install                              # uv venv (Python 3.12) + deps
-make test                                 # 261 passed, 11 skipped
+make test                                 # 369 passed (with `make emulator` running) / 325 passed, 44 skipped (without)
 make ui                                   # http://127.0.0.1:8000
 ```
 
+**Re-verified in a clean clone, 2026-08-17 02:04–02:06 UTC**: `make install`
+exit 0; `make test` **369 passed, 0 failed** with the Firestore emulator
+running, **325 passed, 44 skipped, 0 failed** without it — both runs, same
+clone, same commit. `bash scripts/verify_adk_mapping.sh` — **10/10 checks
+passed**, every ADK 2 construct this README claims found at its cited
+`file:line`. Full transcripts in `evidence/INDEX.md`.
+
 Then type `supplier_K lead time is now 20 days` into the bar and watch 2,594
-become 78.
+become 78. Press **`T`** to open the four-card instrument (Cards 0–3) — see
+"Deployed", below, for where that currently runs.
 
 **The zero-model path, with no credentials at all:**
 
@@ -81,8 +89,11 @@ coming out the right-hand side. The hard dashed line is the **zero-model
 boundary**, and it is enforced by `tests/test_zero_model.py` walking the import
 graph of every module under `spine/` — not by a convention someone remembers.
 
-Solid boxes are built and tested today. Dashed boxes are locked design that is
-not built yet, and they are drawn dashed on purpose. Source:
+**All four cards now draw solid** — Cards 0, 2 and 3 shipped this pass, and
+the diagram was updated to match rather than left showing a stale "locked
+design, not built" state. Every ADK 2 construct label on the diagram is
+checked against the code by `scripts/verify_adk_mapping.sh` (10/10 pass) —
+a label on this picture is not decoration. Source:
 [`assets/architecture.svg`](assets/architecture.svg) ·
 [`assets/architecture.png`](assets/architecture.png).
 
@@ -93,9 +104,23 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Deployed
 
+⚠ **THE DEPLOYED URL RUNS CARD 1 ONLY, AS OF THIS WRITING.** Cards 0
+(WARRANT), 2 (CONTROL TOWER), 3 (COUNTERSIGN) and the four-card instrument UI
+are built, tested (369 passing) and committed to this repository, but
+`infra/deploy.sh` has not been re-run since they landed — redeploying Cloud
+Run infrastructure is a real, external, hard-to-reverse action this
+close-out pass does not take without it being asked for separately. A fresh
+health check just now (`bash scripts/health_check.sh`, 2026-08-17 02:06:14
+UTC) confirms the live service answers and still computes **2,594**
+dependents, `"stage":"task-5-interface"` — the pre-Card-2 build tag, proving
+this is not a stale claim. **To see the four-card instrument, run it
+locally** (below) until redeployment happens; `submission/CHECKLIST.md`
+lists redeployment as a required pre-submission step.
+
 | | |
 | --- | --- |
 | URL | `https://unwind-hgeodtazqq-uc.a.run.app` |
+| Serves today | **Card 1 (UNWIND CORE) only** — the cascade, the field, the honesty panel |
 | Service / region | `unwind` · `us-central1` |
 | Project | `project-895d4ca8-d301-447d-916` |
 | Artifact | `gcloud run deploy --source .` — buildpacks + root `Procfile` |
@@ -104,7 +129,22 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 `infra/deploy.sh` also provisions the runtime service account (three
 least-privilege roles, no Owner/Editor) and the six Pub/Sub topics.
 
-**Last verified 2026-08-13** by `make deploy-verify`, **5/5 PASS, exit 0**:
+### Running Cards 0–3 and the instrument, locally, today
+
+```bash
+make emulator                         # terminal 1: Firestore emulator
+make dev                              # terminal 2: http://127.0.0.1:8000
+bash scripts/demo_warrant.sh          # terminal 3: the BURN + earn-up moments, in the terminal
+```
+
+Then open `http://127.0.0.1:8000`, wait for the field to render, and press
+**`T`**. The bars are seeded live by the same demo the terminal script just
+ran — `SYNTHETIC` labels are visible on every seeded bar; the "Overturn a
+HIGH-risk judgement" and "Earn the rookie's first delegation" buttons drive
+the same real `warrant/ledger.py` code path the terminal demo does.
+
+**Last verified deployed-URL check 2026-08-13** by `make deploy-verify`,
+**5/5 PASS, exit 0** (Card 1 only, as above):
 
 ```
 [1/5] healthz OK  stage=task-5-interface        (GET /api/healthz)
@@ -145,9 +185,9 @@ beats an implied "already done".
 | --- | --- | --- |
 | `Workflow` + `FunctionNode` + `Edge` / `DEFAULT_ROUTE` | the cascade graph; the four-regime split is `ctx.route`, not a prompt | **IN USE** — `agents/cascade/workflow.py` |
 | Deterministic router | Gateway reason codes — `PRINCIPAL_VIOLATION` → `SCOPE_EXCEEDED` → `BUDGET_EXCEEDED` → `WARRANT_INSUFFICIENT`, plus the `WORKER_FAULT` supervisor branch (Card 2) | **IN USE** — `tower/gateway.py:gateway_workflow`, a real `Workflow` of `FunctionNode`s, each check its own routed edge; `tests/test_tower_gateway.py` |
-| `FunctionNode` — warrant SPEND | spend-or-refuse on every delegated act (Card 0) | **LOCKED DESIGN** — not built; the slot (`tower/schema.py:WarrantSlot`) and the refusal code path (`WARRANT_INSUFFICIENT`, currently a stub that always passes) exist |
+| `FunctionNode` — warrant SPEND | atomic spend-or-refuse on every delegated act (Card 0) | **IN USE** — `tower/gateway.py:warrant_check`, a real `FunctionNode` calling `warrant/ledger.py:spend_or_refuse`; a cold-start agent (zero warrant ever minted) is refused `WARRANT_INSUFFICIENT` BY CONSTRUCTION, proven in `tests/test_tower_gateway.py::test_warrant_check_refuses_cold_start_agent` |
 | Dynamic pattern | registry → coordinator selection (Card 2) | **IN USE** — `tower/registry.py:compose_capability_workflow` builds a real ADK `Workflow` whose node set is read from Firestore at call time; flipping one registry field changes the actual graph object, proven in `tests/test_tower_registry.py::test_flipping_a_registry_field_changes_the_composed_graph` |
-| Single-turn `AgentTool` | Countersign / Gemma gating warrant mints (Card 3) | **LOCKED DESIGN** — not built |
+| Single-turn `AgentTool` | Countersign / Gemma gating warrant mints (Card 3) | **IN USE** — `countersign/agent.py:countersign_tool`, a real `google.adk.tools.agent_tool.AgentTool` wrapping an `Agent(mode="single_turn")`; executed via a one-node `Workflow` (`countersign/DESIGN.md` explains why). Wiring verified against LIVE Vertex AI this session — real auth, real API round-trip, blocked by a real `404` (project lacks access to the `gemma-3-27b-it` publisher model). The MECHANISM (collusion guard, DISAGREE→CHALLENGE) is proven with the same scripted-simulator discipline `judgment/model.py:ScriptedT2Model` established for T2 |
 | Durable long-running runtime | case pause/resume — a human may sign on Tuesday | **IN USE** — `tower/runtime.py:case_pause_tool`, a real `google.adk.tools.long_running_tool.LongRunningFunctionTool`; durability proven across a genuine process restart with a simulated one-week gap in `tests/test_tower_runtime.py::test_case_resumes_after_a_simulated_one_week_gap_and_a_process_restart` |
 
 ### Status of `agents/` and `tower/`, stated plainly
@@ -168,27 +208,39 @@ forbidden-model-client list `spine/` is walked against, and confirms
 separately that ADK itself is still present (a router with no framework
 underneath it would be a different, false claim).
 
-Three of the six ADK 2 constructs in the table above are now genuinely
-load-bearing (the router, the dynamic registry composition, the durable
-runtime), and two remain design that lands with Cards 0 and 3. **The court's
-parallelism is real and measured** — `tests/test_court.py` asserts N owners'
-pleas overlap in wall-clock time — but it is implemented with a thread pool,
-**not** with `AgentTool`, and this README will not claim otherwise until the
-code does.
+All six ADK 2 constructs in the table above are now genuinely load-bearing.
+**The court's parallelism is real and measured** — `tests/test_court.py`
+asserts N owners' pleas overlap in wall-clock time — but it is implemented
+with a thread pool, **not** with `AgentTool`, and this README will not claim
+otherwise until the code does.
 
-**44 new tests this prompt, all passing**: `make test` → **316 passed** with
-the Firestore emulator running (0 skipped), **290 passed / 26 skipped**
-without it (the tower tests that need Firestore skip the same way the
-existing emulator-gated tests always have).
+`warrant/` (Card 0) is **~900 lines**: `ledger.py` plus `DESIGN.md` and
+`FAILURE_MODES.md`. `countersign/` (Card 3) is **~350 lines**: `agent.py`,
+`verify.py`, `DESIGN.md`. Neither imports `spine/`, and `spine/` cannot
+import either — `tests/test_warrant_zero_model.py` and
+`tests/test_countersign_boundary.py` prove it by import-graph walk, the same
+technique `tests/test_zero_model.py` and `tests/test_tower_zero_model.py`
+already use. `warrant/ledger.py` additionally imports NO `google.adk` at
+all (stricter than `tower/`'s own boundary — the FunctionNode/AgentTool
+wrapping lives one layer up, in `tower/gateway.py` and `countersign/agent.py`
+respectively).
+
+**53 new tests across Cards 0 and 3, all passing** (37 + 16): `make test` →
+**369 passed** with the Firestore emulator running (0 skipped, up from 316
+after Card 2). Two Card-2-era tests were rewritten, disclosed rather than
+silently changed — `tests/test_tower_gateway.py::test_warrant_check_stub_always_passes`
+asserted the WARRANT_INSUFFICIENT stub BY NAME, and Card 0's whole job was
+to retire that stub; every other test in every other file is untouched, and
+`git diff --stat -- spine/ court/ judgment/ settle/` is empty.
 
 ### The four cards
 
 | | | |
 | --- | --- | --- |
-| **CARD 0 — WARRANT** | deterministic, decaying, capability-scoped authority; minted only from countersigned human-validated outcomes, debited on every delegated act; insufficient warrant is a structural refusal that routes to a human | locked design, not built — the slot exists (`tower/schema.py:WarrantSlot`), the arithmetic does not |
+| **CARD 0 — WARRANT** | deterministic, decaying, capability-scoped authority; minted only from countersigned human-validated outcomes, debited on every delegated act; insufficient warrant is a structural refusal that routes to a human | **built · 37 tests** — `warrant/DESIGN.md`, `warrant/FAILURE_MODES.md`; `scripts/rederive_warrant.py` proves every balance bit-equal to a fresh fold of the log; `scripts/demo_warrant.sh` stages the BURN→revocation and cold-start-earn-up demo moments end to end |
 | **CARD 1 — UNWIND CORE** | everything above the fold in this README | **built · frozen · 261 tests** |
 | **CARD 2 — CONTROL TOWER** | registry · identity · gateway · decision memory · durable runtime · observability | **built · 44 tests** — see `tower/DESIGN.md`; Model Armor and Cloud Trace export verified live against a real GCP project, evidence in `evidence/armor/`, `evidence/observability/`, `evidence/firestore/` |
-| **CARD 3 — COUNTERSIGN** | Gemma as an independent-family verifier gating warrant mints | locked design, not built |
+| **CARD 3 — COUNTERSIGN** | Gemma as an independent-family verifier gating warrant mints | **built · 16 tests** — see `countersign/DESIGN.md`; live-Vertex wiring verified (real auth, real 404 — see below), mechanism proven with a labelled scripted simulator over all 41 eval scenarios: **75.6% agreement (31/41), SIMULATED** |
 
 **Models: Gemini and Gemma only.** Veo and Lyria were evaluated and **cut** for
 failing a five-point necessity test. The cut is stated here rather than hidden,
@@ -231,7 +283,10 @@ script or labelled as not measured. There is no third category.
 | **T2 judgement quality** | **unmeasured.** The live run attempted 60 nodes and resolved **0**, with **0 exceptions**. This is a **non-test, not a failure**: all 174 queue nodes carry `committed_lead_days = None`, and the assessor returns UNRESOLVED *before* the model's answer is consulted. The corpus fixed the outcome, not Gemini |
 | **The corpus** | **synthetic, single-author.** Artifacts and the extraction lexicon were written by the same author. `corpus/README.md` and `docs/COVERAGE.md` state this at length |
 | **The agents don't decide** | owner stance and arbiter tally are arithmetic. Honest framing: multi-principal orchestration with LLM narration |
-| **Never executed** | Firestore rules and composite indexes (written, never deployed) · Model Armor (never configured, so it has never blocked anything) · compensation-path synthesis (`synthesise()` raises rather than emitting a path that looks executable) · the retraction feed |
+| **Countersign agreement rate** | **75.6% (31/41 scenarios), SIMULATED.** Live Gemma was attempted first this session and reported unreachable (`404` — the project lacks access to the `gemma-3-27b-it` publisher model; see `countersign/DESIGN.md` for the full escalation, including a successful real-auth Vertex round-trip). The run fell back to the SAME scripted simulator the tests use, labelled `simulated=True` on every record. The 10 disagreements are exactly the 10 `adversarial`-class scenarios — the simulator's designed behaviour, not a finding about Gemma |
+| **SYNTHETIC-seed policy** | The warrant demo corpus is fabricated and single-author. Every seeded ledger event carries `provenance=SYNTHETIC`, permanently; a balance is labelled `SYNTHETIC` if **even one** event folded into it is — contamination is never diluted by real events sitting alongside it. `scripts/rederive_warrant.py` proves SYNTHETIC and EARNED events fold through the identical arithmetic (`fold_balance` never reads `.provenance`); the demo mints one balance live, on camera, so at least one number is genuinely earned, not seeded |
+| **Residual Goodhart risk** | Warrant issuance is fixed per risk class, but nothing measures CASE DIFFICULTY — an agent (or its operator) routing many trivially-easy validated cases through the mint flow accrues warrant at the same rate as one handling genuinely marginal cases. Per-class isolation and decay bound the damage window; neither eliminates it. Named, not solved, in `warrant/FAILURE_MODES.md`, alongside the same document's Sybil-resistance gap (principal binding proves a balance cannot move between registered identities; it does not prove one registered identity is one real actor) |
+| **Never executed** | Firestore rules and composite indexes (written, never deployed) · Model Armor (never configured, so it has never blocked anything) · compensation-path synthesis (`synthesise()` raises rather than emitting a path that looks executable) · the retraction feed · a live Gemma call from this repository (attempted, blocked by Model Garden access — see above) · redeployment of Cards 0–3 to the live Cloud Run URL (built and tested; not yet deployed — see "Deployed", above) |
 
 Why the T2 fixture was **deliberately not built**: mechanical answer-withholding
 is achievable, but the clause text and the scoring key would be written by the
@@ -242,15 +297,23 @@ measurement. Full reasoning in [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md
 
 ## What has actually been run
 
-**`make test` → 261 passed, 11 skipped** (272 collected; the 11 skips need a live
-Firestore emulator). `ruff check` and `ruff format --check` clean.
+**`make test` → 369 passed, 0 skipped** with the Firestore emulator running
+(`make emulator`); **325 passed, 44 skipped** without it (every skip is
+emulator-gated Firestore infrastructure — `tower/`, `warrant/`,
+`countersign/`'s persisted-section tests). `ruff check` and
+`ruff format --check` clean.
 
 | Command | Result |
 | --- | --- |
-| `make test` | **261 passed, 11 skipped** |
+| `make test` | **369 passed** (emulator running) / **325 passed, 44 skipped** (without) |
 | `make eval` | **41 scenarios passed**, 0 failed, **0 model calls**; false-retraction rate **0.0** |
 | `UNWIND_VERTEX_DISABLED=1 make eval` | identical. Enforced in CI |
 | `make verify-live` | executed 2026-08-13 — Vertex call **OK**, **0 model errors**, recall **81.8% → 100.0%** |
+| `python scripts/rederive_warrant.py` | **PASS** — 4/4 warrant balances (across a seeded veteran agent and a cold-start-then-earned rookie agent) bit-equal to a fresh fold of the log |
+| `bash scripts/demo_warrant.sh` | BURN drops a HIGH-risk bar from 144bp to 0bp, the very next case of that class refuses `WARRANT_INSUFFICIENT`; a cold-start agent earns its first delegation live (0bp → 500bp → ALLOWED), same run |
+| `python scripts/run_countersign_eval.py` | 41 scenarios, live Gemma attempted and reported unreachable (real `404`, see `countersign/DESIGN.md`), fell back to the labelled scripted simulator — **75.6% agreement (31/41)** |
+| `bash scripts/verify_adk_mapping.sh` | **10/10 PASS** — every ADK 2 construct this README's table claims, found at its cited `file:line` |
+| `bash scripts/health_check.sh` | **PASS**, 2026-08-17 02:06:14 UTC — deployed service answers, hub dependents = 2,594 |
 | `make ui-check` | real Chromium: **60 fps median** at 4,206 nodes, on-screen counter **78 = 78**, no horizontal scroll at 380px, 0 app-origin console errors |
 | `make deploy-check` | **20/20 PASS** — preflight only; checks inputs, not the deploy |
 | `make deploy-verify` | **5/5 PASS**, exit 0, against the live URL |
@@ -281,8 +344,12 @@ evidence for that run.
 - [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md) — why T2 judgement quality is unmeasured.
 - [`docs/COVERAGE.md`](docs/COVERAGE.md) — the extraction confusion matrix, regenerated in CI; drift fails the build.
 - [`docs/DEPLOY.md`](docs/DEPLOY.md) — the deployment sequence, and the four defects a line-by-line review found in a script that had never run.
+- [`warrant/DESIGN.md`](warrant/DESIGN.md) · [`warrant/FAILURE_MODES.md`](warrant/FAILURE_MODES.md) — Card 0, including the Goodhart and Sybil risks it does NOT solve.
+- [`countersign/DESIGN.md`](countersign/DESIGN.md) — Card 3, including the full live-Vertex escalation and the exact `404` it ended on.
 - [`submission/demo_script.md`](submission/demo_script.md) — the four-minute demo, shot by shot.
 - `evidence/health/` — timestamped health checks against the deployed URL.
+- `evidence/countersign/results.json` — the full per-scenario Countersign eval output behind the 75.6% figure.
+- `evidence/fps/` — the headless frame-time probe over the four-card instrument.
 - `docs/shots/` — interface screenshots, produced by `make ui-check` rather than hand-captured.
 
 ---
@@ -292,9 +359,13 @@ evidence for that run.
 ```bash
 make install                 # uv venv (Python 3.12) + deps
 make emulator                # terminal 1: Firestore emulator (needs Java 11+)
-make test                    # terminal 2: 272 tests, 11 of which need the emulator
+make test                    # terminal 2: 369 tests, 44 of which need the emulator
 make dev                     # terminal 2: API on http://127.0.0.1:8000/api/healthz
 make ui                      # the operator field — no credentials needed
+python scripts/rederive_warrant.py    # Card 0: proves every warrant balance bit-equal to the log
+bash scripts/demo_warrant.sh          # Card 0: BURN→revocation + cold-start-earn-up, staged
+python scripts/run_countersign_eval.py  # Card 3: agreement rate over all 41 eval scenarios
+bash scripts/verify_adk_mapping.sh      # README's ADK 2 table vs. actual code, file:line
 make corpus-verify           # proves the committed corpus is reproducible
 make eval                    # the hub-retraction scenario, real metrics
 make eval-vertex-off         # THE GUARANTEE: same run with Vertex disabled
@@ -328,6 +399,7 @@ make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
 | ADK | `google-adk==2.6.3` | `adk --version`; installed from PyPI |
 | Model (fast) | `gemini-3.5-flash-lite` | GA on Vertex AI; re-verified 2026-08-12 |
 | Model (deep) | `gemini-3.6-flash` | GA on Vertex AI since 2026-07-21; re-verified 2026-08-12 |
+| Model (Gemma, Card 3) | `gemma-3-27b-it` | **UNVERIFIED as a listing** — never re-checked against a live GA catalogue. The live call this session authenticated correctly against a real project and got a real `404`: the project lacks access to this exact publisher-model resource. Re-check the model ID and Model Garden entitlement before a live demo — see `countersign/DESIGN.md` |
 | Location | `global` | the location the live run actually used |
 | Region | `us-central1` | Cloud Run; pinned in `lib/config.py`, never inferred |
 | Backend | Vertex AI | `GOOGLE_GENAI_USE_ENTERPRISE=true`, set from config in `lib/vertex.py` |
@@ -435,16 +507,19 @@ spine/      the deterministic package boundary — no ADK, no model client
 court/      owners · arbiter · four-turn protocol · team formation
 judgment/   everything that may be wrong; degrades to UNRESOLVED, never a guess
 settle/     irreversibility · cartography · obligation · broker · load rating
+tower/      Card 2 — registry · gateway · decision memory · durable runtime
+warrant/    Card 0 — the ledger: MINT/BURN/SPEND/DECAY/CHALLENGE, DESIGN.md, FAILURE_MODES.md
+countersign/ Card 3 — Gemma as a single-turn AgentTool, DESIGN.md
 lib/        config · vertex · firestore · pubsub · telemetry · schema · principals
 agents/     cascade/ (ADK 2 Workflow) · smoke/ (one delete-ready LlmAgent)
 services/   api/  FastAPI + SSE, serving web/static from the same origin
-web/static/ the operator field — canvas, 4,206 nodes
+web/static/ the operator field + the four-card instrument — canvas, 4,206 nodes
 corpus/     generate.py + committed data + measured stats
 evals/      harness · metrics · 41 scenarios across 5 classes
 infra/      firestore.rules · indexes.json · deploy.sh · emulator.sh · dev.sh
-assets/     architecture.svg · architecture.png
-submission/ demo script · Devpost text · council verdict
-evidence/   timestamped health checks against the deployed service
+assets/     architecture.svg · architecture.png — four cards, ADK sites, zero-model line
+submission/ demo script · Devpost text · blog · social · pre-submission checklist
+evidence/   INDEX.md indexes every artifact — health checks, traces, FPS, warrant/Countersign runs
 ```
 
 `web/` also contains a Next.js 15 skeleton that is **dead code** — the live UI is

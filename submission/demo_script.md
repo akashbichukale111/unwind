@@ -1,168 +1,182 @@
-# Demo script — video v1
+# Demo script v2 — the four-card system
 
 **Target runtime 4:00 · hard ceiling 4:00.** Voiceover budget **≤560 words**
-(≈140 wpm at an unhurried pace). Actual count is asserted at the bottom of this
-file.
+(≈140 wpm at an unhurried pace). Actual count is asserted at the bottom of
+this file, by the same command that measured it.
 
-**Every shot is marked `LIVE` or `CUTAWAY`.** `LIVE` means the thing is running
-in front of the camera, unedited, in one take. `CUTAWAY` means a static screen
-— a console, a file, a terminal that has already finished. There is no third
-category, and nothing in this script is a slide with numbers typed onto it.
+**Every shot is marked `LIVE (deployed)`, `LIVE (local)`, or `CUTAWAY`.**
+`LIVE (deployed)` runs against the Cloud Run URL, unedited, in one take.
+`LIVE (local)` runs against `make dev` on `127.0.0.1`, unedited, in one
+take — used ONLY where the deployed service does not yet have the feature
+(see the disclosure below). `CUTAWAY` means a static screen — a console, a
+file, a terminal that already finished. There is no fourth category, and
+nothing here is a slide with numbers typed onto it.
 
-**Video v1 is a submittable floor.** It stands alone and satisfies Stage One
-without any unbuilt feature appearing in it. The v2 replacements are listed at
-the bottom and are **not** referenced in the voiceover.
+> ⚠ **DISCLOSURE, SAID ON CAMERA, NOT EDITED AROUND.** As of recording, the
+> deployed Cloud Run URL serves Card 1 (UNWIND CORE) only. Cards 0
+> (WARRANT), 2 (CONTROL TOWER) and 3 (COUNTERSIGN) are built and tested
+> (369 passing) but not yet redeployed. Act 2 therefore runs locally, on
+> screen, with the terminal and `127.0.0.1` visibly proving that — never
+> presented as if it were the deployed URL. This is stated in the
+> voiceover at 1:12, not just in this file.
 
 > **Rule for the presenter:** if a figure on screen disagrees with this
 > document, the screen is right and this document is stale. Re-run
-> `make ui-check`, which asserts the on-screen counter equals the cascade's own
-> material count.
+> `make ui-check` (Card 1) or `python scripts/rederive_warrant.py` (Card 0)
+> to confirm before recording.
 
 ---
 
 ## Recording checklist
 
-Work top to bottom. Do not skip step 2 — a cold start on camera looks exactly
-like a broken demo, and it is the single most likely way this recording fails.
+Work top to bottom. Do not skip the warm-up — a cold start on camera looks
+exactly like a broken demo.
 
 ### Capture settings
 
 - [ ] **Resolution 1920×1080**, 30 fps minimum. Record the *screen*, not a
-      window, so the Cloud Run console and the terminal are the same capture.
-- [ ] **Cursor visible** in the capture tool's settings. Highlight/click-effects
-      **off** — they read as a tutorial, not a system.
-- [ ] Microphone tested with **one** trial sentence played back. Voiceover may be
-      recorded live or laid over afterwards; live is preferred because the
-      silence over the cull is easier to time.
-- [ ] Browser at **100% zoom**, full screen, **no bookmarks bar**, no extensions
-      visible, notifications **silenced** (OS Do Not Disturb on).
-- [ ] Terminal font large enough to read at 1080p — 16pt or more. Test by
-      squinting at a thumbnail.
+      window, so the Cloud Run console, the terminal, and the browser are
+      all the same capture.
+- [ ] **Cursor visible.** Highlight/click-effects **off**.
+- [ ] Microphone tested with **one** trial sentence played back.
+- [ ] Browser at **100% zoom**, full screen, no bookmarks bar, no
+      extensions visible, OS Do Not Disturb **on**.
+- [ ] Terminal font **16pt or larger** — the `SYNTHETIC` labels in the
+      instrument UI and the terminal's `SYNTHETIC`/`EARNED` lines must both
+      be legible at 1080p. Test by squinting at a thumbnail.
 
 ### Warm-up — do this immediately before rolling
 
-- [ ] `bash scripts/health_check.sh` → must print **PASS**. This is hit one.
-- [ ] Open the deployed URL in the browser and let the field fully render. This
-      is hit two. **Wait for the second response before recording.**
-- [ ] Run the cascade once, off-camera, so the corpus is cached and shot 1.4 does
-      not stall.
-- [ ] Confirm the Cloud Run console tab is already open and logged in, showing
-      the `unwind` service green — shot 1.1 must not include a login.
+- [ ] `bash scripts/health_check.sh` → must print **PASS**. Hit one on the
+      deployed URL.
+- [ ] Open the deployed URL in the browser and let the field fully render.
+      Hit two. **Wait for the second response before recording.**
+- [ ] Run the cascade once, off-camera, so shot 1.4 does not stall.
+- [ ] Confirm the Cloud Run console tab is already open, logged in, `unwind`
+      service green — shot 1.1 must not include a login.
+- [ ] Start `make emulator` and `make dev` in two terminals, off-camera,
+      before rolling Act 2. Confirm `http://127.0.0.1:8000` renders once,
+      off-camera, so the on-camera load is not the first one.
+- [ ] Run `bash scripts/demo_warrant.sh` once, off-camera, so the Firestore
+      demo agents exist before the on-camera clicks in shot 2.2.
 
 ### Shooting
 
-- [ ] Record **one continuous take** per act. Three takes total is fine; splicing
-      *within* a live shot is not, and the video claims the execution is unedited.
-- [ ] Shot 1.4: **say nothing for eight seconds.** Count it.
-- [ ] Do not move the mouse during the cull.
-- [ ] If a live shot fails, restart that act. Do not cut around the failure.
+- [ ] Record **one continuous take per act**. Splicing *within* a LIVE shot
+      is not allowed — the video claims unedited execution.
+- [ ] Shot 1.4: **say nothing for six seconds.** Count it.
+- [ ] Do not move the mouse during the cull or during the warrant bar
+      animation (shot 2.2).
+- [ ] If a LIVE shot fails, restart that act. Do not cut around the
+      failure.
 
 ### Upload
 
-- [ ] Trim to **≤4:00**. Check the final duration before uploading, not after.
-- [ ] Upload to **YouTube**, visibility **Public** (not Unlisted — the rules ask
-      for public).
-- [ ] Title, English: `UNWIND — Consequence Clearing | Google All Things Agentic
-      Hackathon`
-- [ ] Description: one-line thesis, the repo URL, and the deployed URL.
-- [ ] Language set to **English**; captions optional but auto-captions on.
-- [ ] Watch the uploaded video **once, end to end, signed out**, to confirm it is
-      publicly playable and the audio survived the upload.
-- [ ] Paste the URL into `submission/devpost.md` → Links → Demo video, replacing
-      the `⟨FILL⟩` placeholder.
+- [ ] Trim to **≤4:00**. Check the final duration before uploading.
+- [ ] Upload to **YouTube**, visibility **Public**.
+- [ ] Title, English: `UNWIND — Consequence Clearing | Google All Things
+      Agentic Hackathon`
+- [ ] Description: one-line thesis, repo URL, deployed URL, and the note
+      "Cards 0–3 run locally in this recording; see README for why."
+- [ ] Language **English**; auto-captions on.
+- [ ] Watch the uploaded video **once, end to end, signed out**.
+- [ ] Paste the URL into `submission/devpost.md` → Links → Demo video and
+      into `submission/CHECKLIST.md`.
 
 ---
 
-## ACT 1 — the thesis and the cull (0:00–1:10)
+## ACT 1 — the thesis and the cull (0:00–1:05) · deployed
 
 ### 1.1 · 0:00–0:12 · `CUTAWAY` — Cloud Run console
-Service `unwind`, region `us-central1`, green check, revision name visible.
+Service `unwind`, region `us-central1`, green check, revision visible.
 
-> This is UNWIND, running on Cloud Run. Everything you are about to see happens
-> on this deployed service. Nothing is local and nothing is edited.
+> This is UNWIND, on Cloud Run. Card One of a four-card system — the part
+> that's deployed today.
 
-### 1.2 · 0:12–0:32 · `LIVE` — the field
-The deployed URL. 4,206 nodes, causal debt figure in amber.
+### 1.2 · 0:12–0:28 · `LIVE (deployed)` — the field
+The deployed URL. 4,206 nodes, causal debt in amber.
 
-> Four thousand two hundred live decisions, resting on eleven hundred premises.
-> A supplier says eleven days, so you quote, you order, you promise a customer.
-> Then the world changes — and nothing in the enterprise points backwards from
-> the fact to the decisions built on it.
+> Four thousand two hundred live decisions. A supplier says eleven days, so
+> you quote, you order, you promise a customer. Then the world changes —
+> and nothing points backwards from the fact to what was built on it.
 
-### 1.3 · 0:32–0:48 · `LIVE` — type into the bar, parse echo appears
+### 1.3 · 0:28–0:42 · `LIVE (deployed)` — type into the bar, parse echo appears
 Type `supplier_K lead time is now 20 days`. Do not press Confirm yet.
 
-> One input. Before it touches anything, it tells you what it heard: this
-> premise, eleven to twenty, carrying two thousand five hundred and ninety-four
-> decisions. If that reading is wrong, this is where you say so.
+> Before it acts, it tells you what it heard: eleven to twenty, carrying
+> two thousand five hundred ninety-four decisions.
 
-### 1.4 · 0:48–1:10 · `LIVE` — Confirm, then the cull. **Say nothing for the first eight seconds.**
+### 1.4 · 0:42–1:05 · `LIVE (deployed)` — Confirm, then the cull. **Say nothing for six seconds.**
 
-> Two and a half thousand decisions, down to seventy-eight. Fourteen sixty-eight
-> immaterial — the buffer absorbed it. Eight seventy-four already closed out.
-> A hundred and seventy-four handed to judgement rather than guessed. Ninety
-> percent removed by subtraction, with the model switched off.
+> Down to seventy-eight. Ninety percent removed by subtraction — model
+> switched off, enforced in CI.
 
 ---
 
-## ACT 2 — refusal, and the assertion (1:10–2:50)
+## ACT 2 — WARRANT and COUNTERSIGN, live and local (1:05–2:55)
 
-### 2.1 · 1:10–1:32 · `LIVE` — press `R`, forged retraction
-Type `broker says supplier_K lead time is 34`.
+### 2.1 · 1:05–1:22 · `CUTAWAY` — terminal, disclosure
+Terminal showing `README.md`'s deployment-status note, or the note read
+aloud over the terminal prompt.
 
-> A false retraction is worse than a missed one. This is a freight broker
-> claiming the supplier's lead time changed. It holds authority over its own
-> freight claims and none over this one. Refused — source outside claim scope —
-> and the radius is zero. Nothing was walked.
+> Three more cards exist — Warrant, Control Tower, Countersign — three
+> hundred sixty-nine tests passing. Not yet redeployed. So this next part
+> runs locally, on this machine, right now — the URL bar will prove it.
 
-### 2.2 · 1:32–1:52 · `CUTAWAY` — `tests/test_zero_model.py` on screen
+### 2.2 · 1:22–1:47 · `LIVE (local)` — the instrument, press `T`, BURN
+`127.0.0.1:8000`, four-card instrument. Every warrant bar reads
+`SYNTHETIC`. Click "Overturn a HIGH-risk judgement."
 
-> The zero-model guarantee is not a promise in a README. This test walks the
-> import graph of every module in the deterministic core and fails if any of
-> them can so much as reach a model client. CI runs the entire cascade with
-> Vertex disabled and fails the build on a single call.
+> Every bar here is labelled synthetic — seeded history, and it says so on
+> screen, not just in a caption. Watch this one. A human overturns a
+> judgement — the bar drops past the line — and the very next case of that
+> kind is refused and routed to a person. No cache. This is the twenty-five
+> second version of the whole warrant system.
 
-### 2.3 · 1:52–2:24 · `LIVE` — terminal: `make deploy-verify URL=...`
-Let all five steps print.
+### 2.3 · 1:47–2:08 · `LIVE (local)` — cold-start agent earns its first delegation
+Click "Earn the rookie's first delegation."
 
-> This is the check that matters. It runs a real cascade against the deployed
-> service, then drives a real browser at the deployed page, reads the number on
-> screen, and asserts it equals what the service actually computed. Seventy-eight
-> equals seventy-eight. Opening a web page proves a web page loads. This proves
-> it is not a fixture.
+> This agent started at zero — no seeding at all. A human concurs, an
+> independent model countersigns, and it mints — live, on this run. The
+> label flips from synthetic to earned. That's the only number in this
+> whole demo that wasn't fabricated in advance.
 
-### 2.4 · 2:24–2:50 · `LIVE` — the obligation; the field dissolves into paper
+### 2.4 · 2:08–2:30 · `CUTAWAY` — `countersign/DESIGN.md`, the live-Vertex attempt
+Scroll to the escalation table: 403, then a real 404.
 
-> Seventy-eight decisions changed. Forty-eight of them already went out to
-> someone. This is what the company now owes one of them: a named customer, a
-> quote it can re-issue, and one payment it cannot take back. Exposure as a
-> range with its assumptions, never a point estimate. And a named human who has
-> to sign it.
+> Real Gemma access was attempted this session — real authentication, a
+> real round trip to Vertex — and a real four-oh-four: this project doesn't
+> have Model Garden access yet. So the agreement rate you're about to see
+> is from a labelled simulator, not a live model. We say so everywhere it
+> appears.
+
+### 2.5 · 2:30–2:55 · `LIVE (local)` — Card 3 panel, agreement rate, freeze mark
+
+> Seventy-five point six percent agreement across forty-one scenarios,
+> simulated. Ten disagreements — each one froze a mint with a challenge
+> mark, permanently, right here on the paper.
 
 ---
 
-## ACT 3 — the honesty apparatus, and close (2:50–4:00)
+## ACT 3 — the honesty apparatus, and close (2:55–4:00) · deployed
 
-### 3.1 · 2:50–3:14 · `LIVE` — press `H`, honesty panel
+### 3.1 · 2:55–3:16 · `LIVE (deployed)` — back to the deployed URL, press `H`
 
-> This panel is the part I most want you to see. It publishes the worst thing
-> about the system: extraction recall is sixty-six point seven percent on
-> absolute durations. That is the single class where the model earns its place.
+> Back on the deployed service — press H. This publishes the worst thing
+> about the system on purpose: extraction recall is sixty-six point seven
+> percent on absolute durations.
 
-### 3.2 · 3:14–3:40 · `CUTAWAY` — `docs/LIVE-VERIFICATION.md`
+### 3.2 · 3:16–3:38 · `CUTAWAY` — README honesty map
 
-> Parser alone, eighty-one point eight percent. Parser plus Gemini, one hundred.
-> But the model's denominator is eight, not forty-four. It was shown only the
-> eight the parser missed, and returned eight correct values. The four classes
-> the parser already handled show a delta of exactly zero, because nothing in
-> them was ever sent to a model.
+> Parser alone, eighty-one point eight. Parser plus Gemini, one hundred —
+> but the model's denominator is eight, not forty-four. Judgement quality
+> is still unmeasured, and we call that a non-test, not a result.
 
-### 3.3 · 3:40–4:00 · `LIVE` — README honesty map, then the close card
+### 3.3 · 3:38–4:00 · `LIVE (local or deployed)` — close card
 
-> The judgement tier is still unmeasured, and we call that a non-test rather
-> than a result. The corpus is synthetic and written by one author. All of it is
-> written down, because that honesty is the reason the eighteen-point gain is
-> worth believing at all. The world changed. Your decisions did not.
+> We evaluated Veo and Lyria and cut both — they failed our own necessity
+> test. A model added for the sake of breadth is a model this architecture
+> doesn't need. The world changed. Your decisions didn't — until now.
 
 **Close card:** `THE WORLD CHANGED. YOUR DECISIONS DIDN'T.`
 
@@ -170,46 +184,47 @@ Let all five steps print.
 
 ## The three moments that carry it
 
-1. **The cull.** Do not talk over the first eight seconds. A judge who watches
-   2,594 become 78 with no model call understands the architecture before it is
-   explained.
-2. **`78 = 78`.** The single hardest-to-fake claim in the submission.
-3. **The one payment that cannot be taken back.** Everything else in the demo is
-   recoverable; that line is why the system exists.
+1. **The cull (1.4).** Silence over 2,594 becoming 78 says more than
+   narration can.
+2. **The bar dropping past the line (2.2).** Twenty-five seconds, one state
+   change, no narration needed — the whole warrant thesis in one animation.
+3. **`SYNTHETIC` flipping to `EARNED` (2.3).** The only number in the demo
+   that becomes true during the recording instead of before it.
 
-## If the live run fails
+## If a live run fails
 
-`make golden` writes a deterministic transcript of the same cascade. If the API
-is unreachable the UI shows a full-width banner reading **"REPLAY — live run
-failed, this is a recorded execution"**, and it is never concealed. Say it out
-loud if it happens. A disclosed replay costs less than a concealed one.
+`make golden` writes a deterministic transcript of the Card 1 cascade. If
+the deployed API is unreachable, the UI shows a full-width banner reading
+**"REPLAY — live run failed, this is a recorded execution"** — never
+concealed, said out loud if it happens. For Act 2, if the local server or
+emulator fails to start during warm-up, do not attempt Act 2 live; cut it
+from that take and note the gap in the video description rather than fake
+the click sequence.
 
 ---
 
-## PLANNED — video v2 replacements
+## PLANNED — video v3 replacement
 
-None of these appear in v1, and none is referenced in the v1 voiceover. They
-replace or extend the shot named, once the corresponding card is built.
-
-| Replaces | v2 shot | Requires |
+| Replaces | v3 shot | Requires |
 | --- | --- | --- |
-| 1.4 (extends) | **Warrant burn-and-reroute** — the cull runs, warrant is debited per act, the balance falls, and an act that would exceed it is refused and routed to a human | Card 0 |
-| 2.1 (extends) | **Countersign disagrees** — Gemini approves a mint, Gemma refuses it, the mint does not happen | Card 3 |
-| 2.2 (replaces) | **ADK construct proof, live** — the trace view showing the warrant SPEND `FunctionNode` and the Countersign `AgentTool` executing as distinct constructs | Cards 0 + 3 |
-| 3.1 (extends) | **SYNTHETIC-labelled balances** — the honesty panel showing which warrant balances are `EARNED` and which are `SYNTHETIC`, with SYNTHETIC visibly marked on screen | Card 0 |
+| 2.1–2.5 (all local shots become deployed) | Cards 0–3 and the instrument running on the live Cloud Run URL, no local disclosure needed | Redeployment via `./infra/deploy.sh` |
+| 2.4–2.5 | A genuine live Gemma verdict replacing the simulated agreement rate | Model Garden access to `gemma-3-27b-it` granted on the project |
 
 ---
 
 ## Voiceover word count
 
 Counted over the blockquoted voiceover lines inside the three acts only —
-excluding stage directions, headings, tables, and the presenter-rule note:
+excluding stage directions, headings, tables, and this note:
 
 ```bash
 awk '/^## ACT 1/,/^## The three moments/' submission/demo_script.md \
   | grep '^> ' | sed 's/^> //' | wc -w
 ```
 
-**Measured: 511 words** — budget 560. At 140 wpm that is **3:39** of speech
-inside a 4:00 ceiling, which leaves deliberate silence over the cull (shot 1.4)
-and room to slow down without overrunning.
+**Measured: 414 words** — budget 560, well inside it. At 140 wpm that is
+**2:57** of speech inside a 4:00 ceiling, leaving substantial room for the
+silent beat (shot 1.4), the two full-take reaction pauses in Act 2 (shots
+2.2 and 2.3, where the animation and the label flip need a second or two of
+unforced silence to read on screen), and pacing slower than 140 wpm without
+overrunning.
