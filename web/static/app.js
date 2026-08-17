@@ -64,7 +64,7 @@
     index: new Map(),
     stones: [],
     field: null,
-    screen: "field",
+    screen: "home",
     running: false,
     sag: 0,       // spring displacement of the load lines
     sagV: 0,
@@ -594,6 +594,7 @@
   // ── honesty ───────────────────────────────────────────────────────
 
   async function showHonesty() {
+    hideHomeAndCore();
     const res = await fetch("/api/honesty");
     const h = await res.json();
     const cov = h.coverage;
@@ -718,7 +719,75 @@
     );
   }
 
+  // ── home / core / peek (instrument, honesty) visibility ────────────
+
+  /* H and T can be pressed from ANY screen, including home. Both "peek"
+   * away from whatever was showing (home, or the core field/bar/hud) and
+   * must restore exactly that on toggle-off -- never a state.st reset
+   * (that would wipe an in-progress cascade), just visibility. */
+  let coreVisibleBeforePeek = false;
+
+  function hideHomeAndCore() {
+    coreVisibleBeforePeek = !$("bar-wrap").hidden;
+    $("home").hidden = true;
+    $("hud-left").hidden = true;
+    $("hud-right").hidden = true;
+    $("legend").hidden = true;
+    $("bar-wrap").hidden = true;
+  }
+
+  function restorePeekedFrom() {
+    if (coreVisibleBeforePeek) {
+      $("hud-left").hidden = false;
+      $("hud-right").hidden = false;
+      $("legend").hidden = false;
+      $("bar-wrap").hidden = false;
+    } else {
+      $("home").hidden = false;
+    }
+  }
+
+  function showHome() {
+    hideAll();
+    $("bar-wrap").hidden = true;
+    $("hud-left").hidden = true;
+    $("hud-right").hidden = true;
+    $("legend").hidden = true;
+    $("home").hidden = false;
+    state.screen = "home";
+  }
+
+  function enterCore() {
+    $("home").hidden = true;
+    $("hud-left").hidden = false;
+    $("hud-right").hidden = false;
+    $("legend").hidden = false;
+    // `restart()` only ever toggled the `.gone` fade class on bar-wrap --
+    // it was never given the `hidden` attribute before this screen existed,
+    // so restart() alone does not clear it. Belongs here, not in restart(),
+    // since restart() is also called mid-Core-flow where bar-wrap is
+    // already visible and this would be a redundant no-op.
+    $("bar-wrap").hidden = false;
+    if (state.st) {
+      restart();
+    } else {
+      // boot() has not resolved yet -- reveal the chrome now; restart()
+      // itself runs later once state.st exists, nothing to reset yet.
+      hideAll();
+      $("bar-wrap").classList.remove("gone");
+      $("bar").focus();
+    }
+  }
+
+  document.querySelectorAll(".home-card").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.card === "1") enterCore();
+      else showInstrument();
+    });
+  });
+
   async function showInstrument() {
+    hideHomeAndCore();
     const res = await fetch("/api/instrument");
     const d = await res.json();
     const offline = $("instr-offline");
@@ -798,22 +867,29 @@
       else if (next === "court") showCourt(pending || { claim: "clm_000000", source: "src_supplier_K", new_value: 20 });
       else if (next === "loadrating") showLoadRating();
       else if (next === "honesty") showHonesty();
+      else if (next === "field") enterCore();
       else restart();
     });
   });
 
   window.addEventListener("keydown", (ev) => {
     if (ev.key === "h" || ev.key === "H") {
-      if (state.screen === "honesty") { hideAll(); return; }
+      if (state.screen === "honesty") { hideAll(); restorePeekedFrom(); return; }
       showHonesty();
     } else if (ev.key === "t" || ev.key === "T") {
       if (document.activeElement === $("bar")) return;
-      if (state.screen === "instrument") { hideAll(); return; }
+      if (state.screen === "instrument") { hideAll(); restorePeekedFrom(); return; }
       showInstrument();
     } else if (ev.key === "r" || ev.key === "R") {
-      if (document.activeElement !== $("bar")) restart();
+      if (document.activeElement !== $("bar") && state.screen !== "home") restart();
     } else if (ev.key === "Escape") {
+      // Only the two "peek" screens (honesty, instrument) hid home/core
+      // chrome to get here -- the split/obligation/court/loadrating chain
+      // never touched it, so restoring peek state there would be wrong
+      // (it would show home over an already-correct, already-visible core).
+      const wasPeeking = state.screen === "honesty" || state.screen === "instrument";
       hideAll();
+      if (wasPeeking) restorePeekedFrom();
     }
   });
 

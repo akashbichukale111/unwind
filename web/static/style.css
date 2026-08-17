@@ -607,7 +607,43 @@ html, body {
   letter-spacing: 0.08em;
 }
 
+/* ── HOME — the four cards, shown first, no key required ────────────
+ * Same overlay register as the instrument (`.overlay`: ink ground, rise
+ * animation) and the SAME card visual language (`.instr-label`, slate
+ * border, amber label) -- this is a navigation gate onto the existing
+ * views, not a new design.
+ */
+/* No `display` override on `.home` itself: `.overlay` sets no `display`
+ * property either, deliberately -- the browser's own `[hidden] { display:
+ * none }` rule and a same-specificity class rule tie on specificity, and
+ * the class rule (loaded after the UA sheet) would win the cascade,
+ * silently defeating the `hidden` attribute. Block-level stacking is
+ * already correct for a heading + two card groups; nothing here needs flex. */
+.home-card0 { margin-bottom: 20px; }
+.home-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.home-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--slate);
+  padding: 22px 26px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.home-card0 { padding: 26px 30px; }
+.home-card:hover, .home-card:focus-visible {
+  border-color: var(--amber);
+  background: rgba(200, 138, 46, 0.08);
+}
+.home-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.home-card .instr-label { display: block; margin-bottom: 10px; }
+.home-sub { display: block; color: var(--bone); opacity: 0.72; line-height: 1.7; }
+.home-hint { margin-top: 22px; color: var(--bone); opacity: 0.58; }
+.home-hint .key { margin: 0 2px; }
+
 @media (max-width: 900px) {
+  .home-row { grid-template-columns: 1fr; }
   .instr-row { grid-template-columns: 1fr; }
   .warrant-row { grid-template-columns: 1fr; row-gap: 4px; }
   .wr-value, .wr-synthetic { text-align: left; }

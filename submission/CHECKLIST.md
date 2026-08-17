@@ -71,7 +71,7 @@ failure, a Devpost outage, or a last-minute fix.]
       (`evidence/health/health-20260817T023133Z.md`). Re-run within one
       hour of submitting and record the new timestamp: `⟨FILL⟩`.
 - [ ] `make deploy-verify` against the same URL — must print **5/5 PASS**.
-      Last verified: **2026-08-17**, this pass (`evidence/deploy/deploy-verify-*.log`).
+      Last verified: **2026-08-17**, this pass (`evidence/deploy/deploy-verify-*.md`).
 
 ## Devpost
 

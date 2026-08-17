@@ -18,7 +18,31 @@
 <!-- ─────────── THE FIELD ─────────── -->
 <canvas id="field" aria-label="Field of live decisions"></canvas>
 
-<div id="hud-left" class="hud mono">
+<!-- ─────────── HOME — the four cards, shown first, no key required ─────────── -->
+<section id="home" class="overlay home">
+  <h2 class="cond overlay-h">UNWIND — FOUR CARDS, ONE PAGE</h2>
+  <button type="button" class="home-card home-card0" data-card="0">
+    <span class="instr-label cond">CARD 0 — WARRANT</span>
+    <span class="home-sub mono">Deterministic, decaying, capability-scoped authority. A case no warrant covers routes to a human by construction.</span>
+  </button>
+  <div class="home-row">
+    <button type="button" class="home-card" data-card="1">
+      <span class="instr-label cond">CARD 1 — UNWIND CORE</span>
+      <span class="home-sub mono">2,594 dependent decisions culled to 78 — zero model calls.</span>
+    </button>
+    <button type="button" class="home-card" data-card="2">
+      <span class="instr-label cond">CARD 2 — CONTROL TOWER</span>
+      <span class="home-sub mono">Registry · gateway · decision memory · durable runtime.</span>
+    </button>
+    <button type="button" class="home-card" data-card="3">
+      <span class="instr-label cond">CARD 3 — COUNTERSIGN</span>
+      <span class="home-sub mono">Gemma independently verifies before any warrant mints.</span>
+    </button>
+  </div>
+  <p class="home-hint mono">click a card · or press <span class="key">T</span> anytime for the instrument</p>
+</section>
+
+<div id="hud-left" class="hud mono" hidden>
   <div class="hud-row"><span class="k">live decisions</span><span id="c-nodes" class="v">—</span></div>
   <div class="hud-row"><span class="k">premises</span><span id="c-claims" class="v">—</span></div>
   <div class="hud-row"><span class="k">support edges</span><span id="c-edges" class="v">—</span></div>
@@ -26,7 +50,7 @@
   <div class="hud-note" id="debt-note">standing consequence on a normal day</div>
 </div>
 
-<div id="hud-right" class="hud">
+<div id="hud-right" class="hud" hidden>
   <div id="counter" hidden>
     <div class="counter-line">
       <span id="counter-from" class="counter-from">—</span>
@@ -37,7 +61,7 @@
   </div>
 </div>
 
-<div id="legend" class="hud mono">
+<div id="legend" class="hud mono" hidden>
   <span class="tag built">BUILT</span> cascade · regimes · court · obligations
   <span class="tag designed">DESIGNED</span> vertex T2 · model armor · deploy
   <span class="sep">·</span> <span class="key">H</span> honesty panel
@@ -48,7 +72,7 @@
 <div id="pacing" class="hud mono" hidden></div>
 
 <!-- ─────────── THE BAR ─────────── -->
-<div id="bar-wrap">
+<div id="bar-wrap" hidden>
   <form id="bar-form" autocomplete="off">
     <input id="bar" type="text" spellcheck="false"
            placeholder="State a fact that changed."
