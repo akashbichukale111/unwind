@@ -141,7 +141,8 @@ def _simulation_enabled() -> bool:
 
 def family_root(model_name: str) -> str:
     """Normalize any model string to its FAMILY: the leading alphabetic run,
-    lowercased. `"gemini-3.6-flash"` -> `"gemini"`; `"gemma-3-27b-it"` ->
+    lowercased -- e.g. any `lib.config.MODEL_FAST`/`MODEL_DEEP`-shaped Gemini
+    string reduces to `"gemini"`, any `GEMMA_MODEL`-shaped string reduces to
     `"gemma"`. `countersign/verify.py`'s collusion guard uses this to decide
     whether a countersign's model family is independent of the judging
     side's -- the SAME normalization this module already uses for the

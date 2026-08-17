@@ -367,7 +367,9 @@ def test_mint_with_gemini_family_countersign_raises() -> None:
     reset_for_test(principal=agent.principal)
     case_id = f"case_{uuid.uuid4().hex[:8]}"
     record_human_concurrence(case_id, principal="human::alice", note="ok")
-    record_countersign(case_id, agrees=True, family="gemini-3.6-flash", simulated=False)
+    from lib.config import MODEL_DEEP
+
+    record_countersign(case_id, agrees=True, family=MODEL_DEEP, simulated=False)
 
     with pytest.raises(MintPreconditionError):
         mint(agent=agent, capability="extract", risk_class="LOW", case_id=case_id, reason="x")

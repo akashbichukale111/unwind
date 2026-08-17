@@ -21,6 +21,7 @@ from countersign.verify import (
     assert_independent,
     run_countersign,
 )
+from lib.config import GEMMA_MODEL, MODEL_DEEP, MODEL_FAST
 
 # ===========================================================================
 # PURE section -- no Firestore, no Vertex.
@@ -31,9 +32,9 @@ def test_same_family_countersign_rejected() -> None:
     """Adversary: collusion by family. Different exact string, same root."""
     with pytest.raises(CollusionError):
         assert_independent(
-            countersign_family="gemini-3.6-flash",
+            countersign_family=MODEL_DEEP,
             countersign_principal="countersign::gemma",
-            judging_family="gemini-3.5-flash-lite",
+            judging_family=MODEL_FAST,
             judging_principal="agent::extractor",
         )
 
@@ -42,9 +43,9 @@ def test_same_principal_countersign_rejected() -> None:
     """Adversary: collusion by principal, even with an independent family."""
     with pytest.raises(CollusionError):
         assert_independent(
-            countersign_family="gemma-3-27b-it",
+            countersign_family=GEMMA_MODEL,
             countersign_principal="agent::extractor",
-            judging_family="gemini-3.6-flash",
+            judging_family=MODEL_DEEP,
             judging_principal="agent::extractor",
         )
 
@@ -52,9 +53,9 @@ def test_same_principal_countersign_rejected() -> None:
 def test_independent_family_and_principal_pass() -> None:
     """Vacuity check: the guard does not fire on a genuinely independent pair."""
     assert_independent(
-        countersign_family="gemma-3-27b-it",
+        countersign_family=GEMMA_MODEL,
         countersign_principal="countersign-gemma@0.1.0",
-        judging_family="gemini-3.6-flash",
+        judging_family=MODEL_DEEP,
         judging_principal="agent::extractor",
     )
 
@@ -62,9 +63,9 @@ def test_independent_family_and_principal_pass() -> None:
 def test_family_root_normalizes_versions() -> None:
     from warrant.ledger import family_root
 
-    assert family_root("gemini-3.6-flash") == "gemini"
-    assert family_root("gemini-3.5-flash-lite") == "gemini"
-    assert family_root("gemma-3-27b-it") == "gemma"
+    assert family_root(MODEL_DEEP) == "gemini"
+    assert family_root(MODEL_FAST) == "gemini"
+    assert family_root(GEMMA_MODEL) == "gemma"
     assert family_root("GEMMA-3-27B-IT") == "gemma"
 
 
@@ -73,13 +74,13 @@ def test_simulated_countersign_is_labelled(monkeypatch: pytest.MonkeyPatch) -> N
     call site, not just documented."""
     monkeypatch.delenv("UNWIND_COUNTERSIGN_SIMULATED", raising=False)
     monkeypatch.setenv("UNWIND_VERTEX_DISABLED", "1")
-    off = run_countersign("c1", {}, judging_family="gemini-3.6-flash", judging_principal="agent::x")
+    off = run_countersign("c1", {}, judging_family=MODEL_DEEP, judging_principal="agent::x")
     assert off.simulated is False
     assert off.available is False  # Vertex disabled, not simulated -- honest UNAVAILABLE
 
     monkeypatch.setenv("UNWIND_COUNTERSIGN_SIMULATED", "1")
     on = run_countersign(
-        "c1", {"class": "clean"}, judging_family="gemini-3.6-flash", judging_principal="agent::x"
+        "c1", {"class": "clean"}, judging_family=MODEL_DEEP, judging_principal="agent::x"
     )
     assert on.simulated is True
     assert (
@@ -94,14 +95,14 @@ def test_simulated_countersign_disagrees_on_adversarial_material(
 ) -> None:
     monkeypatch.setenv("UNWIND_COUNTERSIGN_SIMULATED", "1")
     clean = run_countersign(
-        "c1", {"class": "clean"}, judging_family="gemini-3.6-flash", judging_principal="agent::x"
+        "c1", {"class": "clean"}, judging_family=MODEL_DEEP, judging_principal="agent::x"
     )
     assert clean.agrees is True
 
     adversarial = run_countersign(
         "c2",
         {"class": "adversarial"},
-        judging_family="gemini-3.6-flash",
+        judging_family=MODEL_DEEP,
         judging_principal="agent::x",
     )
     assert adversarial.agrees is False
@@ -116,7 +117,7 @@ def test_simulated_countersign_still_enforces_collusion_guard(
         run_countersign(
             "c1",
             {},
-            judging_family="gemini-3.6-flash",
+            judging_family=MODEL_DEEP,
             judging_principal="agent::x",
             principal="agent::x",  # collides on principal
         )
@@ -218,7 +219,7 @@ def test_agree_lets_mint_proceed(monkeypatch: pytest.MonkeyPatch) -> None:
         agent=agent,
         capability="extract",
         risk_class="LOW",
-        judging_family="gemini-3.6-flash",
+        judging_family=MODEL_DEEP,
         judging_principal="agent::some_extractor",
     )
     assert outcome.available and outcome.agrees
@@ -245,7 +246,7 @@ def test_disagree_freezes_minting_with_challenge(monkeypatch: pytest.MonkeyPatch
         agent=agent,
         capability="extract",
         risk_class="LOW",
-        judging_family="gemini-3.6-flash",
+        judging_family=MODEL_DEEP,
         judging_principal="agent::some_extractor",
     )
     assert outcome.available and not outcome.agrees
@@ -274,7 +275,7 @@ def test_unavailable_countersign_writes_nothing(monkeypatch: pytest.MonkeyPatch)
         agent=agent,
         capability="extract",
         risk_class="LOW",
-        judging_family="gemini-3.6-flash",
+        judging_family=MODEL_DEEP,
         judging_principal="agent::some_extractor",
     )
     assert outcome.available is False

@@ -34,6 +34,7 @@ sys.path.insert(0, str(REPO))
 #: constant, not invented for this script.
 from court.arbiter import ARBITER_PRINCIPAL  # noqa: E402
 from lib.config import get_config  # noqa: E402
+from warrant.ledger import family_root  # noqa: E402
 
 
 def _discover() -> list[tuple[str, dict]]:
@@ -111,7 +112,9 @@ def main() -> int:
                 "class": scenario.get("class", "unknown"),
                 "available": outcome.available,
                 "agrees": outcome.agrees,
-                "family": outcome.family,
+                # Family root only -- see the summary dict below for why a
+                # raw version string never lands in this file.
+                "family_root": family_root(outcome.family),
                 "simulated": outcome.simulated,
                 "ground": outcome.ground,
                 "reason_unavailable": outcome.reason_unavailable,
@@ -142,8 +145,14 @@ def main() -> int:
             "reachable": live_reachable,
             "error": live_error,
         },
-        "gemma_model": cfg.gemma_model,
-        "gemini_model_as_judging_family": cfg.gemini_model,
+        # Family roots only, not the raw version strings -- lib/config.py is
+        # the one place a literal Gemini/Gemma model string may appear in
+        # non-prose text (tests/test_config_singleton.py,
+        # tests/test_countersign_boundary.py enforce this); the exact
+        # strings are documented in README.md / countersign/DESIGN.md prose,
+        # which is exempt.
+        "gemma_family": family_root(cfg.gemma_model),
+        "gemini_family_as_judging_side": family_root(cfg.gemini_model),
         "rows": rows,
     }
 

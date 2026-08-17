@@ -56,8 +56,9 @@ def assert_independent(
     """Refuse a countersign that cannot possibly be independent.
 
     Two ways to collide, either one is disqualifying:
-      - FAMILY: `family_root` normalizes both strings (e.g. "gemini-3.6-flash"
-        and "gemini-3.5-flash-lite" both root to "gemini") -- a same-family
+      - FAMILY: `family_root` normalizes both strings (e.g. `lib.config`'s
+        `MODEL_FAST` and `MODEL_DEEP` -- two different Gemini point
+        releases -- both root to the same family) -- a same-family
         countersign proves nothing about independent verification even if the
         exact model string differs.
       - PRINCIPAL: the countersigner must not BE the party whose judgement it
