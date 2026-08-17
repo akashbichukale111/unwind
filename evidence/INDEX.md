@@ -111,6 +111,19 @@ here):
 | Frozen dirs still untouched after this fix pass | this pass's own transcript | `git diff --stat stage-one-floor -- spine/ court/ judgment/ settle/` |
 | Full suite still 369 passed after the fix | this pass's own transcript | `FIRESTORE_EMULATOR_HOST=localhost:8080 python -m pytest -q` |
 
+## 9. Premium UI repair — instrument as the default landing view — 2026-08-17
+
+| Claim | File | Reproduction command |
+| --- | --- | --- |
+| Root cause of raw/default-looking controls: `<button>` does not inherit `color` from its ancestors, and `.home-card` never set it explicitly | `evidence/deploy/ui-premium-fix-2026-08-17.md` | computed-style check in a headless browser: `getComputedStyle(document.querySelector('.home-card')).color` against the pre-fix deployed URL |
+| Fix: retired the tile-menu `#home` screen; the existing premium `#instrument` overlay (real warrant bars, registry data, agreement rate) is now the default landing view, no key required | `web/static/index.html`, `web/static/style.css`, `web/static/app.js` | `git show ae027ac` |
+| Redeployed to the live URL, revision `unwind-00007-2cn` | `evidence/deploy/deploy-20260817T034428Z.log` | `UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916 UNWIND_RUN_REGION=us-central1 UNWIND_VERTEX_LOCATION=global bash infra/deploy.sh` |
+| Fresh health check post-deploy | `evidence/health/health-20260817T034428Z.md` | `bash scripts/health_check.sh` |
+| Fresh load shows all four cards, no `T` required; all four click targets, `Esc`/`T`/the-four-cards-link all return to the instrument; BURN/EARN visibly move real balances; zero console errors — verified against the live URL | `evidence/deploy/shots/04-deployed-instrument-premium.png`, `05-deployed-core-from-card1.png`, `06-instrument-mobile.png` | headless Chromium against `https://unwind-hgeodtazqq-uc.a.run.app` (script not separately committed; see `evidence/deploy/ui-premium-fix-2026-08-17.md` for the full check list) |
+| Contrast/palette/gradient/radius check still clean | this pass's own transcript | `python scripts/check_contrast.py` |
+| Frozen dirs still untouched | this pass's own transcript | `git diff --stat stage-one-floor -- spine/ court/ judgment/ settle/` |
+| Full suite still 369 passed, 10/10 ADK mapping checks | this pass's own transcript | `FIRESTORE_EMULATOR_HOST=localhost:8080 python -m pytest -q && bash scripts/verify_adk_mapping.sh` |
+
 ## 7. Screenshot inventory (each proves exactly its caption)
 
 | File | What it proves | What it does NOT prove |

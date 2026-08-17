@@ -34,8 +34,8 @@ failure, a Devpost outage, or a last-minute fix.]
       commit submitted:
       `git tag submission-final <commit-sha> && git push origin submission-final`
       — **not yet run this pass; the commit to tag is**
-      `c68abee` — the commit whose source is what's actually running at
-      revision `unwind-00005-2bl` (or later, if more fixes land before
+      `ae027ac` — the commit whose source is what's actually running at
+      revision `unwind-00007-2cn` (or later, if more fixes land before
       submission; re-check `gcloud run services describe unwind ...` against
       `git log` before tagging).
 
@@ -62,9 +62,12 @@ failure, a Devpost outage, or a last-minute fix.]
 
 - [x] **Redeployed 2026-08-17.** Cards 0–3 and the four-card instrument are
       live at `https://unwind-hgeodtazqq-uc.a.run.app`, revision
-      `unwind-00005-2bl`. Redeploying surfaced and fixed a real gap (a
-      missing Firestore composite index) — see
-      `evidence/firestore/deploy-2026-08-17.md`.
+      `unwind-00007-2cn`. First redeploy that pass surfaced and fixed a real
+      gap (a missing Firestore composite index) — see
+      `evidence/firestore/deploy-2026-08-17.md`. A later pass the same day
+      fixed the instrument's default-landing-view CSS/JS (raw-looking
+      controls on first load) and redeployed again — see
+      `evidence/deploy/ui-premium-fix-2026-08-17.md`.
 - [ ] Live: `bash scripts/health_check.sh` against
       `https://unwind-hgeodtazqq-uc.a.run.app` — must print **PASS**.
       Timestamp of last PASS: **2026-08-17 02:31:33 UTC**
