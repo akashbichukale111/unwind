@@ -64,7 +64,7 @@
     index: new Map(),
     stones: [],
     field: null,
-    screen: "home",
+    screen: "instrument",
     running: false,
     sag: 0,       // spring displacement of the load lines
     sagV: 0,
@@ -594,7 +594,8 @@
   // ── honesty ───────────────────────────────────────────────────────
 
   async function showHonesty() {
-    hideHomeAndCore();
+    notePeekOrigin();
+    hideCore();
     const res = await fetch("/api/honesty");
     const h = await res.json();
     const cov = h.coverage;
@@ -719,75 +720,78 @@
     );
   }
 
-  // ── home / core / peek (instrument, honesty) visibility ────────────
+  // ── instrument (home) / core / honesty-peek visibility ──────────────
 
-  /* H and T can be pressed from ANY screen, including home. Both "peek"
-   * away from whatever was showing (home, or the core field/bar/hud) and
-   * must restore exactly that on toggle-off -- never a state.st reset
-   * (that would wipe an in-progress cascade), just visibility. */
+  /* THE INSTRUMENT is the default landing view -- it needs no toggle-off,
+   * only a way IN to Core (click Card 1) and a way BACK (Esc, T, or the
+   * "the four cards" link). Honesty is the one remaining true "peek": H
+   * can be pressed from either the instrument or from inside Core, and
+   * must restore exactly which of those it was pressed from on toggle-off
+   * -- never a state.st reset (that would wipe an in-progress cascade),
+   * just visibility. */
   let coreVisibleBeforePeek = false;
 
-  function hideHomeAndCore() {
-    coreVisibleBeforePeek = !$("bar-wrap").hidden;
-    $("home").hidden = true;
+  function notePeekOrigin() {
+    coreVisibleBeforePeek = !$("hud-left").hidden;
+  }
+
+  function hideCore() {
     $("hud-left").hidden = true;
     $("hud-right").hidden = true;
     $("legend").hidden = true;
     $("bar-wrap").hidden = true;
+    $("core-home-link").hidden = true;
+  }
+
+  function showCoreChrome() {
+    $("hud-left").hidden = false;
+    $("hud-right").hidden = false;
+    $("legend").hidden = false;
+    $("bar-wrap").hidden = false;
+    $("core-home-link").hidden = false;
   }
 
   function restorePeekedFrom() {
     if (coreVisibleBeforePeek) {
-      $("hud-left").hidden = false;
-      $("hud-right").hidden = false;
-      $("legend").hidden = false;
-      $("bar-wrap").hidden = false;
+      showCoreChrome();
+      state.screen = "field";
     } else {
-      $("home").hidden = false;
+      showInstrument();
     }
   }
 
-  function showHome() {
-    hideAll();
-    $("bar-wrap").hidden = true;
-    $("hud-left").hidden = true;
-    $("hud-right").hidden = true;
-    $("legend").hidden = true;
-    $("home").hidden = false;
-    state.screen = "home";
-  }
-
   function enterCore() {
-    $("home").hidden = true;
-    $("hud-left").hidden = false;
-    $("hud-right").hidden = false;
-    $("legend").hidden = false;
-    // `restart()` only ever toggled the `.gone` fade class on bar-wrap --
-    // it was never given the `hidden` attribute before this screen existed,
-    // so restart() alone does not clear it. Belongs here, not in restart(),
-    // since restart() is also called mid-Core-flow where bar-wrap is
-    // already visible and this would be a redundant no-op.
-    $("bar-wrap").hidden = false;
+    hideAll();
+    showCoreChrome();
     if (state.st) {
       restart();
     } else {
       // boot() has not resolved yet -- reveal the chrome now; restart()
       // itself runs later once state.st exists, nothing to reset yet.
-      hideAll();
       $("bar-wrap").classList.remove("gone");
       $("bar").focus();
     }
   }
 
-  document.querySelectorAll(".home-card").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (btn.dataset.card === "1") enterCore();
-      else showInstrument();
+  document.querySelectorAll(".instr-clickable").forEach((el) => {
+    const activate = () => {
+      if (el.dataset.card === "1") { enterCore(); return; }
+      // Cards 0, 2, 3 already show their full real detail inline -- there
+      // is no deeper screen to open, so the click gets a genuine, visible
+      // acknowledgement rather than a fake navigation to nothing new.
+      el.classList.add("instr-pulse");
+      setTimeout(() => el.classList.remove("instr-pulse"), reduced ? 0 : 420);
+    };
+    el.addEventListener("click", activate);
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); activate(); }
     });
   });
 
+  $("core-home-link").addEventListener("click", showInstrument);
+
   async function showInstrument() {
-    hideHomeAndCore();
+    hideCore();
     const res = await fetch("/api/instrument");
     const d = await res.json();
     const offline = $("instr-offline");
@@ -878,18 +882,16 @@
       showHonesty();
     } else if (ev.key === "t" || ev.key === "T") {
       if (document.activeElement === $("bar")) return;
-      if (state.screen === "instrument") { hideAll(); restorePeekedFrom(); return; }
       showInstrument();
     } else if (ev.key === "r" || ev.key === "R") {
-      if (document.activeElement !== $("bar") && state.screen !== "home") restart();
+      if (document.activeElement !== $("bar") && state.screen !== "instrument") restart();
     } else if (ev.key === "Escape") {
-      // Only the two "peek" screens (honesty, instrument) hid home/core
-      // chrome to get here -- the split/obligation/court/loadrating chain
-      // never touched it, so restoring peek state there would be wrong
-      // (it would show home over an already-correct, already-visible core).
-      const wasPeeking = state.screen === "honesty" || state.screen === "instrument";
-      hideAll();
-      if (wasPeeking) restorePeekedFrom();
+      // The instrument is home -- Escape from any Core-nested screen
+      // (bare field, or mid split/obligation/court/loadrating) returns to
+      // it. Honesty is the one true peek and restores whichever of
+      // instrument/Core it was opened from, not always the instrument.
+      if (state.screen === "honesty") { hideAll(); restorePeekedFrom(); return; }
+      if (state.screen !== "instrument") showInstrument();
     }
   });
 
@@ -903,6 +905,7 @@
     banner.textContent =
       "REPLAY — live run failed (" + err.message + "), this is a recorded execution";
   });
+  showInstrument();
 
   window.__unwindState = state;
 })();

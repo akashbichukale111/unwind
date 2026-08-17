@@ -72,7 +72,7 @@ html, body {
   pointer-events: none;
 }
 
-#hud-left { top: 22px; left: 24px; }
+#hud-left { top: 58px; left: 24px; }
 .hud-row { display: flex; gap: 14px; align-items: baseline; line-height: 1.9; }
 .hud-row .k { min-width: 108px; color: var(--bone); opacity: 0.72; }
 .hud-row .v { color: var(--bone); opacity: 1; font-variant-numeric: tabular-nums; }
@@ -483,8 +483,9 @@ html, body {
 }
 
 @media (max-width: 480px) {
-  #hud-left { top: 12px; left: 12px; }
+  #hud-left { top: 42px; left: 12px; }
   #hud-right { top: 12px; right: 12px; }
+  #core-home-link { top: 10px; left: 12px; }
   #legend { display: none; }
   .counter-from, .counter-to { font-size: 30px; }
   .split-n { font-size: 48px; }
@@ -607,43 +608,59 @@ html, body {
   letter-spacing: 0.08em;
 }
 
-/* ── HOME — the four cards, shown first, no key required ────────────
- * Same overlay register as the instrument (`.overlay`: ink ground, rise
- * animation) and the SAME card visual language (`.instr-label`, slate
- * border, amber label) -- this is a navigation gate onto the existing
- * views, not a new design.
+/* ── THE INSTRUMENT is the default landing view -- no key required.
+ * Each of its four card sections is a real click target onto "its own"
+ * detail: Card 1 opens the full Unwind Core field/cascade experience;
+ * Cards 0/2/3 already show their full real detail inline (bars, registry,
+ * agreement rate) -- there is no deeper screen to fabricate for those, so
+ * their click is a genuine, visible acknowledgement (a brief amber
+ * highlight) rather than a fake navigation to nothing new. `Esc` from
+ * Core returns here.
  */
-/* No `display` override on `.home` itself: `.overlay` sets no `display`
- * property either, deliberately -- the browser's own `[hidden] { display:
- * none }` rule and a same-specificity class rule tie on specificity, and
- * the class rule (loaded after the UA sheet) would win the cascade,
- * silently defeating the `hidden` attribute. Block-level stacking is
- * already correct for a heading + two card groups; nothing here needs flex. */
-.home-card0 { margin-bottom: 20px; }
-.home-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-.home-card {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 1px solid var(--slate);
-  padding: 22px 26px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.home-card0 { padding: 26px 30px; }
-.home-card:hover, .home-card:focus-visible {
+.instr-clickable { cursor: pointer; }
+.instr-clickable:hover, .instr-clickable:focus-visible {
   border-color: var(--amber);
-  background: rgba(200, 138, 46, 0.08);
+  background: rgba(200, 138, 46, 0.06);
 }
-.home-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
-.home-card .instr-label { display: block; margin-bottom: 10px; }
-.home-sub { display: block; color: var(--bone); opacity: 0.72; line-height: 1.7; }
-.home-hint { margin-top: 22px; color: var(--bone); opacity: 0.58; }
-.home-hint .key { margin: 0 2px; }
+.instr-clickable:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.instr-clickable.instr-pulse { border-color: var(--amber); background: rgba(200, 138, 46, 0.1); }
+#instr-card0-head.instr-clickable { padding: 4px 6px; margin: -4px -6px 0; }
+
+.instr-hint { margin-top: 18px; color: var(--bone); opacity: 0.58; }
+.instr-hint .key { margin: 0 2px; }
+
+/* The one persistent way back to the instrument while inside Core --
+ * a real `<button>`, so it needs the same explicit reset `.btn` and
+ * `.instr-clickable`'s siblings already carry: a `<button>` does not
+ * inherit `color` from the document by default the way a `div` does,
+ * and `appearance: none` strips native OS chrome `background` alone does
+ * not remove in every browser. */
+#core-home-link {
+  appearance: none;
+  -webkit-appearance: none;
+  position: fixed;
+  z-index: 6;
+  top: 22px;
+  left: 24px;
+  margin: 0;
+  background: transparent;
+  color: var(--bone);
+  opacity: 0.72;
+  border: 1px solid var(--slate);
+  border-radius: 0;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+#core-home-link:hover, #core-home-link:focus-visible {
+  opacity: 1;
+  border-color: var(--amber);
+  color: var(--amber);
+}
+#core-home-link:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
 @media (max-width: 900px) {
-  .home-row { grid-template-columns: 1fr; }
   .instr-row { grid-template-columns: 1fr; }
   .warrant-row { grid-template-columns: 1fr; row-gap: 4px; }
   .wr-value, .wr-synthetic { text-align: left; }
