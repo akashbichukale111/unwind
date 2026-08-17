@@ -34,7 +34,10 @@ failure, a Devpost outage, or a last-minute fix.]
       commit submitted:
       `git tag submission-final <commit-sha> && git push origin submission-final`
       — **not yet run this pass; the commit to tag is**
-      `18b2947` (or later, if more fixes land before submission).
+      `c68abee` — the commit whose source is what's actually running at
+      revision `unwind-00005-2bl` (or later, if more fixes land before
+      submission; re-check `gcloud run services describe unwind ...` against
+      `git log` before tagging).
 
 ## Architecture diagram
 
