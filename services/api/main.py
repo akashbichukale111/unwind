@@ -821,7 +821,15 @@ async def instrument() -> dict[str, Any]:
         "card1": {"debt": _debt_figure(), "counts": _stats()["counts"]},
         "card2": {
             "agents": [
-                {"agent_id": a.agent_id, "status": a.status.value, "capabilities": a.capabilities}
+                {
+                    "agent_id": a.agent_id,
+                    "status": a.status.value,
+                    "capabilities": a.capabilities,
+                    "authority_scope": a.authority_scope,
+                    "data_scope": a.data_scope,
+                    "max_budget": a.max_budget,
+                    "risk_class_thresholds": a.risk_class_thresholds,
+                }
                 for a in agents
             ],
             "reason_codes": [c.value for c in GatewayReasonCode],

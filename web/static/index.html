@@ -189,8 +189,8 @@
   <div id="instr-body" hidden>
     <div class="instr-card0">
       <div id="instr-card0-head" class="instr-card-head instr-clickable" data-card="0" role="button" tabindex="0"
-           aria-label="Card 0, Warrant — open detail">
-        <span class="instr-label cond">CARD 0 — WARRANT</span>
+           aria-label="Warrant — open detail">
+        <span class="instr-label cond instr-label-hero">WARRANT</span>
         <span class="instr-sub mono">capability × risk class, never one number</span>
       </div>
       <div id="instr-bars" class="instr-bars"></div>
@@ -209,23 +209,74 @@
 
     <div class="instr-row">
       <div class="instr-card instr-clickable" data-card="1" role="button" tabindex="0"
-           aria-label="Card 1, Unwind Core — open detail">
-        <span class="instr-label cond">CARD 1 — UNWIND CORE</span>
+           aria-label="Unwind Core — open detail">
+        <span class="instr-label cond">UNWIND CORE</span>
         <div id="instr-c1" class="mono instr-body-text"></div>
       </div>
       <div class="instr-card instr-clickable" data-card="2" role="button" tabindex="0"
-           aria-label="Card 2, Control Tower — open detail">
-        <span class="instr-label cond">CARD 2 — CONTROL TOWER</span>
+           aria-label="Control Tower — open detail">
+        <span class="instr-label cond">CONTROL TOWER</span>
         <div id="instr-c2" class="mono instr-body-text"></div>
       </div>
       <div class="instr-card instr-clickable" data-card="3" role="button" tabindex="0"
-           aria-label="Card 3, Countersign — open detail">
-        <span class="instr-label cond">CARD 3 — COUNTERSIGN</span>
+           aria-label="Countersign — open detail">
+        <span class="instr-label cond">COUNTERSIGN</span>
         <div id="instr-c3" class="mono instr-body-text"></div>
       </div>
     </div>
     <p class="instr-hint mono">click a card to open its detail · <span class="key">Esc</span> returns here</p>
   </div>
+</section>
+
+<!-- ─────────── WARRANT DETAIL ─────────── -->
+<section id="warrant-detail" class="overlay" hidden>
+  <button type="button" class="btn btn-quiet detail-back">&#9668; the instrument</button>
+  <h2 class="cond overlay-h detail-title">WARRANT</h2>
+  <p class="instr-sub mono detail-lede">deterministic, decaying, capability-scoped authority — minted only from
+    countersigned, human-validated outcomes. Nobody hands it over; nobody can hand it on.</p>
+  <div id="wd-bars" class="instr-bars detail-bars"></div>
+  <div id="wd-route" class="mono instr-route" hidden></div>
+  <div class="instr-actions">
+    <button id="wd-burn" type="button" class="btn">Overturn a HIGH-risk judgement (BURN)</button>
+    <button id="wd-earn" type="button" class="btn">Earn the rookie's first delegation</button>
+  </div>
+  <div class="detail-notes">
+    <p>Balance is a pure integer fold over an append-only ledger (MINT · BURN · SPEND · DECAY · CHALLENGE) —
+      never a single global number, always per capability × risk class.</p>
+    <p>Insufficient warrant does not retry. The Gateway refuses at
+      <span class="amber">WARRANT_INSUFFICIENT</span>, before any work, and the case routes to a human —
+      the live fold, no cache, visible on the very next call.</p>
+  </div>
+</section>
+
+<!-- ─────────── CONTROL TOWER DETAIL ─────────── -->
+<section id="tower-detail" class="overlay" hidden>
+  <button type="button" class="btn btn-quiet detail-back">&#9668; the instrument</button>
+  <h2 class="cond overlay-h detail-title">CONTROL TOWER</h2>
+  <p class="instr-sub mono detail-lede">executable registry · deterministic gateway · decision memory ·
+    durable runtime · observability</p>
+  <h3 class="mono h-h">Registry</h3>
+  <div id="td-registry" class="detail-registry"></div>
+  <h3 class="mono h-h">Gateway reason codes</h3>
+  <div id="td-reasons" class="mono detail-reasons"></div>
+  <div class="detail-notes">
+    <h3 class="mono h-h">Decision Memory Bank</h3>
+    <p>Append-only, causal chain: case → premise → decision → agent action → human decision → outcome →
+      future consequence. Not a vector store — <span class="mono">tower/memory.py</span> answers
+      "what happened because of X?" by walking the chain.</p>
+    <h3 class="mono h-h">Observability</h3>
+    <p>Cloud Trace carries the full reasoning chain as one root span, including the Gateway's router
+      branches. See <span class="mono">evidence/observability/</span>.</p>
+  </div>
+</section>
+
+<!-- ─────────── COUNTERSIGN DETAIL ─────────── -->
+<section id="countersign-detail" class="overlay" hidden>
+  <button type="button" class="btn btn-quiet detail-back">&#9668; the instrument</button>
+  <h2 class="cond overlay-h detail-title">COUNTERSIGN</h2>
+  <p class="instr-sub mono detail-lede">independent verifier · Gemma, a family separate from the judging
+    side · gates warrant minting</p>
+  <div id="cd-body" class="detail-notes"></div>
 </section>
 
 <div id="replay-banner" class="replay mono" hidden></div>

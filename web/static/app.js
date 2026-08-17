@@ -657,19 +657,23 @@
     );
   }
 
+  // Bars can be on screen in two places at once -- the home hero and the
+  // Warrant detail screen -- so every live update touches every matching
+  // row, not just the first. querySelectorAll, never querySelector.
   function updateBar(b) {
-    const row = document.querySelector(
+    const rows = document.querySelectorAll(
       `.warrant-row[data-agent="${b.agent_id}"][data-risk="${b.risk_class}"]`
     );
-    if (!row) return;
-    const max = Math.max(b.balance_bp, b.threshold_bp, 1) * 1.4;
-    const fillPct = Math.min(100, (b.balance_bp / max) * 100);
-    row.querySelector(".wr-fill").style.width = fillPct + "%";
-    row.querySelector(".wr-value").textContent = b.balance_bp.toLocaleString() + "bp";
-    const earned = b.provenance !== "SYNTHETIC";
-    const syn = row.querySelector(".wr-synthetic");
-    syn.classList.toggle("earned", earned);
-    syn.textContent = earned ? "EARNED" : "SYNTHETIC";
+    rows.forEach((row) => {
+      const max = Math.max(b.balance_bp, b.threshold_bp, 1) * 1.4;
+      const fillPct = Math.min(100, (b.balance_bp / max) * 100);
+      row.querySelector(".wr-fill").style.width = fillPct + "%";
+      row.querySelector(".wr-value").textContent = b.balance_bp.toLocaleString() + "bp";
+      const earned = b.provenance !== "SYNTHETIC";
+      const syn = row.querySelector(".wr-synthetic");
+      syn.classList.toggle("earned", earned);
+      syn.textContent = earned ? "EARNED" : "SYNTHETIC";
+    });
   }
 
   function renderInstrument(d) {
@@ -702,22 +706,117 @@
     $("instr-c3").innerHTML = c3html;
   }
 
+  // Same reasoning as updateBar: the BURN/EARN demo moment must read the
+  // same on the home hero and inside the Warrant detail screen, whichever
+  // one the judge is looking at.
   function applyInstrumentAction(d) {
     d.bars.forEach(updateBar);
-    const route = $("instr-route");
-    route.hidden = false;
-    route.classList.remove("refused", "allowed");
-    route.classList.add(d.allowed ? "allowed" : "refused");
-    route.innerHTML =
-      `<span class="code">${d.reason_code}</span> — ${d.before_bp}bp → ${d.after_bp}bp` +
-      (d.allowed
-        ? " · delegation permitted"
-        : " · routed to a human, no cache, visible on the very next call");
+    document.querySelectorAll(".instr-route").forEach((route) => {
+      route.hidden = false;
+      route.classList.remove("refused", "allowed");
+      route.classList.add(d.allowed ? "allowed" : "refused");
+      route.innerHTML =
+        `<span class="code">${d.reason_code}</span> — ${d.before_bp}bp → ${d.after_bp}bp` +
+        (d.allowed
+          ? " · delegation permitted"
+          : " · routed to a human, no cache, visible on the very next call");
+    });
     document.querySelectorAll(".instr-feed-line").forEach((l) => l.classList.add("active"));
     setTimeout(
       () => document.querySelectorAll(".instr-feed-line").forEach((l) => l.classList.remove("active")),
       reduced ? 0 : 900
     );
+  }
+
+  // ── card detail screens (Warrant / Control Tower / Countersign) ────
+
+  /* Each detail screen reuses exactly the payload `/api/instrument` already
+   * serves for the home hero -- no second backend path, no invented data.
+   * The difference is presentation: the home tiles are a compact preview,
+   * these are the full real surface, on their own screen, reachable by
+   * click and returned from by Esc/T like every other overlay. */
+
+  async function fetchInstrument() {
+    const res = await fetch("/api/instrument");
+    return res.json();
+  }
+
+  async function showWarrantDetail() {
+    const d = await fetchInstrument();
+    if (!d.available) { showInstrument(); return; }
+    $("wd-bars").innerHTML = d.card0.bars.map(barRow).join("");
+    $("wd-route").hidden = true;
+    show("warrant-detail");
+  }
+
+  function renderTowerDetail(card2) {
+    const scopeLine = (label, arr) =>
+      arr && arr.length ? `<div>${label}: ${arr.join(", ")}</div>` : "";
+    $("td-registry").innerHTML = card2.agents
+      .map((a) => {
+        const thresholds = Object.entries(a.risk_class_thresholds || {})
+          .map(([k, v]) => `${k} ${v}`)
+          .join(" / ");
+        return (
+          `<div class="reg-row">` +
+          `<div class="reg-id">${a.agent_id} ` +
+          `<span class="${a.status === "active" ? "" : "amber"}">[${a.status}]</span></div>` +
+          scopeLine("capabilities", a.capabilities) +
+          scopeLine("authority_scope", a.authority_scope) +
+          scopeLine("data_scope", a.data_scope) +
+          (a.max_budget != null
+            ? `<div>max_budget ${a.max_budget}${thresholds ? " · risk thresholds " + thresholds : ""}</div>`
+            : "") +
+          `</div>`
+        );
+      })
+      .join("");
+    $("td-reasons").textContent = card2.reason_codes.join("  →  ");
+  }
+
+  async function showTowerDetail() {
+    const d = await fetchInstrument();
+    if (!d.available) { showInstrument(); return; }
+    renderTowerDetail(d.card2);
+    show("tower-detail");
+  }
+
+  function renderCountersignDetail(c3) {
+    if (c3.agreement_rate == null) {
+      $("cd-body").innerHTML = `<p>${c3.note || "not yet measured"}</p>`;
+      return;
+    }
+    const probe = c3.live_reachability_probe || {};
+    const gemma = c3.gemma_family || "gemma";
+    const judgingSide = c3.gemini_family_as_judging_side || "gemini";
+    let honesty = c3.simulated_run
+      ? "SIMULATED — live Gemma unreachable this session"
+      : "LIVE — Gemma reachable and answering this session";
+    if (c3.simulated_run && probe.error) {
+      honesty += `<br><span class="detail-note-quiet">probe: ${probe.error.slice(0, 160)}${probe.error.length > 160 ? "…" : ""}</span>`;
+    }
+    $("cd-body").innerHTML =
+      `<p>Independent verifier: <span class="amber">${gemma}</span> re-reads each case's ` +
+      `extraction/judgement material a second time, from a model family separate from the ` +
+      `judging side (<span class="amber">${judgingSide}</span>). It writes nothing to the ` +
+      `truth layer -- its record reaches only the Memory Bank and the warrant minting gate.</p>` +
+      `<p>agreement rate <span class="amber">${(c3.agreement_rate * 100).toFixed(1)}%</span> ` +
+      `(${c3.agreed}/${c3.decided} decided, ${c3.disagreed} DISAGREE, ${c3.unavailable} unavailable) ` +
+      `over ${c3.scenarios_total} scenarios.</p>` +
+      `<p>${honesty}</p>` +
+      (c3.disagreed > 0
+        ? `<div class="instr-freeze-mark"><span class="lbl">CHALLENGE ×${c3.disagreed}</span></div>`
+        : "") +
+      `<p>A DISAGREE writes a CHALLENGE event to the warrant ledger: minting freezes for that ` +
+      `case until a human resolves it. A countersign record whose model family or principal ` +
+      `matches the judging side is rejected outright -- collusion cannot gate its own mint.</p>`;
+  }
+
+  async function showCountersignDetail() {
+    const d = await fetchInstrument();
+    if (!d.available) { showInstrument(); return; }
+    renderCountersignDetail(d.card3);
+    show("countersign-detail");
   }
 
   // ── instrument (home) / core / honesty-peek visibility ──────────────
@@ -775,12 +874,12 @@
 
   document.querySelectorAll(".instr-clickable").forEach((el) => {
     const activate = () => {
-      if (el.dataset.card === "1") { enterCore(); return; }
-      // Cards 0, 2, 3 already show their full real detail inline -- there
-      // is no deeper screen to open, so the click gets a genuine, visible
-      // acknowledgement rather than a fake navigation to nothing new.
-      el.classList.add("instr-pulse");
-      setTimeout(() => el.classList.remove("instr-pulse"), reduced ? 0 : 420);
+      switch (el.dataset.card) {
+        case "0": showWarrantDetail(); break;
+        case "1": enterCore(); break;
+        case "2": showTowerDetail(); break;
+        case "3": showCountersignDetail(); break;
+      }
     };
     el.addEventListener("click", activate);
     el.addEventListener("keydown", (ev) => {
@@ -789,6 +888,9 @@
   });
 
   $("core-home-link").addEventListener("click", showInstrument);
+  document.querySelectorAll(".detail-back").forEach((btn) => {
+    btn.addEventListener("click", showInstrument);
+  });
 
   async function showInstrument() {
     hideCore();
@@ -808,18 +910,25 @@
     show("instrument");
   }
 
-  $("instr-burn").addEventListener("click", async () => {
+  async function handleBurn() {
     const res = await fetch("/api/instrument/burn", { method: "POST" });
     applyInstrumentAction(await res.json());
-  });
-  $("instr-earn").addEventListener("click", async () => {
+  }
+  async function handleEarn() {
     const res = await fetch("/api/instrument/earn", { method: "POST" });
     applyInstrumentAction(await res.json());
-  });
+  }
+  $("instr-burn").addEventListener("click", handleBurn);
+  $("instr-earn").addEventListener("click", handleEarn);
+  $("wd-burn").addEventListener("click", handleBurn);
+  $("wd-earn").addEventListener("click", handleEarn);
 
   // ── screen orchestration ──────────────────────────────────────────
 
-  const SCREENS = ["split", "obligation", "court", "loadrating", "honesty", "instrument"];
+  const SCREENS = [
+    "split", "obligation", "court", "loadrating", "honesty", "instrument",
+    "warrant-detail", "tower-detail", "countersign-detail",
+  ];
 
   function show(name) {
     SCREENS.forEach((s) => { $(s).hidden = s !== name; });

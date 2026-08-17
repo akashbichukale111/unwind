@@ -124,6 +124,20 @@ here):
 | Frozen dirs still untouched | this pass's own transcript | `git diff --stat stage-one-floor -- spine/ court/ judgment/ settle/` |
 | Full suite still 369 passed, 10/10 ADK mapping checks | this pass's own transcript | `FIRESTORE_EMULATOR_HOST=localhost:8080 python -m pytest -q && bash scripts/verify_adk_mapping.sh` |
 
+## 10. Card click-through fixed — real detail screens for Warrant / Control Tower / Countersign, "CARD N" labels retired — 2026-08-17
+
+| Claim | File | Reproduction command |
+| --- | --- | --- |
+| Root cause: `.instr-clickable` only routed Card 1 (Unwind Core) to a real screen; Cards 0/2/3 just pulsed a border and went nowhere, and the visible labels still read "CARD 0 — WARRANT" etc. | `git diff` on `web/static/app.js` (former `activate()`) and `web/static/index.html` in this commit | `git show <this-commit> -- web/static/app.js web/static/index.html` |
+| Fix: `WARRANT`, `CONTROL TOWER`, `COUNTERSIGN` labels now read as plain product names; each opens its own `.overlay` detail screen (`#warrant-detail`, `#tower-detail`, `#countersign-detail`) reusing the exact same `/api/instrument` payload the home tiles already used — no new backend logic, `card2.agents` was extended to serialize registry fields (`authority_scope`, `data_scope`, `max_budget`, `risk_class_thresholds`) that `tower/schema.py`'s `AgentRegistryEntry` already computed but the API never exposed | `web/static/index.html`, `web/static/app.js`, `web/static/style.css`, `services/api/main.py` | `git show <this-commit>` |
+| BURN/EARN stay wired to the real endpoints from both the home hero and the Warrant detail screen; `updateBar`/`applyInstrumentAction` update every matching DOM node (`querySelectorAll`, not `querySelector`) so both surfaces agree | `web/static/app.js` | `git show <this-commit> -- web/static/app.js` |
+| 27/27 headless-browser checks pass against the live deployed URL: 4-card labelling, all 4 click-throughs, Esc/T/refresh, live BURN + EARN, Countersign honesty disclosure, zero page errors | `scripts/verify_card_navigation.py`, `evidence/deploy/card-navigation-20260817T102942Z.log` | `UNWIND_CHROME=/opt/pw-browsers/chromium-1234/chrome-linux64/chrome python scripts/verify_card_navigation.py https://unwind-hgeodtazqq-uc.a.run.app` |
+| Redeployed to the live URL, revision `unwind-00008-6b8`, 100% traffic | `evidence/deploy/deploy-20260817T102606Z.log` (this pass's `infra/deploy.sh` run) | `UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916 bash infra/deploy.sh` |
+| Fresh health check post-deploy | `evidence/health/health-20260817T102851Z.md` | `bash scripts/health_check.sh https://unwind-hgeodtazqq-uc.a.run.app` |
+| `pytest`, ruff, ADK mapping, contrast all still clean after this pass | this pass's own transcript | `python -m pytest -q && ruff check . && bash scripts/verify_adk_mapping.sh && python scripts/check_contrast.py` |
+| Known pre-existing gap, not touched by this pass: `scripts/deploy_verify.py` step 5 still assumes the OLD bare-field-with-bar landing screen (from before `ae027ac` made the instrument the default landing view) and times out on `#bar` being hidden; steps 1–4 (the 78=78 computation, zero model calls, refusal path) still pass | `scripts/deploy_verify.py` | `python scripts/deploy_verify.py https://unwind-hgeodtazqq-uc.a.run.app` |
+| Frozen dirs untouched | this pass's own transcript | `git diff --stat stage-one-floor -- spine/ court/ judgment/ settle/ tests/` |
+
 ## 7. Screenshot inventory (each proves exactly its caption)
 
 | File | What it proves | What it does NOT prove |

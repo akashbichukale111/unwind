@@ -666,6 +666,44 @@ html, body {
   .wr-value, .wr-synthetic { text-align: left; }
 }
 
+/* WARRANT is the hero: the largest label on the page, nothing louder. */
+.instr-label-hero { font-size: 20px; }
+
+/* ── CARD DETAIL SCREENS (Warrant / Control Tower / Countersign) ──
+ * Same dark overlay register as the instrument itself. Each opens from its
+ * card's click target and returns via `.detail-back`, Esc, or T -- no new
+ * colour, no new surface language, just more of the same real data.
+ */
+.amber { color: var(--amber); }
+
+.detail-back { margin-bottom: 22px; }
+.detail-title { margin-bottom: 8px; }
+.detail-lede { max-width: 62ch; margin-bottom: 26px; }
+.detail-bars { margin-bottom: 22px; }
+.detail-notes { max-width: 70ch; }
+.detail-notes p {
+  color: var(--bone);
+  opacity: 0.85;
+  line-height: 1.8;
+  margin: 0 0 14px;
+}
+.detail-notes .mono { opacity: 0.9; }
+.detail-notes .h-h:not(:first-child) { margin-top: 24px; }
+
+.detail-registry { margin-bottom: 8px; }
+.reg-row {
+  border-left: 2px solid var(--slate);
+  padding: 4px 0 4px 12px;
+  margin-bottom: 16px;
+  color: var(--bone);
+  opacity: 0.85;
+  line-height: 1.9;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.reg-row .reg-id { color: var(--bone); opacity: 1; font-size: 12px; }
+.detail-reasons { color: var(--bone); opacity: 0.78; line-height: 2; margin-bottom: 8px; }
+
 /* ── REDUCED MOTION ──────────────────────────────────────────────
  * The die-back must still be communicated. Animation is removed; the
  * counter becomes a stepped figure and the field redraws in place.
