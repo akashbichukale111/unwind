@@ -514,6 +514,25 @@ html, body {
   line-height: 1.8;
 }
 
+/* HYPERION-ZERO sits immediately to the left of WARRANT -- both hero-tier,
+ * same border/padding language as `.instr-card0` so it reads as native to
+ * the instrument rather than a bolted-on fifth thing. */
+.instr-hero-row { display: grid; grid-template-columns: 0.82fr 1.5fr; gap: 20px; align-items: stretch; }
+.instr-card-hyperion {
+  border: 1px solid var(--slate);
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.instr-card-hyperion .instr-card-head { margin-bottom: 0; }
+.hy-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.hy-stat { line-height: 1.5; }
+.hy-stat .n { color: var(--amber); font-size: 15px; display: block; }
+.hy-stat .l { color: var(--bone); opacity: 0.6; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.hy-status-line { color: var(--bone); opacity: 0.85; }
+.hy-status-line .dot { color: var(--verdigris); }
+
 .instr-card0 {
   border: 1px solid var(--slate);
   padding: 22px 26px;
@@ -662,6 +681,7 @@ html, body {
 
 @media (max-width: 900px) {
   .instr-row { grid-template-columns: 1fr; }
+  .instr-hero-row { grid-template-columns: 1fr; }
   .warrant-row { grid-template-columns: 1fr; row-gap: 4px; }
   .wr-value, .wr-synthetic { text-align: left; }
 }

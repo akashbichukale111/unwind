@@ -194,6 +194,18 @@ COLLECTION_CASES = "cases"
 #: Append-only warrant events: MINT, BURN, SPEND, DECAY, CHALLENGE. warrant/ledger.py.
 COLLECTION_WARRANT_LEDGER = "warrant_ledger"
 
+# ---------------------------------------------------------------------------
+# HYPERION (immune layer over Card 2's Gateway). A read of the SAME
+# `tower.gateway.evaluate_gateway` decision every other caller already gets,
+# scored and logged -- not a second authority path. Its own collection, never
+# folded into `decision_memory`: those entries are caused BY a decision
+# elsewhere (spine/court/judgment/settle write them); a Hyperion event is
+# caused by a Gateway CHECK, which may run far more often and is not itself
+# part of any case's causal chain.
+# ---------------------------------------------------------------------------
+#: Append-only risk-scored log of Gateway decisions. hyperion/immune_memory.py.
+COLLECTION_HYPERION_EVENTS = "hyperion_events"
+
 #: Subcollection under reverse_index/{claim_id}
 SUBCOLLECTION_DEPENDENTS = "dependents"
 #: Subcollection under cascades/{cascade_id}
@@ -212,6 +224,7 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_DECISION_MEMORY,
     COLLECTION_CASES,
     COLLECTION_WARRANT_LEDGER,
+    COLLECTION_HYPERION_EVENTS,
 )
 
 

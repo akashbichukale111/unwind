@@ -949,6 +949,92 @@ async def instrument_earn() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# HYPERION -- immune layer over Card 2's Gateway (see hyperion/DESIGN.md).
+# Read-only aggregation over real `evaluate_with_hyperion` calls, plus one
+# demo action that drives a genuine, in-domain blocked request end to end so
+# the live event stream has something real to show. Every number in this
+# section's response comes from `hyperion_events`; nothing here is a fixture.
+# ---------------------------------------------------------------------------
+
+_HYPERION_SENTINEL_ID = "hyperion_sentinel"
+
+
+def _ensure_hyperion_sentinel() -> None:
+    """A demo agent scoped to `claim.read` only -- narrow on purpose, so a
+    request for anything else is a REAL `SCOPE_EXCEEDED`, not a staged one.
+    """
+    from tower.registry import get_agent, make_entry, put_agent
+
+    if get_agent(_HYPERION_SENTINEL_ID) is not None:
+        return
+    put_agent(
+        make_entry(
+            _HYPERION_SENTINEL_ID,
+            capabilities=["extract"],
+            authority_scope=["claim.read"],
+            data_scope=[],
+            max_budget=100,
+            risk_class_thresholds={"LOW": 100, "HIGH": 20},
+        )
+    )
+
+
+@app.get("/api/hyperion")
+async def hyperion_summary() -> dict[str, Any]:
+    if not _firestore_available():
+        return {
+            "available": False,
+            "reason": "Firestore emulator not reachable. Start it with `make emulator`.",
+        }
+    from hyperion.immune_memory import aggregate_fleet_summary
+
+    return {"available": True, **aggregate_fleet_summary()}
+
+
+@app.post("/api/hyperion/probe")
+async def hyperion_probe() -> dict[str, Any]:
+    """The demo moment: an agent scoped to `claim.read` requests a claim's
+    confidential settlement terms -- outside its granted scope. The real
+    Gateway (`tower/gateway.py`) refuses it as `SCOPE_EXCEEDED` before any
+    work happens; Hyperion scores and logs that real refusal. This is the
+    same "one real, on-camera event" discipline `/api/instrument/earn`
+    already uses for Card 0.
+    """
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    _ensure_hyperion_sentinel()
+
+    from hyperion.guard import evaluate_with_hyperion
+    from hyperion.immune_memory import aggregate_fleet_summary
+    from tower.registry import get_agent
+
+    agent = get_agent(_HYPERION_SENTINEL_ID)
+    decision, assessment = evaluate_with_hyperion(
+        agent,
+        task="retrieve claim's confidential settlement terms",
+        requested_scope=["claim.confidential_terms"],
+        requested_cost=1,
+        risk_class="HIGH",
+        capability="extract",
+        case_id=f"hyperion_probe_{datetime.now(UTC).timestamp():.0f}",
+    )
+    return {
+        "decision": {
+            "allowed": decision.allowed,
+            "reason_code": decision.reason_code.value,
+            "reason": decision.reason,
+        },
+        "assessment": {
+            "risk_score": assessment.risk_score,
+            "risk_level": assessment.risk_level.value,
+            "threat_type": assessment.threat_type,
+        },
+        "available": True,
+        **aggregate_fleet_summary(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # STATIC UI -- mounted last so it cannot shadow an API route
 # ---------------------------------------------------------------------------
 

@@ -819,6 +819,90 @@
     show("countersign-detail");
   }
 
+  // ── HYPERION-ZERO (immune layer over Card 2's Gateway) ──────────────
+  // Its own endpoint, `/api/hyperion` -- a real, distinct concern (fleet
+  // security aggregate) from the four-card instrument payload, the same way
+  // `/api/loadrating` and `/api/honesty` are already their own endpoints
+  // rather than folded into `/api/instrument`.
+
+  async function fetchHyperion() {
+    const res = await fetch("/api/hyperion");
+    return res.json();
+  }
+
+  function hyperionStatLine(h) {
+    return (
+      `<div class="hy-stat-grid">` +
+      `<div class="hy-stat"><span class="n">${h.agents_protected}</span><span class="l">agents protected</span></div>` +
+      `<div class="hy-stat"><span class="n">${h.threats_detected}</span><span class="l">threats detected</span></div>` +
+      `<div class="hy-stat"><span class="n">${h.blocked_actions}</span><span class="l">blocked actions</span></div>` +
+      `<div class="hy-stat"><span class="n">${h.fleet_health_pct}%</span><span class="l">fleet health</span></div>` +
+      `</div>`
+    );
+  }
+
+  function renderHyperionHome(h) {
+    if (!h.available) {
+      $("instr-hyperion-body").innerHTML =
+        `<div class="hy-status-line">immune log unreachable — start <span class="mono">make emulator</span></div>`;
+      return;
+    }
+    const status = h.events_total > 0
+      ? `<span class="dot">&#9679;</span> IMMUNE CORE ACTIVE — ${h.events_total} decision${h.events_total === 1 ? "" : "s"} observed`
+      : `<span class="dot">&#9679;</span> IMMUNE CORE ACTIVE — no decisions observed yet`;
+    $("instr-hyperion-body").innerHTML =
+      `<div class="hy-status-line">${status}</div>` + hyperionStatLine(h);
+  }
+
+  function eventRow(e) {
+    const blocked = !e.allowed;
+    const ts = e.recorded_at ? new Date(e.recorded_at).toLocaleTimeString() : "";
+    return (
+      `<div class="reg-row">` +
+      `<div class="reg-id">${e.agent_id} ` +
+      `<span class="${blocked ? "amber" : ""}">[${e.reason_code}]</span></div>` +
+      `<div>${e.threat_type} · risk ${e.risk_score}/100 (${e.risk_level}) · ${ts}</div>` +
+      `<div>${e.task}</div>` +
+      `</div>`
+    );
+  }
+
+  function renderHyperionDetail(h) {
+    if (!h.available) {
+      $("hd-summary").innerHTML = `<p>${h.reason}</p>`;
+      $("hd-events").innerHTML = "";
+      return;
+    }
+    $("hd-summary").innerHTML =
+      hyperionStatLine(h) +
+      `<p style="margin-top:16px">${h.agents_observed} agent(s) observed directly · ` +
+      `${h.risk_band_counts.LOW} LOW · ${h.risk_band_counts.MEDIUM} MEDIUM · ` +
+      `${h.risk_band_counts.HIGH} HIGH · ${h.risk_band_counts.CRITICAL} CRITICAL</p>`;
+    $("hd-events").innerHTML = h.recent_events.length
+      ? h.recent_events.map(eventRow).join("")
+      : `<p>No events logged yet — run the probe below, or reload after the Gateway has been called elsewhere.</p>`;
+  }
+
+  async function showHyperionDetail() {
+    const h = await fetchHyperion();
+    renderHyperionDetail(h);
+    show("hyperion-detail");
+  }
+
+  async function handleHyperionProbe() {
+    const res = await fetch("/api/hyperion/probe", { method: "POST" });
+    const d = await res.json();
+    const route = $("hd-probe-result");
+    route.hidden = false;
+    route.classList.remove("refused", "allowed");
+    route.classList.add(d.decision.allowed ? "allowed" : "refused");
+    route.innerHTML =
+      `<span class="code">${d.decision.reason_code}</span> — ${d.assessment.threat_type}, ` +
+      `risk ${d.assessment.risk_score}/100 (${d.assessment.risk_level}) — ${d.decision.reason}`;
+    renderHyperionDetail(d);
+    renderHyperionHome(d);
+  }
+
   // ── instrument (home) / core / honesty-peek visibility ──────────────
 
   /* THE INSTRUMENT is the default landing view -- it needs no toggle-off,
@@ -879,6 +963,7 @@
         case "1": enterCore(); break;
         case "2": showTowerDetail(); break;
         case "3": showCountersignDetail(); break;
+        case "4": showHyperionDetail(); break;
       }
     };
     el.addEventListener("click", activate);
@@ -907,6 +992,7 @@
     offline.hidden = true;
     body.hidden = false;
     renderInstrument(d);
+    renderHyperionHome(await fetchHyperion());
     show("instrument");
   }
 
@@ -922,12 +1008,13 @@
   $("instr-earn").addEventListener("click", handleEarn);
   $("wd-burn").addEventListener("click", handleBurn);
   $("wd-earn").addEventListener("click", handleEarn);
+  $("hd-probe").addEventListener("click", handleHyperionProbe);
 
   // ── screen orchestration ──────────────────────────────────────────
 
   const SCREENS = [
     "split", "obligation", "court", "loadrating", "honesty", "instrument",
-    "warrant-detail", "tower-detail", "countersign-detail",
+    "warrant-detail", "tower-detail", "countersign-detail", "hyperion-detail",
   ];
 
   function show(name) {

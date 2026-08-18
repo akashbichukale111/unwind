@@ -187,17 +187,27 @@
   </div>
 
   <div id="instr-body" hidden>
-    <div class="instr-card0">
-      <div id="instr-card0-head" class="instr-card-head instr-clickable" data-card="0" role="button" tabindex="0"
-           aria-label="Warrant — open detail">
-        <span class="instr-label cond instr-label-hero">WARRANT</span>
-        <span class="instr-sub mono">capability × risk class, never one number</span>
+    <div class="instr-hero-row">
+      <div class="instr-card-hyperion instr-clickable" data-card="4" role="button" tabindex="0"
+           aria-label="Hyperion-Zero — open detail">
+        <div class="instr-card-head">
+          <span class="instr-label cond instr-label-hero">HYPERION-ZERO</span>
+          <span class="instr-sub mono">agentic immune core — observes Gateway decisions, before they execute</span>
+        </div>
+        <div id="instr-hyperion-body" class="mono instr-body-text"></div>
       </div>
-      <div id="instr-bars" class="instr-bars"></div>
-      <div id="instr-route" class="mono instr-route" hidden></div>
-      <div class="instr-actions">
-        <button id="instr-burn" type="button" class="btn">Overturn a HIGH-risk judgement (BURN)</button>
-        <button id="instr-earn" type="button" class="btn">Earn the rookie's first delegation</button>
+      <div class="instr-card0">
+        <div id="instr-card0-head" class="instr-card-head instr-clickable" data-card="0" role="button" tabindex="0"
+             aria-label="Warrant — open detail">
+          <span class="instr-label cond instr-label-hero">WARRANT</span>
+          <span class="instr-sub mono">capability × risk class, never one number</span>
+        </div>
+        <div id="instr-bars" class="instr-bars"></div>
+        <div id="instr-route" class="mono instr-route" hidden></div>
+        <div class="instr-actions">
+          <button id="instr-burn" type="button" class="btn">Overturn a HIGH-risk judgement (BURN)</button>
+          <button id="instr-earn" type="button" class="btn">Earn the rookie's first delegation</button>
+        </div>
       </div>
     </div>
 
@@ -225,6 +235,32 @@
       </div>
     </div>
     <p class="instr-hint mono">click a card to open its detail · <span class="key">Esc</span> returns here</p>
+  </div>
+</section>
+
+<!-- ─────────── HYPERION-ZERO DETAIL ─────────── -->
+<section id="hyperion-detail" class="overlay" hidden>
+  <button type="button" class="btn btn-quiet detail-back">&#9668; the instrument</button>
+  <h2 class="cond overlay-h detail-title">HYPERION-ZERO</h2>
+  <p class="instr-sub mono detail-lede">agentic immune core — scores and logs every real Gateway decision;
+    it observes agent execution state and intended tool actions before they cross the security boundary,
+    it does not gate them. Card 2's Gateway remains the one choke point.</p>
+  <div id="hd-summary" class="detail-notes"></div>
+  <div class="instr-actions">
+    <button id="hd-probe" type="button" class="btn">Run a real scope-escalation probe</button>
+  </div>
+  <div id="hd-probe-result" class="mono instr-route" hidden></div>
+  <h3 class="mono h-h">Live security event log</h3>
+  <div id="hd-events" class="detail-registry"></div>
+  <div class="detail-notes">
+    <h3 class="mono h-h">What this is, and is not</h3>
+    <p>Every event above is a real, already-happened call to
+      <span class="mono">tower.gateway.evaluate_gateway</span>, scored by a fixed, deterministic weight table
+      (<span class="mono">hyperion/risk.py</span>) and logged append-only. Hyperion adds no second authority
+      path — the Gateway's four ordered checks are untouched.</p>
+    <p id="hd-roadmap">MCP tool-call guarding, live Model Armor enforcement, sandboxed execution, and automated
+      quarantine/recovery are architecture only in this build — not implemented, not simulated. See
+      <span class="mono">hyperion/DESIGN.md</span> for the full, honest accounting.</p>
   </div>
 </section>
 
@@ -281,6 +317,6 @@
 
 <div id="replay-banner" class="replay mono" hidden></div>
 
-<script src="/static/app.js?v=4c"></script>
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>
