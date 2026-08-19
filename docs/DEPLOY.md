@@ -1,49 +1,68 @@
 # Deploying UNWIND
 
-**Status: DEPLOYED AND VERIFIED — 4/5 PASS + 1 SKIPPED (no headless browser in
-this session), ALL SIX CARDS + AGENTIC COMMAND OS.** `infra/deploy.sh` was
-rewritten in Task 6 after a line-by-line review found four defects (below),
-and has now run end to end five times: 2026-08-13 (Card 1 only), 2026-08-17
-(Cards 0–3 redeployed on top), and three more since (adding Hyperion-Zero,
-Singularity-Mesh, and — **2026-08-19** — the Agentic Command OS layer,
-`command_os/`, redeployed twice the same day: once to ship the feature,
-once more after a self-caught text-contrast fix to two of its new CSS
-rules, both disclosed below rather than folded together). `make deploy-verify`
-confirms 4/5 checks against the live service, exit code 0 (step 5, a real
-headless-browser check, was **SKIPPED** in this session because no Chromium
-binary was available — say so plainly rather than claim it ran):
+**Status: DEPLOYED AND VERIFIED — 4/5 AUTOMATED PASS + a real, separate
+headless-browser click-through, ALL SIX CARDS + AGENTIC COMMAND OS +
+CONTINUOUS MISSION STATE.** `infra/deploy.sh` was rewritten in Task 6 after
+a line-by-line review found four defects (below), and has now run end to
+end six times: 2026-08-13 (Card 1 only), 2026-08-17 (Cards 0–3 redeployed
+on top), and four more since (adding Hyperion-Zero, Singularity-Mesh, the
+Agentic Command OS layer — redeployed twice on 2026-08-19, once to ship the
+feature and once after a self-caught text-contrast fix — and, later the
+same day, Continuous Mission State). `make deploy-verify` confirms 4/5
+automated checks against the live service, exit code 0 (its own step 5
+looks for Chromium at a hardcoded path that doesn't match this session's
+actual one and reports SKIPPED — see below for the real browser
+verification that replaces it):
 
 ```
 Service   : unwind
 Region    : us-central1
-Revision  : unwind-00012-mhv   (was unwind-00010-ms7 before this day's deploys)
+Revision  : unwind-00013-9h7   (was unwind-00012-mhv before this deploy)
 Project   : project-895d4ca8-d301-447d-916
 URL       : https://unwind-hgeodtazqq-uc.a.run.app
-Result    : 4/5 PASS — healthz, same-origin UI, real cascade
-            (radius 2,594 -> material 78), adversarial refusal.
-            5/5 SKIPPED — no chromium at
-            /opt/pw-browsers/chromium-1194/chrome-linux/chrome in this
-            session; API-level verification only, browser click-through NOT
-            performed.
+Result    : 4/5 PASS (make deploy-verify) — healthz, same-origin UI, real
+            cascade (radius 2,594 -> material 78), adversarial refusal.
+            Its own step 5 SKIPPED (hardcoded chromium path mismatch) --
+            superseded by a real headless-browser click-through against
+            this exact URL, below.
 ```
 
-**2026-08-19 redeploy adds no new Google Cloud dependency.** The Agentic
-Command OS layer (`command_os/`) is pure orchestration over already-deployed
-code — same service, same region, same runtime service account and IAM
-roles as every prior deploy. Direct checks against the live URL after this
-deploy, beyond `make deploy-verify`'s five:
+## 2026-08-19: Continuous Mission State redeploy
+
+Adds no new Google Cloud dependency — same service, region, runtime
+service account, and IAM roles as every prior deploy; `command_os/` only
+adds one new Firestore collection (`command_os_missions`, no rules or
+index change needed — see `docs/architecture.md`'s "Google Cloud services"
+section for why).
+
+**A real headless Chromium was available in this session** (a working
+binary at `/opt/pw-browsers/chromium-1234/chrome-linux64/chrome`, a
+different path than `scripts/deploy_verify.py`'s hardcoded check), so this
+deploy's verification is a genuine browser click-through against the live
+URL, not API calls alone:
+
+```
+1. landing               -- #command-os visible by default:            PASS
+2. default mission run   -- 11 stages, "MISSION: SUCCESS",
+                             Trusted State panel populated (4 rows):    PASS
+3. human override gate   -- pauses at 8 stages, Approve resumes to 11:  PASS
+4. mission time machine  -- missions list -> checkpoints -> detail:     PASS
+5. zero console/page errors across the entire click-through:           PASS
+```
+
+Plus the existing six-card regression check, same URL:
 
 ```bash
-curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/status    # 200
-curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/concept-map  # 200
-curl -s -X POST https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/mission  # 200, 11 stages, report.validation == "PASS"
+curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/instrument   # 200
+curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/hyperion     # 200
+curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/singularity  # 200
 ```
 
-All three returned 200 with real (not fixture) payloads — the mission run
-produced real Hyperion and Singularity-Mesh events, visible in
-`/api/hyperion` and `/api/singularity`'s aggregates on the very next call,
-the same real-evidence-left-behind property every other write endpoint in
-this app already has.
+All real, non-fixture payloads — the mission runs during this
+verification produced real Hyperion events and real
+`command_os_missions/*/checkpoints` documents, visible in
+`GET /api/command-os/missions` on the very next call (2 missions listed,
+matching the 2 real runs above).
 
 **The 2026-08-17 redeploy found one real gap, fixed, not hidden:** the
 Memory Bank's Firestore query needed a composite index
