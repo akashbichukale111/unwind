@@ -926,7 +926,10 @@ html, body {
 }
 .cmdos-live { color: var(--amber); border-color: var(--amber); }
 .cmdos-simulated { color: var(--bone); opacity: 0.85; border-style: dashed; }
-.cmdos-unavailable { color: var(--oxide); border-color: var(--oxide); }
+/* oxide is 2.40:1 on ink and unreadable as text (same rule the echo-refusal
+ * .code label already follows) -- the border keeps the rust, the label
+ * itself stays bone. */
+.cmdos-unavailable { color: var(--bone); border-color: var(--oxide); }
 .cmdos-reference { color: var(--bone); opacity: 0.55; }
 
 .cmdos-report {
@@ -935,7 +938,10 @@ html, body {
   margin-bottom: 30px;
   max-width: 78ch;
 }
-.cmdos-report-title { color: var(--verdigris); font-size: 16px; margin-bottom: 10px; }
+/* verdigris is 3.67:1 on ink, below the 4.5:1 floor as text -- amber (6.21:1)
+ * carries the "this is real, on this run" meaning instead; verdigris stays
+ * on the border only. */
+.cmdos-report-title { color: var(--amber); font-size: 16px; margin-bottom: 10px; }
 .cmdos-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
 .cmdos-report-grid .k { color: var(--bone); opacity: 0.62; margin-right: 8px; }
 .cmdos-report-grid .v { color: var(--bone); font-variant-numeric: tabular-nums; }
