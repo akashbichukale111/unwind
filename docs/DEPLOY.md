@@ -3,18 +3,20 @@
 **Status: DEPLOYED AND VERIFIED — 4/5 PASS + 1 SKIPPED (no headless browser in
 this session), ALL SIX CARDS + AGENTIC COMMAND OS.** `infra/deploy.sh` was
 rewritten in Task 6 after a line-by-line review found four defects (below),
-and has now run end to end four times: 2026-08-13 (Card 1 only), 2026-08-17
-(Cards 0–3 redeployed on top), and twice more since (adding Hyperion-Zero,
+and has now run end to end five times: 2026-08-13 (Card 1 only), 2026-08-17
+(Cards 0–3 redeployed on top), and three more since (adding Hyperion-Zero,
 Singularity-Mesh, and — **2026-08-19** — the Agentic Command OS layer,
-`command_os/`). `make deploy-verify` confirms 4/5 checks against the live
-service, exit code 0 (step 5, a real headless-browser check, was **SKIPPED**
-in this session because no Chromium binary was available — say so plainly
-rather than claim it ran):
+`command_os/`, redeployed twice the same day: once to ship the feature,
+once more after a self-caught text-contrast fix to two of its new CSS
+rules, both disclosed below rather than folded together). `make deploy-verify`
+confirms 4/5 checks against the live service, exit code 0 (step 5, a real
+headless-browser check, was **SKIPPED** in this session because no Chromium
+binary was available — say so plainly rather than claim it ran):
 
 ```
 Service   : unwind
 Region    : us-central1
-Revision  : unwind-00011-hf8   (was unwind-00010-ms7 before this deploy)
+Revision  : unwind-00012-mhv   (was unwind-00010-ms7 before this day's deploys)
 Project   : project-895d4ca8-d301-447d-916
 URL       : https://unwind-hgeodtazqq-uc.a.run.app
 Result    : 4/5 PASS — healthz, same-origin UI, real cascade
