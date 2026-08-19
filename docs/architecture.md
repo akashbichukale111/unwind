@@ -82,9 +82,9 @@ used these services:
 | Cloud Run | hosts the whole FastAPI app, including `/api/command-os/*` |
 | Vertex AI | `lib/vertex.py`, reachable from `countersign/agent.py`'s real Gemma path — not called during a `command_os` mission run, which always sets `UNWIND_COUNTERSIGN_SIMULATED=1` |
 
-**Not used** (same list `ARCHITECTURE.md` already states, unchanged by this
-layer): GKE, Cloud SQL/Spanner, BigQuery, Dataflow, Redis/Memorystore, Model
-Armor, Dataplex.
+Deliberately **NOT USED** (same list `ARCHITECTURE.md` already states,
+unchanged by this layer): GKE, Cloud SQL/Spanner, BigQuery, Dataflow,
+Redis/Memorystore, Model Armor, Dataplex.
 
 ## The 15-name concept map
 

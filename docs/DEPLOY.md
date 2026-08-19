@@ -1,21 +1,47 @@
 # Deploying UNWIND
 
-**Status: DEPLOYED AND VERIFIED — 5/5 PASS, ALL FOUR CARDS.** `infra/deploy.sh`
-was rewritten in Task 6 after a line-by-line review found four defects
-(below), and has run end to end twice: 2026-08-13 (Card 1 only) and
-2026-08-17 (Cards 0–3 redeployed on top). `make deploy-verify` confirms all
-five checks against the live service, exit code 0:
+**Status: DEPLOYED AND VERIFIED — 4/5 PASS + 1 SKIPPED (no headless browser in
+this session), ALL SIX CARDS + AGENTIC COMMAND OS.** `infra/deploy.sh` was
+rewritten in Task 6 after a line-by-line review found four defects (below),
+and has now run end to end four times: 2026-08-13 (Card 1 only), 2026-08-17
+(Cards 0–3 redeployed on top), and twice more since (adding Hyperion-Zero,
+Singularity-Mesh, and — **2026-08-19** — the Agentic Command OS layer,
+`command_os/`). `make deploy-verify` confirms 4/5 checks against the live
+service, exit code 0 (step 5, a real headless-browser check, was **SKIPPED**
+in this session because no Chromium binary was available — say so plainly
+rather than claim it ran):
 
 ```
 Service   : unwind
 Region    : us-central1
-Revision  : unwind-00005-2bl
+Revision  : unwind-00011-hf8   (was unwind-00010-ms7 before this deploy)
 Project   : project-895d4ca8-d301-447d-916
 URL       : https://unwind-hgeodtazqq-uc.a.run.app
-Result    : 5/5 PASS — healthz, same-origin UI, real cascade
-            (radius 2,594 -> material 78), adversarial refusal, and a real
-            headless-browser check (4,206 nodes rendered, counter 78 = 78)
+Result    : 4/5 PASS — healthz, same-origin UI, real cascade
+            (radius 2,594 -> material 78), adversarial refusal.
+            5/5 SKIPPED — no chromium at
+            /opt/pw-browsers/chromium-1194/chrome-linux/chrome in this
+            session; API-level verification only, browser click-through NOT
+            performed.
 ```
+
+**2026-08-19 redeploy adds no new Google Cloud dependency.** The Agentic
+Command OS layer (`command_os/`) is pure orchestration over already-deployed
+code — same service, same region, same runtime service account and IAM
+roles as every prior deploy. Direct checks against the live URL after this
+deploy, beyond `make deploy-verify`'s five:
+
+```bash
+curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/status    # 200
+curl -s https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/concept-map  # 200
+curl -s -X POST https://unwind-hgeodtazqq-uc.a.run.app/api/command-os/mission  # 200, 11 stages, report.validation == "PASS"
+```
+
+All three returned 200 with real (not fixture) payloads — the mission run
+produced real Hyperion and Singularity-Mesh events, visible in
+`/api/hyperion` and `/api/singularity`'s aggregates on the very next call,
+the same real-evidence-left-behind property every other write endpoint in
+this app already has.
 
 **The 2026-08-17 redeploy found one real gap, fixed, not hidden:** the
 Memory Bank's Firestore query needed a composite index
