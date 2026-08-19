@@ -1200,14 +1200,103 @@ async def singularity_behavior_probe(scenario: str = Query("normal")) -> dict[st
 
 
 @app.post("/api/command-os/mission")
-async def command_os_mission(objective: str = Query("")) -> dict[str, Any]:
+async def command_os_mission(
+    objective: str = Query(""), auto_approve: bool = Query(True)
+) -> dict[str, Any]:
+    """`auto_approve=false` runs stages 1-8 and then pauses at the Human
+    Override Gate (`status: "AWAITING_HUMAN"`, `report: null`) instead of
+    auto-concurring into repair -- see `command_os/mission.py`'s module
+    docstring for exactly what a human decision at the gate can and cannot
+    do."""
     if not _firestore_available():
         raise HTTPException(503, "Firestore emulator not reachable.")
 
     from command_os.mission import DEFAULT_OBJECTIVE, run_mission
 
-    result = run_mission(objective.strip() or DEFAULT_OBJECTIVE)
+    result = run_mission(objective.strip() or DEFAULT_OBJECTIVE, auto_approve=auto_approve)
     return result.model_dump(mode="json")
+
+
+@app.get("/api/command-os/missions")
+async def command_os_missions(limit: int = Query(25)) -> dict[str, Any]:
+    """The Mission Time Machine's index: real missions, most recent first."""
+    if not _firestore_available():
+        return {"available": False, "reason": "Firestore emulator not reachable."}
+    from command_os.checkpoint import list_missions
+
+    return {
+        "available": True,
+        "missions": [m.model_dump(mode="json") for m in list_missions(limit=limit)],
+    }
+
+
+@app.get("/api/command-os/mission/{mission_id}/checkpoints")
+async def command_os_mission_checkpoints(mission_id: str) -> dict[str, Any]:
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    from command_os.checkpoint import list_checkpoints
+
+    checkpoints = list_checkpoints(mission_id)
+    if not checkpoints:
+        raise HTTPException(404, f"no mission {mission_id!r} found")
+    return {
+        "mission_id": mission_id,
+        "checkpoints": [c.model_dump(mode="json") for c in checkpoints],
+    }
+
+
+@app.post("/api/command-os/mission/{mission_id}/resume")
+async def command_os_mission_resume(mission_id: str) -> dict[str, Any]:
+    """Crash-recovery resume only. A mission `AWAITING_HUMAN` refuses here
+    -- use the gate endpoint below, which is the only path that can carry a
+    human decision."""
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    from command_os.mission import resume_mission
+
+    try:
+        result = resume_mission(mission_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return result.model_dump(mode="json")
+
+
+@app.post("/api/command-os/mission/{mission_id}/gate")
+async def command_os_mission_gate(mission_id: str, decision: str = Query(...)) -> dict[str, Any]:
+    """The Human Override Gate. `decision` must be `approve` or `deny` --
+    approve continues into the SAME repair->re-mint->re-validate chain the
+    automatic path already uses; deny halts the mission without ever
+    attempting repair. Neither choice can overturn the Gateway's original
+    refusal -- see `command_os/mission.py`'s module docstring."""
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    if decision not in ("approve", "deny"):
+        raise HTTPException(422, "decision must be 'approve' or 'deny'")
+    from command_os.mission import resume_mission
+
+    try:
+        result = resume_mission(mission_id, human_decision=decision)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return result.model_dump(mode="json")
+
+
+@app.get("/api/command-os/mission/{mission_id}/trust")
+async def command_os_mission_trust(mission_id: str) -> dict[str, Any]:
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    from command_os.trust import trusted_state_for_mission
+
+    return trusted_state_for_mission(mission_id)
+
+
+@app.get("/api/command-os/mission/{mission_id}/context-firewall")
+async def command_os_mission_context_firewall(mission_id: str) -> dict[str, Any]:
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+    from command_os.context_firewall import filter_context
+
+    return {"mission_id": mission_id, "decisions": filter_context(mission_id)}
 
 
 @app.get("/api/command-os/status")

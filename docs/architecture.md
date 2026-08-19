@@ -32,12 +32,40 @@ flowchart TD
         S1-->S2-->S3-->S4-->S5-->S6-->S7-->S8-->S9-->S10-->S11
     end
 
+    S1 -.checkpointed after every stage.-> CKPT
+    S2 -.-> CKPT
+    S3 -.-> CKPT
+    S4 -.-> CKPT
+    S5 -.-> CKPT
+    S6 -.-> CKPT
+    S7 -.-> CKPT
+    S8 -.-> CKPT
+    S9 -.-> CKPT
+    S10 -.-> CKPT
+    S11 -.-> CKPT
+    CKPT["MISSION CHECKPOINT ENGINE\ncommand_os/checkpoint.py\ncommand_os_missions/{id}/checkpoints/{seq}\nstatus: LIVE"]
+
+    S8 -->|auto_approve=False pauses here| GATE["HUMAN OVERRIDE GATE\nAWAITING_HUMAN\napprove -> stage 9 · deny -> HALTED\ncannot overturn stage 6's refusal\nstatus: LIVE"]
+    GATE -->|approve| S9
+
+    CKPT --> TRUST["TRUSTED STATE\ncommand_os/trust.py\nTRUSTED/UNTRUSTED/QUARANTINED/REVOKED\n(categorical, never a score)\nstatus: LIVE"]
+    CKPT --> FW["CONTEXT FIREWALL\ncommand_os/context_firewall.py\nfreshness + trust + relevance ->\nINCLUDE/SUMMARIZE/REJECT/QUARANTINE\nstatus: LIVE"]
+    CKPT --> TM["MISSION TIME MACHINE\nweb/static #mission-time-machine\nhistorical state inspection, not replay\nstatus: LIVE"]
+
     COS --> OBS["OBSERVABILITY\nFleetGuard/AutoAudit/ShadowAudit/Nexus Command\n= hyperion_events + singularity_mesh_events\n(append-only, real aggregates)"]
 
     S6 -.blocked path.-> RT["RED TEAM (Pandora)\none scripted scenario per run\nstatus: SIMULATED"]
-    S9 -.-> SH["SELF-HEALING (Phoenix)\nreal re-mint via warrant/ledger.py\nstatus: LIVE"]
-    S1 -.-> DT["DIGITAL TWIN (Chronos-Void)\nnot built\nstatus: DESIGNED"]
+    S9 -.-> SH["SELF-HEALING (Phoenix)\nreal re-mint via warrant/ledger.py,\nnow checkpoint-aware recovery\nstatus: LIVE"]
+    S1 -.-> DT["DIGITAL TWIN (Chronos-Void)\nno simulation/forecasting engine exists\n(Mission Time Machine, above, is a\nDIFFERENT thing -- historical inspection,\nnot a twin -- see the note below)\nstatus: DESIGNED"]
 ```
+
+**Mission Time Machine is not Chronos-Void / Digital Twin, and the diagram
+deliberately keeps them separate nodes.** A digital twin means a live
+simulated model used to forecast a hypothetical future state; the Mission
+Time Machine reconstructs *already-happened, already-persisted* checkpoints
+— read-only history, never a forecast or a what-if branch. Digital Twin
+stays `DESIGNED` (not built); Mission Time Machine is its own real, `LIVE`
+capability with its own honest scope, documented in `docs/mission-state.md`.
 
 ## Component table
 
@@ -53,8 +81,13 @@ flowchart TD
 | UNWIND core | `spine/cascade.py` | `run_cascade()` | LIVE, but **not invoked by this mission** — see "What this mission does not do," below |
 | Observability | `hyperion/immune_memory.py`, `singularity/mesh_memory.py` | `aggregate_fleet_summary()`, `aggregate_mesh_summary()` | LIVE — real folds over append-only logs, empty log returns honest zeros |
 | Red Team | one scripted `BehaviorObservation` in `command_os/mission.py` stage 4 | — | SIMULATED — one scripted scenario per mission, no autonomous red agent |
-| Self-Healing | `command_os/mission.py` stages 9–10 | narrower `compute_genome()` + real `mint()` | LIVE |
-| Digital Twin | — | — | DESIGNED — not built, no simulation/forecasting engine exists |
+| Self-Healing (Phoenix) | `command_os/mission.py` stages 9–10 | narrower `compute_genome()` + real `mint()` | LIVE — now checkpoint-aware: resumable from `_GATE_AFTER_SEQ` regardless of what interrupted the mission |
+| Mission Checkpoint Engine | `command_os/checkpoint.py` | `write_checkpoint`, `list_checkpoints`, `resume_mission` (in `mission.py`) | LIVE — real Firestore writes, single-field queries only — see "Google Cloud services," below |
+| Trusted State | `command_os/trust.py` | `trusted_state_for_mission()` | LIVE — categorical fold, never a score (see `docs/mission-state.md`) |
+| Context Firewall | `command_os/context_firewall.py` | `filter_context()` | LIVE — three real signals (freshness, trust, relevance), not the full ten-field model a fuller version could have |
+| Human Override Gate | `command_os/mission.py` (`_GATE_AFTER_SEQ`), `POST /api/command-os/mission/{id}/gate` | `resume_mission(..., human_decision=...)` | LIVE — cannot overturn stage 6's Gateway refusal, by construction |
+| Mission Time Machine | `web/static/index.html` `#mission-time-machine` | `GET /api/command-os/missions`, `.../checkpoints` | LIVE — historical-state inspection; explicitly not Chronos-Void / a digital twin, see below |
+| Digital Twin (Chronos-Void) | — | — | DESIGNED — not built, no simulation/forecasting engine exists |
 
 ## What this mission does not do
 
@@ -77,7 +110,7 @@ used these services:
 
 | Service | Used by |
 | --- | --- |
-| Firestore | `warrant/ledger.py`, `tower/registry.py`, `hyperion/immune_memory.py`, `singularity/mesh_memory.py` |
+| Firestore | `warrant/ledger.py`, `tower/registry.py`, `hyperion/immune_memory.py`, `singularity/mesh_memory.py`, `command_os/checkpoint.py` (new: `command_os_missions/{id}/checkpoints/{seq}`, mirroring the existing `cascades/{id}/nodes` subcollection pattern in `lib/firestore.py` — every query is a single-field `order_by` with no combined `.where()` filter, so it needs no new entry in `infra/indexes.json`, unlike `decision_memory`'s composite index, `docs/DEPLOY.md`) |
 | Pub/Sub | `lib/pubsub.py` (UNWIND core's cascade fan-out; not touched by `command_os/`) |
 | Cloud Run | hosts the whole FastAPI app, including `/api/command-os/*` |
 | Vertex AI | `lib/vertex.py`, reachable from `countersign/agent.py`'s real Gemma path — not called during a `command_os` mission run, which always sets `UNWIND_COUNTERSIGN_SIMULATED=1` |

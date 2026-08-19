@@ -42,6 +42,27 @@ No GCP account needed for this layer specifically: the mission always sets
 
 ---
 
+## Extended beat: Human Override Gate + Mission Time Machine (+60s, optional)
+
+If there's time after the closing card, this is the second story worth
+showing — Continuous Mission State, not just one mission running once:
+
+1. Check **"require human approval before repair"** and run the mission
+   again. It pauses after stage 8 with a visible **HUMAN OVERRIDE GATE**
+   panel — say out loud that this is a real pause, not a scripted delay:
+   `POST /api/command-os/mission?auto_approve=false` genuinely stops before
+   calling `compute_genome` or `mint` for the repair.
+2. Click **Deny**. The mission finalises `HALTED`, 8 stages only, zero
+   repairs — the isolated agent stays isolated. Run it once more and click
+   **Approve** instead: it resumes into the *exact same* repair chain the
+   automatic path used, because it's the same function underneath.
+3. Open **Mission Time Machine**, pick either run, and click through its
+   checkpoints — real, persisted Firestore documents, not the trace
+   replayed from memory. Point at the Trusted State panel underneath the
+   report: four categorical buckets, never a score, and say why (a past
+   design decision this repository already made once, in
+   `settle/loadrating.py`).
+
 ## The one moment that carries it
 
 **Stage 6's reason code.** Everything before it is setup; everything after
@@ -77,3 +98,13 @@ retry.
   mission?"** Because no claim was retracted — see "What this mission does
   not do" in `docs/architecture.md`. It stays fully live and reachable as
   its own card.
+- **"Can a human bypass the security block?"** No, and that's checkable,
+  not just asserted: `command_os/mission.py`'s Human Override Gate can only
+  ever call `evaluate_gateway` again with a *narrower* request; there is no
+  code path that flips stage 6's `SCOPE_EXCEEDED` decision itself. See
+  `docs/mission-state.md`'s "Human Override Gate" section.
+- **"Is Mission Time Machine a digital twin?"** No — it's read-only
+  inspection of already-persisted checkpoints, never a forecast or a
+  simulated future state. Chronos-Void (Digital Twin) stays `DESIGNED`;
+  the two are kept explicitly separate in `docs/COMMAND-OS-CONCEPT-MAP.md`
+  rather than letting one borrow the other's status.

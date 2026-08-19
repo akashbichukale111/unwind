@@ -64,7 +64,44 @@ def system_reality() -> list[dict[str, Any]]:
         (
             "self_healing_repair",
             "LIVE",
-            "genome re-negotiation + real re-mint via warrant/ledger.py, driven by command_os/mission.py",
+            "genome re-negotiation + real re-mint via warrant/ledger.py, now checkpoint-aware "
+            "(resumes from the last completed stage after any interruption, not a fixed script)",
+        ),
+        (
+            "mission_checkpoint_engine",
+            "LIVE",
+            "real Firestore writes per stage (command_os/checkpoint.py); command_os_missions/"
+            "{id}/checkpoints/{seq}",
+        ),
+        (
+            "resumability",
+            "LIVE",
+            "resume_mission distinguishes ALREADY COMPLETED / REQUIRES HUMAN APPROVAL / "
+            "REPLAYABLE FROM THE NEXT STAGE -- see docs/mission-state.md",
+        ),
+        (
+            "trusted_state",
+            "LIVE",
+            "categorical fold (TRUSTED/UNTRUSTED/QUARANTINED/REVOKED), never a score -- "
+            "command_os/trust.py",
+        ),
+        (
+            "context_firewall",
+            "LIVE",
+            "three real signals (freshness, trust, relevance), not a ten-field model -- "
+            "command_os/context_firewall.py",
+        ),
+        (
+            "human_override_gate",
+            "LIVE",
+            "cannot overturn the Gateway's original refusal, by construction -- "
+            "command_os/mission.py's _GATE_AFTER_SEQ",
+        ),
+        (
+            "mission_time_machine",
+            "LIVE",
+            "historical checkpoint inspection, not a digital twin -- see digital_twin, above, "
+            "which stays DESIGNED",
         ),
     ):
         rows.append(

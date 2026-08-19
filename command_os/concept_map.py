@@ -60,8 +60,9 @@ CONCEPT_MAP: list[ConceptMapping] = [
     {
         "name": "Phoenix",
         "maps_to": "Repair + Recovery",
-        "module": "command_os/mission.py stages 9-10",
-        "status": "LIVE",
+        "module": "command_os/mission.py stages 9-10, resumable via command_os/checkpoint.py",
+        "status": "LIVE -- checkpoint-aware: resumes from the last completed stage regardless of "
+        "what interrupted the mission, not just a scripted stage sequence",
     },
     {
         "name": "ShadowAudit",
@@ -90,7 +91,9 @@ CONCEPT_MAP: list[ConceptMapping] = [
     {
         "name": "Chronos-Void",
         "maps_to": "Digital Twin / Simulation",
-        "module": "none",
+        "module": "none -- command_os/checkpoint.py's Mission Time Machine is a DIFFERENT, "
+        "related capability (historical-state inspection, not a forecasting twin); see "
+        "docs/mission-state.md",
         "status": "DESIGNED -- not built, no simulation/forecasting engine exists",
     },
     {

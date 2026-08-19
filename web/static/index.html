@@ -188,16 +188,46 @@
 
   <div class="cmdos-actions">
     <button id="cmdos-run" type="button" class="btn">Run mission: build &amp; deploy a secure enterprise service</button>
+    <label class="cmdos-gate-toggle mono">
+      <input id="cmdos-auto-approve" type="checkbox" />
+      require human approval before repair
+    </label>
     <button id="cmdos-open-instrument" type="button" class="btn btn-quiet">the six-layer instrument &#9658;</button>
+    <button id="cmdos-open-timemachine" type="button" class="btn btn-quiet">Mission Time Machine &#9658;</button>
   </div>
 
   <div id="cmdos-offline" class="mono instr-offline" hidden>
     FIRESTORE UNREACHABLE — start the emulator (<span class="cond">make emulator</span>) to run a mission.
   </div>
 
+  <div id="cmdos-gate" class="cmdos-gate mono" hidden>
+    <div class="cmdos-gate-title cond">HUMAN OVERRIDE GATE — AWAITING DECISION</div>
+    <p class="cmdos-gate-body">The mission paused after isolating the agent. Approving resumes the SAME
+      repair → re-mint → re-validate chain the automatic path uses; the original Gateway refusal is
+      never overturned either way — approval only authorises a new, narrower request to be
+      independently re-checked.</p>
+    <div class="cmdos-actions">
+      <button id="cmdos-gate-approve" type="button" class="btn">Approve</button>
+      <button id="cmdos-gate-deny" type="button" class="btn btn-quiet">Deny</button>
+    </div>
+  </div>
+
   <ol id="cmdos-stages" class="cmdos-stages mono" aria-live="polite"></ol>
 
   <div id="cmdos-report" class="cmdos-report mono" hidden></div>
+
+  <div id="cmdos-trust-firewall" class="cmdos-tf-grid" hidden>
+    <div>
+      <h3 class="mono cmdos-h">Trusted State</h3>
+      <p class="cmdos-hint mono">categorical, never a score — see the concept map for why</p>
+      <div id="cmdos-trust" class="cmdos-trust mono"></div>
+    </div>
+    <div>
+      <h3 class="mono cmdos-h">Context Firewall</h3>
+      <p class="cmdos-hint mono">what a resume would actually see, and why</p>
+      <div id="cmdos-firewall" class="cmdos-firewall mono"></div>
+    </div>
+  </div>
 
   <h3 class="mono cmdos-h">System Reality</h3>
   <p class="cmdos-hint mono">every feature below carries its own honest status — nothing here claims
@@ -206,6 +236,26 @@
 
   <p class="instr-hint mono">every stage below calls a real engine one layer down · exactly one input
     per mission is scripted, and it is labelled SIMULATED</p>
+</section>
+
+<!-- ─────────── MISSION TIME MACHINE ─────────── -->
+<section id="mission-time-machine" class="overlay cmdos" hidden>
+  <button type="button" id="mtm-back" class="btn btn-quiet cmdos-back-link">&#9650; Agentic Command OS</button>
+  <h2 class="cond overlay-h">MISSION TIME MACHINE</h2>
+  <p class="mono cmdos-lede">historical mission state, reconstructed from real checkpoints — not a
+    literal reversal of time, a replay of what was actually persisted</p>
+
+  <div class="cmdos-tf-grid">
+    <div>
+      <h3 class="mono cmdos-h">Missions</h3>
+      <ol id="mtm-missions" class="cmdos-mission-list mono"></ol>
+    </div>
+    <div>
+      <h3 class="mono cmdos-h">Checkpoints</h3>
+      <ol id="mtm-checkpoints" class="cmdos-stages mono"></ol>
+      <div id="mtm-detail" class="cmdos-report mono" hidden></div>
+    </div>
+  </div>
 </section>
 
 <!-- ─────────── THE INSTRUMENT (Card 0 spanning Cards 1-3) ─────────── -->

@@ -1193,6 +1193,8 @@
   // ── AGENTIC COMMAND OS — master orchestration layer above the instrument.
   // Additive only: every function below is new, nothing above it changed.
 
+  let cmdosMissionId = null;
+
   function statusClass(status) {
     if (status.indexOf("LIVE") === 0) return "cmdos-live";
     if (status === "SIMULATED") return "cmdos-simulated";
@@ -1215,12 +1217,15 @@
     )).join("");
   }
 
-  function renderMissionReport(report) {
+  function renderMissionReport(report, missionStatus) {
     const el = $("cmdos-report");
     el.hidden = false;
     const pass = report.validation === "PASS";
+    const headline = missionStatus === "HALTED" && !pass
+      ? "MISSION: HALTED"
+      : "MISSION: " + (pass ? "SUCCESS" : "INCOMPLETE");
     el.innerHTML =
-      "<div class='cmdos-report-title cond'>MISSION: " + (pass ? "SUCCESS" : "INCOMPLETE") + "</div>" +
+      "<div class='cmdos-report-title cond'>" + headline + "</div>" +
       "<div class='cmdos-report-grid'>" +
         "<div><span class='k'>agents in fleet</span><span class='v'>" + report.agents_in_fleet + "</span></div>" +
         "<div><span class='k'>threats detected</span><span class='v'>" + report.threats_detected + "</span></div>" +
@@ -1232,26 +1237,92 @@
       "</div>";
   }
 
+  function renderTrust(state) {
+    const el = $("cmdos-trust");
+    const rows = [
+      ["TRUSTED", state.trusted],
+      ["UNTRUSTED", state.untrusted],
+      ["QUARANTINED", state.quarantined],
+      ["REVOKED", state.revoked],
+    ];
+    el.innerHTML = rows.map(([label, items]) => (
+      "<div class='cmdos-reality-row'>" +
+        "<span class='cmdos-reality-feature'>" + label + "</span>" +
+        "<span class='cmdos-tag " + statusClass(label === "TRUSTED" ? "LIVE" : label === "REVOKED" ? "UNAVAILABLE" : "SIMULATED") + "'>" +
+          items.length + "</span>" +
+      "</div>"
+    )).join("");
+  }
+
+  function renderFirewall(decisions) {
+    const el = $("cmdos-firewall");
+    el.innerHTML = decisions.map((d) => (
+      "<div class='cmdos-reality-row' title='" + d.reason + "'>" +
+        "<span class='cmdos-reality-feature'>" + String(d.seq).padStart(2, "0") + " " + d.stage + "</span>" +
+        "<span class='cmdos-tag " + (d.decision === "INCLUDE" ? "cmdos-live" : d.decision === "REJECT" ? "cmdos-unavailable" : "cmdos-simulated") + "'>" +
+          d.decision + "</span>" +
+      "</div>"
+    )).join("");
+  }
+
+  async function loadTrustAndFirewall(missionId) {
+    const [trustRes, firewallRes] = await Promise.all([
+      fetch("/api/command-os/mission/" + missionId + "/trust"),
+      fetch("/api/command-os/mission/" + missionId + "/context-firewall"),
+    ]);
+    if (!trustRes.ok || !firewallRes.ok) return;
+    renderTrust(await trustRes.json());
+    renderFirewall((await firewallRes.json()).decisions);
+    $("cmdos-trust-firewall").hidden = false;
+  }
+
+  function applyMissionResult(d) {
+    cmdosMissionId = d.mission_id;
+    renderMissionStages(d.stages);
+    if (d.status === "AWAITING_HUMAN") {
+      $("cmdos-gate").hidden = false;
+      $("cmdos-report").hidden = true;
+      $("cmdos-trust-firewall").hidden = true;
+    } else {
+      $("cmdos-gate").hidden = true;
+      renderMissionReport(d.report, d.status);
+      loadTrustAndFirewall(d.mission_id);
+    }
+  }
+
   async function runMission() {
     const btn = $("cmdos-run");
     btn.disabled = true;
     btn.textContent = "MISSION RUNNING…";
     $("cmdos-offline").hidden = true;
     $("cmdos-report").hidden = true;
+    $("cmdos-gate").hidden = true;
+    $("cmdos-trust-firewall").hidden = true;
     $("cmdos-stages").innerHTML = "";
     try {
-      const res = await fetch("/api/command-os/mission", { method: "POST" });
+      const autoApprove = !$("cmdos-auto-approve").checked;
+      const res = await fetch(
+        "/api/command-os/mission?auto_approve=" + autoApprove, { method: "POST" }
+      );
       if (res.status === 503) {
         $("cmdos-offline").hidden = false;
         return;
       }
-      const d = await res.json();
-      renderMissionStages(d.stages);
-      renderMissionReport(d.report);
+      applyMissionResult(await res.json());
     } finally {
       btn.disabled = false;
       btn.textContent = "Run mission: build & deploy a secure enterprise service";
     }
+  }
+
+  async function handleGateDecision(decision) {
+    if (!cmdosMissionId) return;
+    const res = await fetch(
+      "/api/command-os/mission/" + cmdosMissionId + "/gate?decision=" + decision,
+      { method: "POST" }
+    );
+    if (!res.ok) return;
+    applyMissionResult(await res.json());
   }
 
   async function renderSystemReality() {
@@ -1284,6 +1355,75 @@
   $("cmdos-run").addEventListener("click", runMission);
   $("cmdos-open-instrument").addEventListener("click", showInstrument);
   $("instr-cmdos-link").addEventListener("click", showCommandOS);
+  $("cmdos-gate-approve").addEventListener("click", () => handleGateDecision("approve"));
+  $("cmdos-gate-deny").addEventListener("click", () => handleGateDecision("deny"));
+
+  // ── MISSION TIME MACHINE ────────────────────────────────────────────
+
+  async function showTimeMachine() {
+    hideCore();
+    show("mission-time-machine");
+    $("mtm-checkpoints").innerHTML = "";
+    $("mtm-detail").hidden = true;
+    const res = await fetch("/api/command-os/missions");
+    const d = await res.json();
+    const list = $("mtm-missions");
+    if (!d.available || d.missions.length === 0) {
+      list.innerHTML = "<li class='cmdos-stage'><div class='cmdos-stage-summary'>no missions recorded yet — run one from Agentic Command OS first</div></li>";
+      return;
+    }
+    list.innerHTML = d.missions.map((m) => (
+      "<li class='cmdos-stage cmdos-clickable' data-mission='" + m.mission_id + "'>" +
+        "<div class='cmdos-stage-head'>" +
+          "<span class='cmdos-stage-name cond'>" + m.mission_id + "</span>" +
+          "<span class='cmdos-tag " + statusClass(m.status === "COMPLETED" ? "LIVE" : m.status === "HALTED" ? "UNAVAILABLE" : "SIMULATED") + "'>" + m.status + "</span>" +
+        "</div>" +
+        "<div class='cmdos-stage-summary'>" + m.objective + "</div>" +
+      "</li>"
+    )).join("");
+    list.querySelectorAll("[data-mission]").forEach((li) => {
+      li.addEventListener("click", () => loadCheckpointTimeline(li.dataset.mission));
+    });
+  }
+
+  async function loadCheckpointTimeline(missionId) {
+    $("mtm-detail").hidden = true;
+    const res = await fetch("/api/command-os/mission/" + missionId + "/checkpoints");
+    if (!res.ok) return;
+    const d = await res.json();
+    const el = $("mtm-checkpoints");
+    el.innerHTML = d.checkpoints.map((c) => (
+      "<li class='cmdos-stage cmdos-clickable' data-seq='" + c.seq + "'>" +
+        "<div class='cmdos-stage-head'>" +
+          "<span class='cmdos-stage-n'>" + String(c.seq).padStart(2, "0") + "</span>" +
+          "<span class='cmdos-stage-name cond'>" + c.stage.name + "</span>" +
+          "<span class='cmdos-tag " + statusClass(c.status === "COMPLETED" ? "LIVE" : c.status === "HALTED" ? "UNAVAILABLE" : "SIMULATED") + "'>" + c.status + "</span>" +
+        "</div>" +
+        "<div class='cmdos-stage-summary'>" + c.stage.summary + "</div>" +
+      "</li>"
+    )).join("");
+    el.querySelectorAll("[data-seq]").forEach((li, i) => {
+      li.addEventListener("click", () => showCheckpointDetail(d.checkpoints[i]));
+    });
+  }
+
+  function showCheckpointDetail(cp) {
+    const el = $("mtm-detail");
+    el.hidden = false;
+    el.innerHTML =
+      "<div class='cmdos-report-title cond'>CHECKPOINT " + String(cp.seq).padStart(2, "0") + "</div>" +
+      "<div class='cmdos-report-grid'>" +
+        "<div><span class='k'>stage</span><span class='v'>" + cp.stage.name + "</span></div>" +
+        "<div><span class='k'>status</span><span class='v'>" + cp.status + "</span></div>" +
+        "<div><span class='k'>recorded</span><span class='v'>" + cp.created_at + "</span></div>" +
+      "</div>" +
+      "<pre class='cmdos-hint mono' style='white-space:pre-wrap;margin-top:12px'>" +
+        JSON.stringify(cp.ctx, null, 2) +
+      "</pre>";
+  }
+
+  $("cmdos-open-timemachine").addEventListener("click", showTimeMachine);
+  $("mtm-back").addEventListener("click", showCommandOS);
 
   async function showInstrument() {
     hideCore();
@@ -1324,7 +1464,7 @@
   const SCREENS = [
     "split", "obligation", "court", "loadrating", "honesty", "instrument",
     "warrant-detail", "tower-detail", "countersign-detail", "hyperion-detail",
-    "singularity-detail", "command-os",
+    "singularity-detail", "command-os", "mission-time-machine",
   ];
 
   function show(name) {

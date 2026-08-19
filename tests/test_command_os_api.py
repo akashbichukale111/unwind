@@ -57,8 +57,63 @@ def test_mission_endpoint_runs_end_to_end() -> None:
         resp = client.post("/api/command-os/mission")
     assert resp.status_code == 200
     body = resp.json()
+    assert body["status"] == "COMPLETED"
     assert len(body["stages"]) == 11
     assert body["report"]["validation"] == "PASS"
+
+
+@requires_emulator
+def test_gate_pause_approve_deny_and_resume_via_http() -> None:
+    from command_os.mission import reset_for_test
+
+    with TestClient(app) as client:
+        paused = client.post("/api/command-os/mission?auto_approve=false").json()
+        assert paused["status"] == "AWAITING_HUMAN"
+        assert paused["report"] is None
+        mission_id = paused["mission_id"]
+
+        # the crash-recovery endpoint refuses a gated mission
+        refused = client.post(f"/api/command-os/mission/{mission_id}/resume")
+        assert refused.status_code == 409
+
+        # an invalid decision is rejected before touching the mission
+        bad = client.post(f"/api/command-os/mission/{mission_id}/gate?decision=maybe")
+        assert bad.status_code == 422
+
+        approved = client.post(f"/api/command-os/mission/{mission_id}/gate?decision=approve").json()
+        assert approved["status"] == "COMPLETED"
+
+        checkpoints = client.get(f"/api/command-os/mission/{mission_id}/checkpoints").json()
+        assert len(checkpoints["checkpoints"]) == 11
+    reset_for_test(mission_id)
+
+
+@requires_emulator
+def test_trust_and_context_firewall_endpoints_are_wired() -> None:
+    from command_os.mission import reset_for_test
+
+    with TestClient(app) as client:
+        result = client.post("/api/command-os/mission").json()
+        mission_id = result["mission_id"]
+
+        trust = client.get(f"/api/command-os/mission/{mission_id}/trust").json()
+        assert trust["mission_status"] == "COMPLETED"
+
+        firewall = client.get(f"/api/command-os/mission/{mission_id}/context-firewall").json()
+        assert len(firewall["decisions"]) == 11
+
+        missions = client.get("/api/command-os/missions").json()
+        assert missions["available"] is True
+        assert mission_id in {m["mission_id"] for m in missions["missions"]}
+    reset_for_test(mission_id)
+
+
+def test_checkpoints_for_an_unknown_mission_is_404() -> None:
+    if not _emulator_up():
+        pytest.skip("needs the emulator to reach Firestore at all")
+    with TestClient(app) as client:
+        resp = client.get("/api/command-os/mission/mission_does_not_exist/checkpoints")
+    assert resp.status_code == 404
 
 
 def test_mission_endpoint_without_emulator_reports_unavailable_not_a_crash() -> None:

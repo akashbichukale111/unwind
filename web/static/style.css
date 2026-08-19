@@ -931,6 +931,7 @@ html, body {
  * itself stays bone. */
 .cmdos-unavailable { color: var(--bone); border-color: var(--oxide); }
 .cmdos-reference { color: var(--bone); opacity: 0.55; }
+.cmdos-designed { color: var(--bone); opacity: 0.4; border-style: dotted; }
 
 .cmdos-report {
   border: 1px solid var(--verdigris);
@@ -959,6 +960,38 @@ html, body {
   border-bottom: 1px solid rgba(38, 44, 52, 0.6);
 }
 .cmdos-reality-feature { color: var(--bone); opacity: 0.72; }
+
+.cmdos-gate-toggle { display: flex; align-items: center; gap: 6px; color: var(--bone); opacity: 0.72; }
+.cmdos-gate-toggle input { accent-color: var(--amber); }
+
+/* The pause state gets its own colour: not built (designed/dotted), not a
+ * live pass (amber), not a block (oxide-bordered) -- a decision genuinely
+ * pending, so it reuses the paper's rust-on-bone contrast pairing already
+ * proven for `.btn-dark`, since this panel visually reads as a request for
+ * a human's attention the same way the paper obligation does. */
+.cmdos-gate {
+  border: 1px solid var(--oxide);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  max-width: 78ch;
+  animation: rise 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cmdos-gate-title { color: var(--bone); font-size: 15px; margin-bottom: 10px; }
+.cmdos-gate-body { color: var(--bone); opacity: 0.78; line-height: 1.7; margin: 0 0 16px; max-width: 68ch; }
+
+.cmdos-tf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 40px; margin-bottom: 26px; max-width: 78ch; }
+.cmdos-trust, .cmdos-firewall { display: flex; flex-direction: column; }
+
+.cmdos-mission-list { list-style: none; padding: 0; margin: 0; max-width: 40ch; }
+.cmdos-clickable { cursor: pointer; }
+.cmdos-clickable:hover, .cmdos-clickable:focus-visible {
+  border-color: var(--amber);
+  background: rgba(200, 138, 46, 0.06);
+}
+
+@media (max-width: 900px) {
+  .cmdos-tf-grid { grid-template-columns: 1fr; }
+}
 
 /* ── REDUCED MOTION ──────────────────────────────────────────────
  * The die-back must still be communicated. Animation is removed; the

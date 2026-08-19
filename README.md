@@ -53,12 +53,33 @@ Gateway is asked again and allows it. The mission resumes. The executive
 report at the end is folded from the stages that actually ran — never
 hardcoded.
 
+**Continuous Mission State:** a mission isn't a fire-and-forget call. Every
+stage writes a real Firestore checkpoint (`command_os/checkpoint.py`), so a
+mission survives a process restart — `resume_mission` distinguishes ALREADY
+COMPLETED, REQUIRES HUMAN APPROVAL, and REPLAYABLE FROM THE NEXT STAGE, and
+never re-enters a completed stage (no duplicate warrant spend, no duplicate
+Hyperion event). Set **"require human approval before repair"** and the
+mission pauses at a real **Human Override Gate** after isolating the agent
+instead of auto-concurring — approve resumes into the same repair chain,
+deny halts it, and neither choice can overturn the Gateway's original
+refusal (true by construction, not by promise — see
+`docs/mission-state.md`). **Trusted State** folds the mission into four
+named buckets (TRUSTED/UNTRUSTED/QUARANTINED/REVOKED), deliberately never a
+score — this repository already rejected scalar agent trust once
+(`lib/schema.py:AgentTrust`, refused by
+`settle/loadrating.py:assert_not_agent_trust`). The **Context Firewall**
+scores what a resumed mission actually sees on three real signals
+(freshness, trust, relevance). The **Mission Time Machine** UI inspects any
+past mission's real checkpoint history — historical-state reconstruction,
+not a digital twin (Chronos-Void stays honestly `DESIGNED`).
+
 | | |
 | --- | --- |
 | Full architecture, diagram, component table | [`docs/architecture.md`](docs/architecture.md) |
+| Checkpointing, resumability, trust, gate, firewall | [`docs/mission-state.md`](docs/mission-state.md) |
 | Four-minute demo script | [`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md) |
 | Where each of the 15 concept names in the hackathon brief actually lives | [`docs/COMMAND-OS-CONCEPT-MAP.md`](docs/COMMAND-OS-CONCEPT-MAP.md) |
-| API | `POST /api/command-os/mission`, `GET /api/command-os/status`, `GET /api/command-os/concept-map` |
+| API | `POST /api/command-os/mission[?auto_approve=]`, `.../resume`, `.../gate`, `.../trust`, `.../context-firewall`, `GET .../missions`, `.../checkpoints`, `.../status`, `.../concept-map` |
 | Code | `command_os/` (new); reuses `singularity/`, `hyperion/`, `tower/`, `warrant/`, `countersign/` unchanged |
 
 **What is honestly not built:** a live agent-spawning fleet (the roster is
@@ -102,17 +123,19 @@ Nothing here needs a Google Cloud account.
 git clone https://github.com/akashbichukale111/unwind.git
 cd unwind
 make install                              # uv venv (Python 3.12) + deps
-make test                                 # 423 passed, 1 skipped (with `make emulator` running) / 364 passed, 60 skipped (without)
+make test                                 # 441 passed, 1 skipped (with `make emulator` running) / 364 passed, 78 skipped (without)
 make ui                                   # http://127.0.0.1:8000
 ```
 
-**Re-verified 2026-08-19** after adding the Agentic Command OS layer
-(`command_os/` — see below): `make install` exit 0; `make test` **423
-passed, 1 skipped** with the Firestore emulator running, **364 passed, 60
-skipped, 0 failed** without it — both runs, same clone, same commit. The one
-emulator-mode skip is by design (`tests/test_command_os_api.py`'s
-no-emulator-path test skips itself when the emulator is up). `ruff check`
-and `ruff format --check` both clean. Full command-by-command breakdown in
+**Re-verified 2026-08-19** after adding Continuous Mission State
+(checkpointing, resumability, Trusted State, the Human Override Gate, and
+the Context Firewall — see below) on top of the Agentic Command OS layer:
+`make install` exit 0; `make test` **441 passed, 1 skipped** with the
+Firestore emulator running, **364 passed, 78 skipped, 0 failed** without it
+— both runs, same clone, same commit. The one emulator-mode skip is by
+design (`tests/test_command_os_api.py`'s no-emulator-path test skips itself
+when the emulator is up). `ruff check` and `ruff format --check` both
+clean. Full command-by-command breakdown in
 [`docs/architecture.md`](docs/architecture.md) and
 [`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md).
 
@@ -375,15 +398,15 @@ measurement. Full reasoning in [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md
 
 ## What has actually been run
 
-**`make test` → 423 passed, 1 skipped** with the Firestore emulator running
-(`make emulator`); **364 passed, 60 skipped** without it (every skip is
+**`make test` → 441 passed, 1 skipped** with the Firestore emulator running
+(`make emulator`); **364 passed, 78 skipped** without it (every skip is
 emulator-gated Firestore infrastructure — `tower/`, `warrant/`,
 `countersign/`, `command_os/`'s persisted-section tests). `ruff check` and
 `ruff format --check` clean.
 
 | Command | Result |
 | --- | --- |
-| `make test` | **423 passed, 1 skipped** (emulator running) / **364 passed, 60 skipped** (without) |
+| `make test` | **441 passed, 1 skipped** (emulator running) / **364 passed, 78 skipped** (without) |
 | `make eval` | **41 scenarios passed**, 0 failed, **0 model calls**; false-retraction rate **0.0** |
 | `UNWIND_VERTEX_DISABLED=1 make eval` | identical. Enforced in CI |
 | `make verify-live` | executed 2026-08-13 — Vertex call **OK**, **0 model errors**, recall **81.8% → 100.0%** |
