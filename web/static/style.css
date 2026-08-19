@@ -894,6 +894,66 @@ html, body {
   .sm-layer-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
+/* ── AGENTIC COMMAND OS ──────────────────────────────────────────
+ * The master orchestration layer above the instrument. Same dark overlay
+ * register (`.overlay`), same restrained palette -- no new hue, no new
+ * surface language, the same "amber = live, everything else says what it
+ * actually is" discipline the six existing cards already use.
+ */
+.cmdos-lede { max-width: 68ch; opacity: 0.7; margin: 0 0 22px; }
+.cmdos-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.cmdos-back-link { position: absolute; top: 22px; right: 24px; }
+
+.cmdos-stages { list-style: none; padding: 0; margin: 0 0 26px; max-width: 78ch; }
+.cmdos-stage {
+  border-left: 2px solid var(--slate);
+  padding: 8px 0 10px 14px;
+  margin-bottom: 6px;
+}
+.cmdos-stage-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cmdos-stage-n { color: var(--bone); opacity: 0.45; }
+.cmdos-stage-name { color: var(--bone); font-size: 13px; letter-spacing: 0.02em; }
+.cmdos-stage-summary { color: var(--bone); opacity: 0.72; margin-top: 4px; line-height: 1.7; }
+
+.cmdos-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid var(--slate);
+  border-radius: 2px;
+}
+.cmdos-live { color: var(--amber); border-color: var(--amber); }
+.cmdos-simulated { color: var(--bone); opacity: 0.85; border-style: dashed; }
+.cmdos-unavailable { color: var(--oxide); border-color: var(--oxide); }
+.cmdos-reference { color: var(--bone); opacity: 0.55; }
+
+.cmdos-report {
+  border: 1px solid var(--verdigris);
+  padding: 16px 20px;
+  margin-bottom: 30px;
+  max-width: 78ch;
+}
+.cmdos-report-title { color: var(--verdigris); font-size: 16px; margin-bottom: 10px; }
+.cmdos-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+.cmdos-report-grid .k { color: var(--bone); opacity: 0.62; margin-right: 8px; }
+.cmdos-report-grid .v { color: var(--bone); font-variant-numeric: tabular-nums; }
+
+.cmdos-h { color: var(--bone); opacity: 0.72; font-size: 12px; letter-spacing: 0.04em; margin: 0 0 4px; }
+.cmdos-hint { color: var(--bone); opacity: 0.55; margin: 0 0 14px; }
+.cmdos-reality { display: flex; flex-wrap: wrap; gap: 24px 40px; }
+.cmdos-reality-group { min-width: 220px; }
+.cmdos-reality-area { color: var(--bone); opacity: 0.8; font-size: 12px; margin-bottom: 6px; }
+.cmdos-reality-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(38, 44, 52, 0.6);
+}
+.cmdos-reality-feature { color: var(--bone); opacity: 0.72; }
+
 /* ── REDUCED MOTION ──────────────────────────────────────────────
  * The die-back must still be communicated. Animation is removed; the
  * counter becomes a stepped figure and the field redraws in place.

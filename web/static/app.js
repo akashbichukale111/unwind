@@ -1190,6 +1190,101 @@
     btn.addEventListener("click", showInstrument);
   });
 
+  // ── AGENTIC COMMAND OS — master orchestration layer above the instrument.
+  // Additive only: every function below is new, nothing above it changed.
+
+  function statusClass(status) {
+    if (status.indexOf("LIVE") === 0) return "cmdos-live";
+    if (status === "SIMULATED") return "cmdos-simulated";
+    if (status === "UNAVAILABLE") return "cmdos-unavailable";
+    if (status === "DESIGNED") return "cmdos-designed";
+    return "cmdos-reference";
+  }
+
+  function renderMissionStages(stages) {
+    const el = $("cmdos-stages");
+    el.innerHTML = stages.map((s) => (
+      "<li class='cmdos-stage'>" +
+        "<div class='cmdos-stage-head'>" +
+          "<span class='cmdos-stage-n'>" + String(s.n).padStart(2, "0") + "</span>" +
+          "<span class='cmdos-stage-name cond'>" + s.name + "</span>" +
+          "<span class='cmdos-tag " + statusClass(s.status) + "'>" + s.status + "</span>" +
+        "</div>" +
+        "<div class='cmdos-stage-summary'>" + s.summary + "</div>" +
+      "</li>"
+    )).join("");
+  }
+
+  function renderMissionReport(report) {
+    const el = $("cmdos-report");
+    el.hidden = false;
+    const pass = report.validation === "PASS";
+    el.innerHTML =
+      "<div class='cmdos-report-title cond'>MISSION: " + (pass ? "SUCCESS" : "INCOMPLETE") + "</div>" +
+      "<div class='cmdos-report-grid'>" +
+        "<div><span class='k'>agents in fleet</span><span class='v'>" + report.agents_in_fleet + "</span></div>" +
+        "<div><span class='k'>threats detected</span><span class='v'>" + report.threats_detected + "</span></div>" +
+        "<div><span class='k'>unsafe actions executed</span><span class='v'>" + report.unsafe_actions_executed + "</span></div>" +
+        "<div><span class='k'>agents isolated</span><span class='v'>" + report.agents_isolated + "</span></div>" +
+        "<div><span class='k'>repairs completed</span><span class='v'>" + report.repairs_completed + "</span></div>" +
+        "<div><span class='k'>validation</span><span class='v'>" + report.validation + "</span></div>" +
+        "<div><span class='k'>fleet status</span><span class='v'>" + report.fleet_status + "</span></div>" +
+      "</div>";
+  }
+
+  async function runMission() {
+    const btn = $("cmdos-run");
+    btn.disabled = true;
+    btn.textContent = "MISSION RUNNING…";
+    $("cmdos-offline").hidden = true;
+    $("cmdos-report").hidden = true;
+    $("cmdos-stages").innerHTML = "";
+    try {
+      const res = await fetch("/api/command-os/mission", { method: "POST" });
+      if (res.status === 503) {
+        $("cmdos-offline").hidden = false;
+        return;
+      }
+      const d = await res.json();
+      renderMissionStages(d.stages);
+      renderMissionReport(d.report);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run mission: build & deploy a secure enterprise service";
+    }
+  }
+
+  async function renderSystemReality() {
+    const res = await fetch("/api/command-os/status");
+    const d = await res.json();
+    const byArea = {};
+    d.rows.forEach((r) => {
+      (byArea[r.area] = byArea[r.area] || []).push(r);
+    });
+    const el = $("cmdos-reality");
+    el.innerHTML = Object.keys(byArea).map((area) => (
+      "<div class='cmdos-reality-group'>" +
+        "<div class='cmdos-reality-area cond'>" + area + "</div>" +
+        byArea[area].map((r) => (
+          "<div class='cmdos-reality-row'>" +
+            "<span class='cmdos-reality-feature'>" + r.feature.replace(/_/g, " ") + "</span>" +
+            "<span class='cmdos-tag " + statusClass(r.status) + "'>" + r.status + "</span>" +
+          "</div>"
+        )).join("") +
+      "</div>"
+    )).join("");
+  }
+
+  async function showCommandOS() {
+    hideCore();
+    show("command-os");
+    renderSystemReality();
+  }
+
+  $("cmdos-run").addEventListener("click", runMission);
+  $("cmdos-open-instrument").addEventListener("click", showInstrument);
+  $("instr-cmdos-link").addEventListener("click", showCommandOS);
+
   async function showInstrument() {
     hideCore();
     const res = await fetch("/api/instrument");
@@ -1229,7 +1324,7 @@
   const SCREENS = [
     "split", "obligation", "court", "loadrating", "honesty", "instrument",
     "warrant-detail", "tower-detail", "countersign-detail", "hyperion-detail",
-    "singularity-detail",
+    "singularity-detail", "command-os",
   ];
 
   function show(name) {
@@ -1316,7 +1411,7 @@
     banner.textContent =
       "REPLAY — live run failed (" + err.message + "), this is a recorded execution";
   });
-  showInstrument();
+  showCommandOS();
 
   window.__unwindState = state;
 })();

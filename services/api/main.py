@@ -1190,6 +1190,41 @@ async def singularity_behavior_probe(scenario: str = Query("normal")) -> dict[st
 
 
 # ---------------------------------------------------------------------------
+# AGENTIC COMMAND OS -- the master orchestration layer above Cards 0-5.
+# `command_os/mission.py` contains no new decision logic: every stage below
+# is a real call into an engine that is already live one layer down (see
+# that module's docstring for the exact chain). This section only wires it
+# into the API surface, the same thin-wrapper discipline every other
+# endpoint in this file already follows.
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/command-os/mission")
+async def command_os_mission(objective: str = Query("")) -> dict[str, Any]:
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore emulator not reachable.")
+
+    from command_os.mission import DEFAULT_OBJECTIVE, run_mission
+
+    result = run_mission(objective.strip() or DEFAULT_OBJECTIVE)
+    return result.model_dump(mode="json")
+
+
+@app.get("/api/command-os/status")
+async def command_os_status() -> dict[str, Any]:
+    from command_os.status import system_reality
+
+    return {"rows": system_reality()}
+
+
+@app.get("/api/command-os/concept-map")
+async def command_os_concept_map() -> dict[str, Any]:
+    from command_os.concept_map import CONCEPT_MAP
+
+    return {"rows": CONCEPT_MAP}
+
+
+# ---------------------------------------------------------------------------
 # STATIC UI -- mounted last so it cannot shadow an API route
 # ---------------------------------------------------------------------------
 

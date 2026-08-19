@@ -11,7 +11,7 @@
      and the fallback stacks in style.css keep the condensed/serif/mono split. -->
 <link rel="stylesheet" media="print" onload="this.media='all'"
       href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" />
-<link rel="stylesheet" href="/static/style.css?v=5" />
+<link rel="stylesheet" href="/static/style.css?v=6" />
 </head>
 <body>
 
@@ -178,8 +178,39 @@
   <button class="btn btn-advance" data-next="field" type="button">Back to the field</button>
 </section>
 
+<!-- ─────────── AGENTIC COMMAND OS (master orchestration layer, above the
+     six existing control layers below — additive only, nothing under
+     #instrument changes) ─────────── -->
+<section id="command-os" class="overlay cmdos">
+  <h2 class="cond overlay-h">AGENTIC COMMAND OS</h2>
+  <p class="mono cmdos-lede">the master orchestration layer above UNWIND's six control layers — one
+    mission, run end to end through the real engines beneath it</p>
+
+  <div class="cmdos-actions">
+    <button id="cmdos-run" type="button" class="btn">Run mission: build &amp; deploy a secure enterprise service</button>
+    <button id="cmdos-open-instrument" type="button" class="btn btn-quiet">the six-layer instrument &#9658;</button>
+  </div>
+
+  <div id="cmdos-offline" class="mono instr-offline" hidden>
+    FIRESTORE UNREACHABLE — start the emulator (<span class="cond">make emulator</span>) to run a mission.
+  </div>
+
+  <ol id="cmdos-stages" class="cmdos-stages mono" aria-live="polite"></ol>
+
+  <div id="cmdos-report" class="cmdos-report mono" hidden></div>
+
+  <h3 class="mono cmdos-h">System Reality</h3>
+  <p class="cmdos-hint mono">every feature below carries its own honest status — nothing here claims
+    to be live that is not</p>
+  <div id="cmdos-reality" class="cmdos-reality mono"></div>
+
+  <p class="instr-hint mono">every stage below calls a real engine one layer down · exactly one input
+    per mission is scripted, and it is labelled SIMULATED</p>
+</section>
+
 <!-- ─────────── THE INSTRUMENT (Card 0 spanning Cards 1-3) ─────────── -->
-<section id="instrument" class="overlay instrument">
+<section id="instrument" class="overlay instrument" hidden>
+  <button type="button" id="instr-cmdos-link" class="btn btn-quiet cmdos-back-link">&#9650; Agentic Command OS</button>
   <h2 class="cond overlay-h">UNWIND — THE INSTRUMENT</h2>
 
   <div id="instr-offline" class="mono instr-offline" hidden>
@@ -597,6 +628,6 @@
 
 <div id="replay-banner" class="replay mono" hidden></div>
 
-<script src="/static/app.js?v=6"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>

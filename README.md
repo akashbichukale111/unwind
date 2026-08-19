@@ -20,6 +20,58 @@ Google "All Things Agentic" Hackathon
 
 ---
 
+## Agentic Command OS — the master orchestration layer
+
+**One line:** an integrated closed-loop control architecture for autonomous
+AI-agent fleets — create, negotiate capability, monitor behaviour, detect
+drift, block, isolate, repair, validate, resume — sitting above UNWIND's six
+existing control layers, not replacing any of them.
+
+UNWIND (this repository) already had six independently-working control
+layers before this pass: **UNWIND** (consequence clearing, above), **WARRANT**
+(append-only capability ledger), **CONTROL TOWER** (the one Gateway choke
+point), **COUNTERSIGN** (independent verification), **HYPERION-ZERO**
+(read-only immune layer over the Gateway), and **SINGULARITY-MESH**
+(Capability Genome + Behavioral DNA — two more real, zero-model decision
+engines). What was missing was a single narrative that runs a mission
+*through* all of them in order and reports the outcome honestly.
+`command_os/mission.py` is that narrative — one function, no new decision
+logic, that sequences real calls into the six layers above and reports what
+each one actually returned.
+
+**The wow moment, live:** open the app, click **"Run mission: build & deploy
+a secure enterprise service."** A 7-role fleet is discovered. An agent
+negotiates its Capability Genome. Behavioral DNA takes a normal baseline,
+then — one scripted, clearly-labelled adversarial event — scores `CRITICAL`
+drift. Hyperion scores the attempted action; the real Gateway (`tower/gateway.py`,
+unchanged) refuses it `SCOPE_EXCEEDED` before any work happens. An independent
+Countersign verifier confirms the block. The agent is isolated. A narrower
+genome is negotiated, a human concurs, warrant is re-minted — real Firestore
+writes, the same `record_human_concurrence` → `verify_and_record` → `mint`
+chain `/api/instrument/earn` already used for its own cold-start moment. The
+Gateway is asked again and allows it. The mission resumes. The executive
+report at the end is folded from the stages that actually ran — never
+hardcoded.
+
+| | |
+| --- | --- |
+| Full architecture, diagram, component table | [`docs/architecture.md`](docs/architecture.md) |
+| Four-minute demo script | [`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md) |
+| Where each of the 15 concept names in the hackathon brief actually lives | [`docs/COMMAND-OS-CONCEPT-MAP.md`](docs/COMMAND-OS-CONCEPT-MAP.md) |
+| API | `POST /api/command-os/mission`, `GET /api/command-os/status`, `GET /api/command-os/concept-map` |
+| Code | `command_os/` (new); reuses `singularity/`, `hyperion/`, `tower/`, `warrant/`, `countersign/` unchanged |
+
+**What is honestly not built:** a live agent-spawning fleet (the roster is
+reference data, `singularity/fleet.py`, unchanged from before this pass), an
+autonomous red-team agent (one scripted scenario per mission run, not an
+adversarial agent that improvises), and a Digital Twin / simulation engine
+(does not exist). The mission's own `GET /api/command-os/status` states this
+for every feature on screen — a "System Reality" panel is not a marketing
+page, it is a second, independently-queryable source that has to agree with
+the UI or the UI is wrong.
+
+---
+
 ## 2,594 → 78, and the reduction is arithmetic
 
 A supplier lead time moves from 11 days to 20. The reverse index finds **2,594
@@ -50,16 +102,19 @@ Nothing here needs a Google Cloud account.
 git clone https://github.com/akashbichukale111/unwind.git
 cd unwind
 make install                              # uv venv (Python 3.12) + deps
-make test                                 # 369 passed (with `make emulator` running) / 325 passed, 44 skipped (without)
+make test                                 # 423 passed, 1 skipped (with `make emulator` running) / 364 passed, 60 skipped (without)
 make ui                                   # http://127.0.0.1:8000
 ```
 
-**Re-verified in a clean clone, 2026-08-17 02:04–02:06 UTC**: `make install`
-exit 0; `make test` **369 passed, 0 failed** with the Firestore emulator
-running, **325 passed, 44 skipped, 0 failed** without it — both runs, same
-clone, same commit. `bash scripts/verify_adk_mapping.sh` — **10/10 checks
-passed**, every ADK 2 construct this README claims found at its cited
-`file:line`. Full transcripts in `evidence/INDEX.md`.
+**Re-verified 2026-08-19** after adding the Agentic Command OS layer
+(`command_os/` — see below): `make install` exit 0; `make test` **423
+passed, 1 skipped** with the Firestore emulator running, **364 passed, 60
+skipped, 0 failed** without it — both runs, same clone, same commit. The one
+emulator-mode skip is by design (`tests/test_command_os_api.py`'s
+no-emulator-path test skips itself when the emulator is up). `ruff check`
+and `ruff format --check` both clean. Full command-by-command breakdown in
+[`docs/architecture.md`](docs/architecture.md) and
+[`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md).
 
 Then type `supplier_K lead time is now 20 days` into the bar and watch 2,594
 become 78. Press **`T`** to open the four-card instrument (Cards 0–3) — see
@@ -320,15 +375,15 @@ measurement. Full reasoning in [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md
 
 ## What has actually been run
 
-**`make test` → 369 passed, 0 skipped** with the Firestore emulator running
-(`make emulator`); **325 passed, 44 skipped** without it (every skip is
+**`make test` → 423 passed, 1 skipped** with the Firestore emulator running
+(`make emulator`); **364 passed, 60 skipped** without it (every skip is
 emulator-gated Firestore infrastructure — `tower/`, `warrant/`,
-`countersign/`'s persisted-section tests). `ruff check` and
+`countersign/`, `command_os/`'s persisted-section tests). `ruff check` and
 `ruff format --check` clean.
 
 | Command | Result |
 | --- | --- |
-| `make test` | **369 passed** (emulator running) / **325 passed, 44 skipped** (without) |
+| `make test` | **423 passed, 1 skipped** (emulator running) / **364 passed, 60 skipped** (without) |
 | `make eval` | **41 scenarios passed**, 0 failed, **0 model calls**; false-retraction rate **0.0** |
 | `UNWIND_VERTEX_DISABLED=1 make eval` | identical. Enforced in CI |
 | `make verify-live` | executed 2026-08-13 — Vertex call **OK**, **0 model errors**, recall **81.8% → 100.0%** |
