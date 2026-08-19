@@ -206,6 +206,19 @@ COLLECTION_WARRANT_LEDGER = "warrant_ledger"
 #: Append-only risk-scored log of Gateway decisions. hyperion/immune_memory.py.
 COLLECTION_HYPERION_EVENTS = "hyperion_events"
 
+# ---------------------------------------------------------------------------
+# SINGULARITY-MESH (Card 5): the zero-trust autonomous agent fleet framework.
+# Its own collection for the two live, deterministic decision engines this
+# card actually implements -- Capability Genome negotiation and Behavioral
+# DNA drift detection (singularity/genome.py, singularity/behavior.py). Never
+# folded into hyperion_events or decision_memory: a mesh event is caused by a
+# capability-genome or behavioral-drift computation, a distinct concern from
+# either of those. See singularity/DESIGN.md for what is built vs. reference
+# architecture only.
+# ---------------------------------------------------------------------------
+#: Append-only log of capability-genome and behavioral-DNA decisions. singularity/mesh_memory.py.
+COLLECTION_SINGULARITY_EVENTS = "singularity_mesh_events"
+
 #: Subcollection under reverse_index/{claim_id}
 SUBCOLLECTION_DEPENDENTS = "dependents"
 #: Subcollection under cascades/{cascade_id}
@@ -225,6 +238,7 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_CASES,
     COLLECTION_WARRANT_LEDGER,
     COLLECTION_HYPERION_EVENTS,
+    COLLECTION_SINGULARITY_EVENTS,
 )
 
 

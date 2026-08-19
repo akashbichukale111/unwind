@@ -903,6 +903,218 @@
     renderHyperionHome(d);
   }
 
+  // ── SINGULARITY-MESH (Card 5 -- zero-trust autonomous agent fleet) ──
+  // Its own endpoints, `/api/singularity` and the two probes -- an
+  // independent concern from both the four-card instrument payload and
+  // Hyperion's `/api/hyperion`. See `singularity/DESIGN.md`: only
+  // Capability Genome, Behavioral DNA and their event log are LIVE; the
+  // fleet/architecture/MCP/etc. sections below are reference content and
+  // are rendered with an explicit ARCHITECTURE badge, never claimed live.
+
+  async function fetchSingularity() {
+    const res = await fetch("/api/singularity");
+    return res.json();
+  }
+
+  function statusBadge(status) {
+    const s = String(status || "");
+    let cls = "arch";
+    if (s.includes("LIVE")) cls = "live";
+    else if (s.includes("DEMO") || s.includes("SIMULATION")) cls = "demo";
+    return `<span class="sm-status ${cls}">${s}</span>`;
+  }
+
+  function smFlowLine(steps) {
+    return steps.map((s) => `<span>${s}</span>`).join('<span class="sm-arrow">→</span>');
+  }
+
+  function smFlowSteps(containerId, steps, liveNames) {
+    const live = new Set(liveNames || []);
+    $(containerId).innerHTML = steps
+      .map((s, i) => {
+        const name = s.name || s;
+        const isLive = live.has(name) || (s.status && String(s.status).includes("LIVE"));
+        const step = `<span class="step${isLive ? " live" : ""}">${name}</span>`;
+        return i === 0 ? step : `<span class="sep">→</span>${step}`;
+      })
+      .join("");
+  }
+
+  function renderSingularityHome(d) {
+    if (!d.mesh_available) {
+      $("instr-c5").innerHTML =
+        `<div>Capability Genome · Behavioral DNA <span class="amber">ARCHITECTURE PREVIEW</span></div>` +
+        `<div style="opacity:.6">mesh log unreachable — start <span class="mono">make emulator</span></div>`;
+      return;
+    }
+    $("instr-c5").innerHTML =
+      `<div>fleet ${d.fleet.length} agents · lifecycle ${d.lifecycle_stages.length} stages</div>` +
+      `<div class="amber">genome ${d.genome_events_total} · drift ${d.behavior_events_total} · ` +
+      `denials ${d.capability_denials} · isolations ${d.behavioral_isolations}</div>`;
+  }
+
+  function fleetRow(a) {
+    return (
+      `<div class="reg-row">` +
+      `<div class="reg-id">${a.title} ${statusBadge(a.status)}</div>` +
+      `<div>${a.responsibility}</div>` +
+      `<div>inputs: ${a.inputs.join(", ")}</div>` +
+      `<div>outputs: ${a.outputs.join(", ")}</div>` +
+      `<div>security: ${a.security_responsibility}</div>` +
+      `<div>relationship: ${a.relationship}</div>` +
+      `</div>`
+    );
+  }
+
+  function renderSingularityDetail(d) {
+    // The Agent Fleet -- Sentinel + Orchestrator up top, workers in their own section.
+    const sentinelAndOrchestrator = d.fleet.filter((a) => !a.role.startsWith("WORKER"));
+    const workers = d.fleet.filter((a) => a.role.startsWith("WORKER"));
+    $("sm-fleet").innerHTML = sentinelAndOrchestrator.map(fleetRow).join("");
+    $("sm-workers").innerHTML = workers.map(fleetRow).join("");
+
+    // Lifecycle timeline (hero).
+    $("sm-lifecycle").innerHTML = d.lifecycle_stages
+      .map(
+        (s) =>
+          `<div class="sm-stage"><div class="n">${String(s.n).padStart(2, "0")}</div>` +
+          `<div class="name">${s.name}</div><div class="note">${s.note}</div></div>`
+      )
+      .join("");
+
+    // Agent Immune System.
+    $("sm-immune").innerHTML = d.immune_layers
+      .map(
+        (l) =>
+          `<div class="sm-immune-card${l.status === "LIVE" ? " sm-immune-live" : ""}">` +
+          `<div class="name">${l.name} ${statusBadge(l.status)}</div>` +
+          `<div class="threat">${l.threat}</div>` +
+          `<div class="action">${l.action}</div></div>`
+      )
+      .join("");
+
+    // MCP / Knowledge Catalog / Model Armor / Agent Gateway flows.
+    $("sm-mcp-flow").innerHTML = smFlowLine(d.mcp_flow);
+    $("sm-catalog").innerHTML = smFlowLine(d.knowledge_catalog_sources);
+    $("sm-armor-flow").innerHTML = smFlowLine(d.model_armor_flow);
+    $("sm-gateway-resp").innerHTML = smFlowLine(d.agent_gateway_responsibilities);
+    $("sm-memory-chain").innerHTML = smFlowLine(d.agent_memory_chain);
+    $("sm-a2a-chain").innerHTML = smFlowLine(d.agent_to_agent_chain);
+    $("sm-agentic-chain").innerHTML = smFlowLine(d.why_agentic_chain);
+    $("sm-governed-stack").innerHTML = d.governed_autonomy_stack
+      .map((s, i) => (i === 0 ? `<span>${s}</span>` : `<span class="sm-plus">+</span><span>${s}</span>`))
+      .join("") + `<span class="sm-eq-arrow">↓</span><span class="amber">SAFE AUTONOMOUS FLEET</span>`;
+    $("sm-innovation-stack").innerHTML = d.innovation_stack
+      .map((s, i) => (i === 0 ? `<span>${s}</span>` : `<span class="sm-plus">+</span><span>${s}</span>`))
+      .join("");
+
+    // IAM identities.
+    $("sm-iam").innerHTML = d.iam_identities
+      .map(
+        (id) =>
+          `<div class="reg-row"><div class="reg-id">${id.account}</div>` +
+          `<div>allowed: ${id.allowed.join(", ")}</div>` +
+          `<div>denied: ${id.denied.join(", ")}</div></div>`
+      )
+      .join("");
+
+    // Seven architecture layers.
+    $("sm-layers").innerHTML = d.architecture_layers
+      .map(
+        (l) =>
+          `<div class="sm-layer-row"><span class="n">${l.n}</span><span class="name">${l.name}</span>` +
+          `<span class="detail">${l.detail}</span>${statusBadge(l.status)}</div>`
+      )
+      .join("");
+
+    // Recovery flow -- rendered once compactly (self-healing section) and
+    // once as the full attack->resume walkthrough (same underlying steps).
+    smFlowSteps("sm-recovery-flow", d.recovery_flow);
+    smFlowSteps("sm-recovery-detail", d.recovery_flow);
+
+    // 3-minute demo.
+    $("sm-demo-phases").innerHTML = d.demo_phases
+      .map(
+        (p) =>
+          `<div class="sm-demo-phase"><div class="title">PHASE ${p.phase} — ${p.title}</div>` +
+          `<div class="input">"${p.input}"</div>` +
+          `<div class="mono">${smFlowLine(p.flow)}</div>` +
+          `<div class="sm-note">${p.status}</div></div>`
+      )
+      .join("");
+
+    // Implementation status table.
+    $("sm-status-table").innerHTML = Object.entries(d.implementation_status)
+      .map(([k, v]) => `<div class="row"><span>${k.replace(/_/g, " ")}</span>${statusBadge(v)}</div>`)
+      .join("");
+
+    // Observability stream -- real mesh events when the log has any,
+    // honestly empty otherwise. Never fabricated to look live.
+    const events = d.recent_events || [];
+    $("sm-observability-empty").hidden = events.length > 0 || d.mesh_available === false;
+    $("sm-observability").innerHTML = events
+      .map((e) => {
+        const ts = e.recorded_at ? new Date(e.recorded_at).toLocaleTimeString() : "";
+        return (
+          `<div class="reg-row"><div class="reg-id">${e.agent_role} ` +
+          `<span class="${e.allowed ? "" : "amber"}">[${e.reason_code}]</span></div>` +
+          `<div>${e.kind === "genome" ? "capability genome" : "behavioral DNA"} · ${e.reason} · ${ts}</div>` +
+          `</div>`
+        );
+      })
+      .join("");
+  }
+
+  function renderGenomeResult(scenario, genome) {
+    const route = $("sm-genome-result");
+    route.hidden = false;
+    route.classList.remove("refused", "allowed");
+    route.classList.add(genome.decision === "ALLOW" ? "allowed" : "refused");
+    route.innerHTML =
+      `<span class="code">${genome.decision}</span> (${scenario}) — risk ${genome.risk_level} — ${genome.reason}` +
+      (genome.denied_actions.length ? `<br>denied: ${genome.denied_actions.join(", ")}` : "") +
+      (genome.allowed_actions.length ? `<br>allowed: ${genome.allowed_actions.join(", ")}` : "");
+  }
+
+  async function handleGenomeProbe(scenario) {
+    const res = await fetch(`/api/singularity/genome/probe?scenario=${scenario}`, { method: "POST" });
+    if (!res.ok) return;
+    const d = await res.json();
+    renderGenomeResult(d.scenario, d.genome);
+    renderSingularityDetail({ ...(await fetchSingularity()), ...d });
+    renderSingularityHome(await fetchSingularity());
+  }
+
+  function renderBehaviorResult(scenario, assessment) {
+    const route = $("sm-behavior-result");
+    route.hidden = false;
+    route.classList.remove("refused", "allowed");
+    route.classList.add(assessment.drift_band === "NORMAL" ? "allowed" : "refused");
+    route.innerHTML =
+      `<span class="code">${assessment.drift_band}</span> (${scenario}) — score ${assessment.drift_score}/100 ` +
+      `— action ${assessment.capability_action}<br>${assessment.signals.join("; ")}`;
+  }
+
+  async function handleBehaviorProbe(scenario) {
+    const res = await fetch(`/api/singularity/behavior/probe?scenario=${scenario}`, { method: "POST" });
+    if (!res.ok) return;
+    const d = await res.json();
+    renderBehaviorResult(d.scenario, d.assessment);
+    renderSingularityDetail({ ...(await fetchSingularity()), ...d });
+    renderSingularityHome(await fetchSingularity());
+  }
+
+  async function showSingularityDetail() {
+    const d = await fetchSingularity();
+    renderSingularityDetail(d);
+    show("singularity-detail");
+  }
+
+  $("sm-genome-normal").addEventListener("click", () => handleGenomeProbe("normal"));
+  $("sm-genome-attack").addEventListener("click", () => handleGenomeProbe("attack"));
+  $("sm-behavior-normal").addEventListener("click", () => handleBehaviorProbe("normal"));
+  $("sm-behavior-drift").addEventListener("click", () => handleBehaviorProbe("drift"));
+
   // ── instrument (home) / core / honesty-peek visibility ──────────────
 
   /* THE INSTRUMENT is the default landing view -- it needs no toggle-off,
@@ -964,6 +1176,7 @@
         case "2": showTowerDetail(); break;
         case "3": showCountersignDetail(); break;
         case "4": showHyperionDetail(); break;
+        case "5": showSingularityDetail(); break;
       }
     };
     el.addEventListener("click", activate);
@@ -993,6 +1206,7 @@
     body.hidden = false;
     renderInstrument(d);
     renderHyperionHome(await fetchHyperion());
+    renderSingularityHome(await fetchSingularity());
     show("instrument");
   }
 
@@ -1015,6 +1229,7 @@
   const SCREENS = [
     "split", "obligation", "court", "loadrating", "honesty", "instrument",
     "warrant-detail", "tower-detail", "countersign-detail", "hyperion-detail",
+    "singularity-detail",
   ];
 
   function show(name) {
