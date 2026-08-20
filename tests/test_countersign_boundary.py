@@ -127,5 +127,10 @@ def test_gemma_model_string_appears_only_in_config() -> None:
             continue
         if path.suffix == ".md":
             continue  # prose is exempt, the same rule test_config_singleton.py uses
+        # Evidence artefacts are exempt for the same reason -- and only
+        # recorded output, never source. See the fuller note in
+        # `tests/test_config_singleton.py`.
+        if rel.startswith("evidence/") and path.suffix in {".log", ".json", ".txt"}:
+            continue
         offenders.append(rel)
     assert not offenders, f"gemma model string found outside lib/config.py: {offenders}"

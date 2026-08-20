@@ -252,6 +252,7 @@ def test_attack_11_memory_poisoning_via_a_forged_countersign(monkeypatch) -> Non
     """ATTACK: write a countersign record claiming a Gemini-family verifier
     agreed, then mint.
     DEFENCE: `mint`'s precondition requires a NON-Gemini family."""
+    from lib.config import MODEL_DEEP
     from tower.registry import get_agent, make_entry, put_agent
     from warrant.ledger import (
         MintPreconditionError,
@@ -263,7 +264,11 @@ def test_attack_11_memory_poisoning_via_a_forged_countersign(monkeypatch) -> Non
     put_agent(make_entry("attack11", capabilities=["c"], warrant_mint_schedule={"LOW": 10}))
     agent = get_agent("attack11")
     record_human_concurrence("case11", principal="human::x", note="n")
-    record_countersign("case11", agrees=True, family="gemini-3.6-flash", simulated=False)
+    # The judging-side model string comes from `lib.config`, never a literal.
+    # `tests/test_config_singleton.py` enforces that rule repo-wide, and CI
+    # caught this line hardcoding it -- correctly, because a test pinned to a
+    # stale model string stops testing the model the system actually uses.
+    record_countersign("case11", agrees=True, family=MODEL_DEEP, simulated=False)
     with pytest.raises(MintPreconditionError, match="non-Gemini"):
         mint(agent=agent, capability="c", risk_class="LOW", case_id="case11", reason="r")
 
