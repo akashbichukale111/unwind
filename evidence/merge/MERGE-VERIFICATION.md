@@ -101,3 +101,45 @@ Re-verified on the merged branch in this session:
 
 The live URL could not even be probed from this session (HTTP 000, proxy 403).
 The last recorded revision `unwind-00013-9h7` **predates this rewrite**.
+
+
+## 7. CI on the default branch
+
+The default branch's own previous runs were failures (`d11a1bd`, `34a969e`).
+After this integration:
+
+```
+6eae395c  ci  success   27/27 steps, zero failures
+https://github.com/akashbichukale111/unwind/actions/runs/32331799969
+```
+
+This is the **first green CI run on the default branch**, and the first time
+since 2026-08-13 that the zero-model guarantee step (`eval-vertex-off`) has
+executed in CI on any branch.
+
+## 8. End-to-end mission over HTTP, on the merged default branch
+
+`POST /api/command-os/mission` with a real bearer credential:
+
+```
+status                  COMPLETED_WITH_RESTRICTIONS
+plan                    SECURITY_INVESTIGATION | ZERO_MODEL | 5 steps
+stages                  12
+agents_selected         SENTINEL, WORKER_COMPLIANCE, WORKER_DOCUMENT, WORKER_PYTHON
+evidence parsed         16 / 20     contradictions 2     escalations 1
+drift_band              CRITICAL    isolated_agent fleet_recon
+challenger_agrees       True
+human_principal         human::kim@ops.example      gate APPROVED
+external_action         REVOKE_CAPABILITY_REQUEST -> sbx-013995a90faf (sandbox_file)
+verified                True
+authority_settlement    MINT        warrant 160bp -> 360bp
+```
+
+### Persistence confirmed by re-reading, not by trusting the response
+
+| Re-read | Result |
+| --- | --- |
+| `GET .../checkpoints` | 12 checkpoints from Firestore, ordered |
+| `GET .../trust` | `COMPLETED_WITH_RESTRICTIONS` · 6 trusted, 1 quarantined · 7 Hyperion events |
+| `GET .../context-firewall` | 12 decisions — 7 INCLUDE, 4 SUMMARIZE, 1 QUARANTINE |
+| `.sandbox/actions.jsonl` (a real file **outside** the process) | `sbx-013995a90faf` · `REVOKE_CAPABILITY_REQUEST` · target `fleet_recon`/`req-8802` · human `human::kim@ops.example` · reversal recorded |
