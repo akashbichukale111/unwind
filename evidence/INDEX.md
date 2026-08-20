@@ -192,3 +192,29 @@ so instead of pointing at something weaker and calling it proof.
 | Veo / Lyria | `DESIGNED` | Not built. No credentials, and generated media would be presentation rather than evidence. |
 | GitHub external-action backend | `CONFIGURED_NOT_EXERCISED` | Real adapter, no token. It raises rather than reporting success — `test_external_action.py::test_github_backend_refuses_rather_than_faking_success`. |
 | Cloud Run deployment of this commit | **not deployed** | This session has no `gcloud` credentials and its egress proxy blocks `*.run.app`. The last recorded deploy (`unwind-00013-9h7`) predates this rewrite and does **not** contain it. |
+
+---
+
+## 9. Merge into the default branch (2026-08-20)
+
+The Agentic Command OS was merged **in place** into the existing default
+branch `claude/unwind-hackathon-foundation-s36wdi` (merge commit `5e19e60`).
+Full account: [`evidence/merge/MERGE-VERIFICATION.md`](merge/MERGE-VERIFICATION.md).
+
+| Claim | Source | Command | Result | Environment | Status |
+| --- | --- | --- | --- | --- | --- |
+| The merge cannot lose default-branch work | git | `git log forensic..default --oneline` | **0 commits** | local | VERIFIED |
+| Nothing deleted or renamed | git | `git diff --diff-filter=DR --name-only <default> <forensic>` | **0 / 0** | local | VERIFIED |
+| Frozen systems byte-identical | git | `git diff <default> <forensic> -- spine tower singularity court judgment settle corpus` | empty | local | VERIFIED |
+| Merged tree == verified tree | git | `git rev-parse HEAD^{tree}` vs forensic | identical (`6a2860ab`) | local | VERIFIED |
+| No API route lost | live import | enumerate `app.routes` | 27 → 29 | local | VERIFIED |
+| Full suite post-merge | pytest | `FIRESTORE_EMULATOR_HOST=localhost:8080 make test` | **586 passed, 1 skipped** | local + emulator | VERIFIED |
+| Red team post-merge | pytest | `make redteam` | **21 passed** | local + emulator | VERIFIED |
+| All 7 cards click through | Chromium | `python evidence/browser/verify_all_cards.py` | **26/26** | local + emulator | VERIFIED |
+| Anonymous mutation refused | curl | `curl -X POST .../api/command-os/mission` | **401** | local | VERIFIED |
+| Gemini planning | `fleet/agents.py` | `evidence/adk/merged-live-attempt-20260820T041232Z.log` | plan labelled `ZERO_MODEL` | no credentials | **CONFIGURED_NOT_EXERCISED** |
+| Gemma challenge | `countersign/verify.py` | same log | `available=False, agrees=None` | no credentials | **CONFIGURED_NOT_EXERCISED** |
+| Veo mission replay | — | — | — | no credentials | **NOT_BUILT** |
+| Lyria mission audio | — | — | — | no credentials | **NOT_BUILT** |
+| Cloud Run deploy of this branch | `infra/deploy.sh` | `./infra/deploy.sh` | **not run** — no `gcloud`, proxy blocks `*.run.app` | sandbox | **NOT_DEPLOYED** |
+| Live URL serves this branch | — | `curl .../api/healthz` | **HTTP 000** (proxy 403) | sandbox | **UNVERIFIABLE HERE** — last revision `unwind-00013-9h7` predates this rewrite |

@@ -25,7 +25,7 @@ from it, not maintained by hand in two places). Served live at
 | Chronos-9 | Dynamic Agent Factory | `singularity/fleet.py:full_fleet()` | SIMULATED -- static roster, no live agent spawning |
 | Aegis-Neuro | Distributed Defense | `hyperion/guard.py, hyperion/risk.py` | LIVE |
 | Chronos-Void | Digital Twin / Simulation | `none -- command_os/checkpoint.py's Mission Time Machine is a DIFFERENT, related capability (historical-state inspection, not a forecasting twin); see docs/mission-state.md` | DESIGNED -- not built, no simulation/forecasting engine exists |
-| Pandora | Autonomous Red Team / Chaos Testing | `command_os/mission.py stage 4 (scripted adversarial observation)` | SIMULATED -- one scripted scenario per run, no autonomous red agent |
+| Pandora | Autonomous Red Team / Chaos Testing | `tests/test_adversarial.py` (20 attacks, asserted defences) + `fleet/data/incident/` (the evidence a mission actually reacts to) | LIVE (TEST SUITE) -- 20 attacks with asserted defences plus one declared undefended gap; still no autonomous red agent that improvises |
 | Vigilante AI | Rogue Agent Detection | `singularity/behavior.py:detect_drift` | LIVE |
 | Nexus Command | Command Center / Executive Control | `web/static (Agentic Command OS screen) + command_os/mission.py's report` | LIVE |
 | Nebula OS | Autonomous DevOps Fleet | `infra/deploy.sh, Makefile deploy targets` | DESIGNED -- deploy is scripted, not agent-driven |

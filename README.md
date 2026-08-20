@@ -183,7 +183,7 @@ Nothing here needs a Google Cloud account.
 git clone https://github.com/akashbichukale111/unwind.git
 cd unwind
 make install                              # uv venv (Python 3.12) + deps
-make test                                 # 441 passed, 1 skipped (with `make emulator` running) / 364 passed, 78 skipped (without)
+make test                                 # 586 passed, 1 skipped (with `make emulator` running) / 458 passed, 129 skipped (without)
 make ui                                   # http://127.0.0.1:8000
 ```
 
@@ -258,17 +258,48 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Deployed
 
-**All four cards are live on the deployed URL, as of 2026-08-17.** Cards 0
-(WARRANT), 2 (CONTROL TOWER) and 3 (COUNTERSIGN), plus the four-card
-instrument UI, were redeployed and verified against the running service —
-press `T` on the URL below, today, no local setup required.
+> ### ⚠ THE DEPLOYED REVISION PREDATES THIS BRANCH
+>
+> The Cloud Run service below is **live and serving**, but it runs an
+> **earlier revision**. It does **not** contain the plan-driven Agentic
+> Command OS, the agent fleet, the Warrant Market, authentication, or the
+> external-action layer.
+>
+> The session that produced this integration had **no `gcloud` binary and no
+> Google Cloud credentials**, and its egress proxy returns `403` for
+> `*.run.app` — so it could neither deploy nor probe the URL. Rather than
+> claim a deployment that did not happen, this section says so.
+>
+> **To deploy this branch**, from an environment with credentials:
+>
+> ```bash
+> git checkout claude/unwind-hackathon-foundation-s36wdi   # the default branch
+> UNWIND_PROJECT_ID=<project> UNWIND_RUN_REGION=us-central1 \
+>   UNWIND_VERTEX_LOCATION=global ./infra/deploy.sh        # same service, same URL
+> make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
+> ```
+>
+> `infra/deploy.sh` targets the **existing** `unwind` service in
+> `us-central1`. It creates no new service and no new URL.
+>
+> Set `UNWIND_TRUST_IAP_HEADER=1` (behind IAP) or `UNWIND_OPERATOR_TOKENS`
+> before deploying: with neither set and `UNWIND_ENV=production`, every
+> mutating endpoint correctly refuses **all** callers, which is fail-closed
+> and intended — see [`docs/SECURITY.md`](docs/SECURITY.md).
+
+**What has been verified for this branch, locally, in a real browser**
+(`evidence/browser/merged-all-cards.json`, **26/26 checks**): all seven cards
+render and click through — AGENTIC COMMAND OS, WARRANT, UNWIND CORE, CONTROL
+TOWER, COUNTERSIGN, HYPERION-ZERO, SINGULARITY-MESH — with a real mission
+running end to end, all 29 API routes responding, and anonymous mutation
+refused `401`.
 
 | | |
 | --- | --- |
 | URL | `https://unwind-hgeodtazqq-uc.a.run.app` |
-| Serves today | **All four cards** — the cascade, the field, the honesty panel, and the instrument (`T`) |
-| Service / region | `unwind` · `us-central1` |
-| Revision | `unwind-00005-2bl` |
+| Status of that URL | **LIVE, but serving a revision older than this branch** — not verifiable from the integration session (proxy-blocked) |
+| Last recorded revision | `unwind-00013-9h7` (2026-08-19, per `docs/DEPLOY.md`) — **predates the Agentic Command OS rewrite** |
+| Service / region | `unwind` · `us-central1` — unchanged, reused, no new service |
 | Project | `project-895d4ca8-d301-447d-916` |
 | Artifact | `gcloud run deploy --source .` — buildpacks + root `Procfile` |
 | Serving | the real FastAPI app, `/api/*` **and** `web/static` from one origin |
@@ -474,15 +505,15 @@ measurement. Full reasoning in [`docs/T2-MEASUREMENT.md`](docs/T2-MEASUREMENT.md
 
 ## What has actually been run
 
-**`make test` → 441 passed, 1 skipped** with the Firestore emulator running
-(`make emulator`); **364 passed, 78 skipped** without it (every skip is
+**`make test` → 586 passed, 1 skipped** with the Firestore emulator running
+(`make emulator`); **458 passed, 129 skipped** without it (every skip is
 emulator-gated Firestore infrastructure — `tower/`, `warrant/`,
 `countersign/`, `command_os/`'s persisted-section tests). `ruff check` and
 `ruff format --check` clean.
 
 | Command | Result |
 | --- | --- |
-| `make test` | **441 passed, 1 skipped** (emulator running) / **364 passed, 78 skipped** (without) |
+| `make test` | **586 passed, 1 skipped** (emulator running) / **458 passed, 129 skipped** (without) |
 | `make eval` | **41 scenarios passed**, 0 failed, **0 model calls**; false-retraction rate **0.0** |
 | `UNWIND_VERTEX_DISABLED=1 make eval` | identical. Enforced in CI |
 | `make verify-live` | executed 2026-08-13 — Vertex call **OK**, **0 model errors**, recall **81.8% → 100.0%** |

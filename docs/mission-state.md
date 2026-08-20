@@ -12,7 +12,10 @@ rather than left implicit.
 
 ## Mission Checkpoint Engine
 
-`command_os/mission.py`'s eleven stages are individually checkpointed.
+Every phase `command_os/mission.py` runs is individually checkpointed. A
+mission's length is no longer fixed: the plan is computed from the
+objective, and a containment probe or a replan appends work mid-flight,
+so the phase queue and cursor live in the checkpointed context itself.
 After every stage, `command_os/checkpoint.py:write_checkpoint` persists one
 document to `command_os_missions/{mission_id}/checkpoints/{seq}` — a real
 Firestore write, not an in-memory trace: `stage` (the same `MissionStage`
@@ -69,7 +72,7 @@ categorical fold) are deliberately different objects.
 `run_mission(..., auto_approve=True)` is the default and runs stages 1–11
 straight through — byte-identical to the mission orchestrator's behaviour
 before this pass, so the original one-click demo is unaffected.
-`auto_approve=False` pauses after stage 8 (agent isolated) instead of
+`auto_approve=False` pauses at the GATE phase, before any external action, instead of
 auto-concurring into repair. The only way past that pause is
 `POST /api/command-os/mission/{id}/gate` with `{"decision": "approve"}` or
 `{"decision": "deny"}`:
