@@ -1409,6 +1409,43 @@
     }
   }
 
+  //: Status -> what an operator should DO about it. Never a bare code: a
+  //: number tells you something failed, not which of your problems it is.
+  const MISSION_FAILURE_HELP = {
+    400: "the request was rejected as malformed — check the objective text",
+    401: "NOT AUTHENTICATED — enter an operator token above, then run again",
+    403: "authenticated, but this principal may not run a mission (a service " +
+         "token cannot; the human gate requires a human principal)",
+    404: "no such mission",
+    409: "the mission is in a state that refuses this action",
+    422: "the request was well-formed but rejected — see the detail below",
+    429: "rate limited — this instance allows a bounded number of requests per " +
+         "principal per minute",
+    500: "the server errored — see the detail below and the server log",
+  };
+
+  async function showMissionFailure(res) {
+    const el = $("cmdos-authfail");
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body.detail || body.reason || "";
+    } catch (err) {
+      detail = "";
+    }
+    const help = MISSION_FAILURE_HELP[res.status] || "the mission could not start";
+    el.hidden = false;
+    el.innerHTML =
+      "<span class='cmdos-tag cmdos-unavailable'>HTTP " + res.status + "</span> " +
+      esc(help) + (detail ? "<div class='cmdos-hint mono'>" + esc(detail) + "</div>" : "");
+    // Put the operator where the fix is, rather than making them find it.
+    if (res.status === 401) {
+      const token = $("cmdos-token");
+      if (token) { token.focus(); token.select(); }
+    }
+    el.scrollIntoView({ block: "nearest" });
+  }
+
   async function runMission() {
     const btn = $("cmdos-run");
     btn.disabled = true;
@@ -1432,7 +1469,18 @@
         $("cmdos-offline").hidden = false;
         return;
       }
-      if (!res.ok) return;
+      // EVERY failure must be visible AT THE POINT OF ACTION.
+      //
+      // This used to be `if (!res.ok) return;` -- a silent return. A 401 at
+      // least surfaced `#cmdos-authfail` via authedFetch, but 400, 403, 409,
+      // 422, 429 and 500 produced NOTHING AT ALL: the button disabled for a
+      // few hundred milliseconds, snapped back to its idle label, and the
+      // operator was left looking at an unchanged screen with no way to tell
+      // the click from a no-op. That is the definition of a dead button.
+      if (!res.ok) {
+        await showMissionFailure(res);
+        return;
+      }
       const token = operatorToken();
       if (token) sessionStorage.setItem(TOKEN_KEY, token);
       applyMissionResult(await res.json());
@@ -1652,13 +1700,13 @@
     // Veo live but cannot reach Lyria, and saying otherwise would be exactly
     // the over-reporting this panel exists to prevent.
     const modes = d.auth_modes_detected || {};
+    const modeLabel = modes.mode === "adc"
+      ? ("Application Default Credentials" + (modes.project ? " · project " + modes.project : ""))
+      : modes.mode === "api_key" ? "Gemini API key" : "";
     const live = d.modalities.filter((m) => m.status === "CONFIGURED").length;
     $("media-note").textContent = d.available
-      ? "credentials detected (" +
-        (modes.api_key ? "Gemini API key" : "") +
-        (modes.api_key && modes.vertex_service_account ? " + " : "") +
-        (modes.vertex_service_account ? "Vertex service account" : "") +
-        ") — " + live + " of 3 modalities can make a real call now"
+      ? "credential detected (" + modeLabel + ") — " + live +
+        " of 3 modalities can make a real call now"
       : "NOT CONFIGURED — " + d.reason +
         ". The adapters, prompts and model IDs are complete and the request path is " +
         "verified to reach Google; pressing a button returns NOT_CONFIGURED with this " +
@@ -1670,6 +1718,22 @@
   }
 
   const MEDIA_ROUTE = { gemini: "synthesize", veo: "replay", lyria: "signal" };
+
+  //: The failure statuses are DERIVED FROM GOOGLE'S ACTUAL ERROR
+  //: (media/adapters.py:classify_failure), not guessed. They are rendered
+  //: distinctly because they have different fixes: AUTH_REQUIRED means
+  //: re-authenticate, ACCESS_REQUIRED means grant a role or enable an API,
+  //: QUOTA_LIMITED means wait or raise a quota. Collapsing them into one
+  //: red badge tells an operator nothing about what to do next.
+  const MEDIA_STATUS_CLASS = {
+    GENERATED: "LIVE",
+    NOT_CONFIGURED: "DESIGNED",
+    AUTH_REQUIRED: "UNAVAILABLE",
+    ACCESS_REQUIRED: "UNAVAILABLE",
+    QUOTA_LIMITED: "SIMULATED",
+    UNAVAILABLE: "UNAVAILABLE",
+    ERROR: "UNAVAILABLE",
+  };
 
   async function runMedia(modality, btn) {
     // Reuse the Command OS's own mission id -- the Media Lab must describe
@@ -1707,7 +1771,7 @@
   function renderMediaResult(out, r) {
     const head =
       "<div class='media-result-head'><span class='cmdos-tag " +
-      statusClass(r.status === "GENERATED" ? "LIVE" : r.status === "FAILED" ? "UNAVAILABLE" : "DESIGNED") +
+      statusClass(MEDIA_STATUS_CLASS[r.status] || "DESIGNED") +
       "'>" + esc(r.status) + "</span> <span class='mono'>" + esc(r.model) + "</span></div>";
     if (r.status === "GENERATED") {
       let body = "";

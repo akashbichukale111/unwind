@@ -192,10 +192,13 @@ def test_a_clean_mission_produces_a_different_prompt_than_a_contained_one() -> N
 def _no_credentials(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNWIND_VERTEX_DISABLED", "1")
     from lib.config import reset_config_cache
+    from lib.gcp_auth import reset_auth_cache
 
     reset_config_cache()
+    reset_auth_cache()
     yield
     reset_config_cache()
+    reset_auth_cache()
 
 
 @pytest.mark.parametrize("call", ["synthesize_mission", "generate_replay", "generate_signal"])
@@ -278,10 +281,17 @@ def _api_key_only(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     from lib.config import reset_config_cache
+    from lib.gcp_auth import reset_auth_cache
 
+    # BOTH caches. `resolve_auth` memoises per process, so a test that only
+    # cleared the config cache inherited the previous test's credential
+    # verdict -- which is exactly the kind of cross-test leak that makes a
+    # suite pass in one order and fail in another.
     reset_config_cache()
+    reset_auth_cache()
     yield
     reset_config_cache()
+    reset_auth_cache()
 
 
 def test_an_api_key_makes_gemini_and_veo_available(_api_key_only: None) -> None:
@@ -341,3 +351,95 @@ def test_status_never_says_generated(_api_key_only: None) -> None:
     from media.adapters import media_status
 
     assert all(m["status"] != "GENERATED" for m in media_status()["modalities"])
+
+
+# ---------------------------------------------------------------------------
+# ADC: the mechanism a project without API keys must use
+# ---------------------------------------------------------------------------
+
+
+def test_adc_detection_does_not_depend_on_env_vars_gcloud_never_sets() -> None:
+    """THE FALSE NEGATIVE THAT BLOCKED THE ONLY SUPPORTED PATH.
+
+    `has_gcp_credentials` used to test GOOGLE_APPLICATION_CREDENTIALS and
+    GOOGLE_CLOUD_PROJECT. `gcloud auth application-default login` sets
+    NEITHER -- it writes a well-known JSON file -- so a correctly
+    authenticated operator was told there were no credentials. On a project
+    whose org policy disallows API keys, ADC is the only permitted
+    mechanism, so that false negative blocked everything.
+
+    Asserted over the source: the resolver must consult `google.auth`, not
+    just read environment variables.
+    """
+    source = (REPO / "lib" / "gcp_auth.py").read_text(encoding="utf-8")
+    assert "google.auth" in source and "default(" in source, (
+        "credential detection no longer asks google.auth.default(), so it cannot "
+        "see an ADC file or a Cloud Run service identity"
+    )
+
+
+def test_api_key_never_outranks_adc(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADC must win. A stray key beating a real service account turns a
+    correct setup into a confusing 403 on a keys-disallowed project."""
+    from lib.gcp_auth import reset_auth_cache
+
+    source = (REPO / "lib" / "gcp_auth.py").read_text(encoding="utf-8")
+    adc_at = source.index("# 1. ADC FIRST")
+    key_at = source.index("# 2. API key")
+    assert adc_at < key_at, "the API-key branch is evaluated before ADC"
+    reset_auth_cache()
+
+
+def test_disallowing_api_keys_refuses_a_key_that_is_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A project whose org policy blocks key creation must not silently use
+    a key that happens to be in the environment."""
+    monkeypatch.setenv("UNWIND_DISALLOW_API_KEYS", "1")
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSyTEST_KEY_NOT_REAL_0000000000000000")
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    from lib.gcp_auth import api_keys_disallowed, reset_auth_cache
+
+    reset_auth_cache()
+    try:
+        assert api_keys_disallowed() is True
+        from media.adapters import _api_key
+
+        assert _api_key() == "", "a disallowed API key was still returned for use"
+    finally:
+        reset_auth_cache()
+
+
+@pytest.mark.parametrize(
+    ("code", "blob", "expected"),
+    [
+        (401, "UNAUTHENTICATED", "AUTH_REQUIRED"),
+        (403, "PERMISSION_DENIED", "ACCESS_REQUIRED"),
+        (429, "RESOURCE_EXHAUSTED", "QUOTA_LIMITED"),
+        (404, "NOT_FOUND", "UNAVAILABLE"),
+        (500, "INTERNAL", "ERROR"),
+    ],
+)
+def test_failures_are_classified_from_the_real_error(code: int, blob: str, expected: str) -> None:
+    """ "Cannot authenticate", "authenticated but not permitted" and "over
+    quota" are three different problems with three different fixes.
+    Collapsing them into one FAILED tells an operator nothing."""
+    from media.adapters import classify_failure
+
+    class _Err(Exception):
+        def __init__(self) -> None:
+            super().__init__(blob)
+            self.code = code
+
+    status, reason = classify_failure(_Err())
+    assert status.value == expected
+    assert reason, "a classified failure must carry a next action"
+
+
+def test_status_never_reports_live_without_a_call() -> None:
+    """CONFIGURED means "a real call is possible". Only a successful call
+    may produce GENERATED, and only on a MediaResult."""
+    from media.adapters import MediaStatus, media_status
+
+    for modality in media_status()["modalities"]:
+        assert modality["status"] != MediaStatus.GENERATED.value

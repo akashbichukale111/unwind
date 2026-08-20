@@ -58,6 +58,12 @@ corpus: ## Regenerate the committed corpus (output must be byte-identical)
 corpus-verify: ## Prove the generator is deterministic (regenerate + diff manifest)
 	$(PY) -m corpus.generate --verify --out corpus/data
 
+.PHONY: verify-models
+verify-models: ## Verify the four Google models against a REAL project (credit-safe)
+	@echo "Requires: gcloud auth application-default login"
+	@echo "Text models only. Add --media to spend credits on ONE Veo + ONE Lyria generation."
+	$(PY) scripts/verify_models.py $(ARGS)
+
 .PHONY: eval
 eval: ## Run the eval harness over evals/scenarios
 	$(PY) -m evals.harness --scenarios evals/scenarios --out evals/results

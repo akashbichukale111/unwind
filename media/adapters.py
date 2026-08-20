@@ -51,14 +51,29 @@ ARTIFACT_DIR = Path(os.environ.get("UNWIND_MEDIA_DIR", ".media"))
 
 
 class MediaStatus(str, Enum):
-    """Closed vocabulary. `GENERATED` is reachable only by a real successful call."""
+    """Closed vocabulary. `GENERATED` is reachable only by a real successful call.
+
+    The failure states are DERIVED FROM GOOGLE'S ACTUAL ERROR, never guessed
+    (`classify_failure`, below). "we could not authenticate", "you are
+    authenticated but lack access to this model", and "you are over quota"
+    are three different problems with three different fixes, and collapsing
+    them into one FAILED tells an operator nothing about what to do next.
+    """
 
     #: A real call succeeded and an artefact exists on disk.
     GENERATED = "GENERATED"
-    #: The adapter is complete but no usable Vertex configuration is present.
+    #: No usable credential at all -- nothing was attempted.
     NOT_CONFIGURED = "NOT_CONFIGURED"
-    #: Configured, called, and the call failed. The reason is verbatim.
-    FAILED = "FAILED"
+    #: A credential exists but Google rejected it (401 / invalid / expired).
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    #: Authenticated, but this identity may not use this model or API (403).
+    ACCESS_REQUIRED = "ACCESS_REQUIRED"
+    #: Authenticated and permitted, but rate/quota limited (429).
+    QUOTA_LIMITED = "QUOTA_LIMITED"
+    #: The model ID or endpoint does not exist in this project/region (404).
+    UNAVAILABLE = "UNAVAILABLE"
+    #: Anything else. The reason is verbatim.
+    ERROR = "ERROR"
 
 
 @dataclass(frozen=True)
@@ -100,6 +115,42 @@ class MediaResult:
         }
 
 
+def classify_failure(exc: Exception) -> tuple[MediaStatus, str]:
+    """Turn a real exception into an honest status plus a next action.
+
+    Reads the HTTP status code and Google's own `status` string rather than
+    pattern-matching prose, so a reworded error message cannot silently
+    reclassify a permission problem as a quota problem.
+    """
+    text = f"{type(exc).__name__}: {exc}"
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    blob = str(exc).upper()
+
+    if code == 401 or "UNAUTHENTICATED" in blob or "DefaultCredentialsError" in text:
+        return MediaStatus.AUTH_REQUIRED, (
+            "Google rejected the credential. Re-run "
+            "`gcloud auth application-default login`, or check the service "
+            f"account key. Verbatim: {text}"
+        )
+    if code == 403 or "PERMISSION_DENIED" in blob or "SERVICE_DISABLED" in blob:
+        return MediaStatus.ACCESS_REQUIRED, (
+            "Authenticated, but this identity may not use this model or the API is "
+            "not enabled on the project. Enable the Vertex AI API and grant "
+            f"roles/aiplatform.user. Verbatim: {text}"
+        )
+    if code == 429 or "RESOURCE_EXHAUSTED" in blob or "QUOTA" in blob:
+        return MediaStatus.QUOTA_LIMITED, (
+            f"Authenticated and permitted, but over quota or rate limit. Verbatim: {text}"
+        )
+    if code == 404 or "NOT_FOUND" in blob:
+        return MediaStatus.UNAVAILABLE, (
+            "The model ID or endpoint does not exist for this project and region. "
+            "Check the model is available in your Vertex region and that the ID in "
+            f"lib/config.py is current. Verbatim: {text}"
+        )
+    return MediaStatus.ERROR, text
+
+
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
@@ -120,11 +171,11 @@ SUPPORTED_AUTH: dict[str, frozenset[str]] = {
 
 
 def _api_key() -> str:
-    """The Gemini Developer API key, if one is configured.
+    """The Gemini Developer API key, if one is configured AND permitted."""
+    from lib.gcp_auth import api_keys_disallowed  # noqa: PLC0415
 
-    Both names the google-genai SDK itself reads, checked here so the Media
-    Lab's status agrees with what the SDK would do rather than guessing.
-    """
+    if api_keys_disallowed():
+        return ""
     return (
         os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
     )
@@ -134,51 +185,50 @@ def _availability(modality: str = "gemini") -> tuple[bool, str, str]:
     """Can THIS modality make a real call right now? Never optimistic.
 
     Returns `(available, auth_mode, reason_if_not)` where `auth_mode` is
-    `"api_key"`, `"vertex"` or `""`.
+    `"adc"`, `"api_key"` or `""`.
 
-    TWO REAL PATHS, NOT ONE
-    --------------------------
-    An earlier version only recognised a Vertex service account, so a
-    perfectly usable `GEMINI_API_KEY` would still have reported NOT
-    CONFIGURED. That was a false negative -- the honest-status discipline
-    cuts both ways, and under-reporting a capability that genuinely works is
-    as wrong as over-reporting one that does not.
+    ADC FIRST, AND THAT ORDER IS DELIBERATE
+    ------------------------------------------
+    An earlier version preferred an API key over Application Default
+    Credentials. That is wrong for the deployment this project actually
+    targets: a Google Cloud project whose organisation policy DISALLOWS API
+    key creation, where ADC is the only permitted mechanism and Cloud Run's
+    service identity supplies it automatically in production. A stray key in
+    the environment winning over a working service account turns a correct
+    setup into a confusing 403.
 
-    Order matters: an explicit API key wins, because it is the cheapest
-    thing for a reader to supply to make this live, and because a Vertex
-    service account may be present for Firestore alone without any
-    aiplatform grant.
+    Detection is delegated to `lib/gcp_auth.resolve_auth`, which asks
+    `google.auth.default()` -- the same resolver the SDK itself uses -- so
+    this answer cannot disagree with what a real call would do. The previous
+    check tested two environment variables that `gcloud auth
+    application-default login` does not set, and therefore reported
+    NOT_CONFIGURED to correctly-authenticated operators.
     """
+    from lib.gcp_auth import api_keys_disallowed, resolve_auth  # noqa: PLC0415
+
     cfg = get_config()
     if cfg.vertex_disabled:
         return False, "", "UNWIND_VERTEX_DISABLED=1"
 
     supported = SUPPORTED_AUTH.get(modality, frozenset({"vertex"}))
-    key = _api_key()
-    if key and "api_key" in supported:
-        return True, "api_key", ""
-    if cfg.has_gcp_credentials and "vertex" in supported:
-        return True, "vertex", ""
+    auth = resolve_auth(allow_api_key=not api_keys_disallowed())
 
-    if key and "api_key" not in supported:
+    if auth.mode == "adc" and "vertex" in supported:
+        return True, "adc", ""
+    if auth.mode == "api_key" and "api_key" in supported:
+        return True, "api_key", ""
+
+    if auth.mode == "api_key" and "api_key" not in supported:
         return (
             False,
             "",
             (
-                f"a Gemini API key is configured, but {modality} is served only by "
-                "Vertex AI (a Model Garden model), which needs a Google Cloud "
-                "service account -- set GOOGLE_APPLICATION_CREDENTIALS"
+                f"an API key is configured, but {modality} is served only by Vertex AI "
+                "(a Model Garden model), which requires Application Default Credentials "
+                "or a service account -- run `gcloud auth application-default login`"
             ),
         )
-    return (
-        False,
-        "",
-        (
-            "no Google credentials in this environment: set GEMINI_API_KEY (or "
-            "GOOGLE_API_KEY) for the Gemini Developer API, or "
-            "GOOGLE_APPLICATION_CREDENTIALS / an attached service account for Vertex AI"
-        ),
-    )
+    return False, "", (auth.reason or "no Google credential available")
 
 
 def _client(modality: str):
@@ -189,14 +239,23 @@ def _client(modality: str):
     """
     from google import genai  # noqa: PLC0415
 
+    from lib.gcp_auth import resolve_auth  # noqa: PLC0415
+
     _, mode, _ = _availability(modality)
     if mode == "api_key":
         return genai.Client(api_key=_api_key())
+
+    # ADC / Vertex. The project comes from whatever ADC itself resolved,
+    # falling back to config -- a credential and a project from two
+    # different places is how a call ends up authenticating as one identity
+    # against another identity's project.
     from lib.vertex import configure_vertex_backend  # noqa: PLC0415
 
     configure_vertex_backend()
     cfg = get_config()
-    return genai.Client(vertexai=True, project=cfg.project_id, location=cfg.vertex_location)
+    auth = resolve_auth()
+    project = auth.project or cfg.project_id
+    return genai.Client(vertexai=True, project=project, location=cfg.vertex_location)
 
 
 def _unconfigured(modality: str, model: str, brief: MissionBrief, prompt: str) -> MediaResult:
@@ -265,14 +324,15 @@ def synthesize_mission(brief: MissionBrief) -> MediaResult:
             detail={"grounded_on_checkpoints": brief.checkpoint_count, "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001 -- reported verbatim, never swallowed
+        status, reason = classify_failure(exc)
         return MediaResult(
             modality="gemini",
             model=cfg.model_deep,
-            status=MediaStatus.FAILED,
+            status=status,
             mission_id=brief.mission_id,
             prompt=prompt,
             prompt_sha256=_sha(prompt),
-            reason=f"{type(exc).__name__}: {exc}",
+            reason=reason,
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
         )
@@ -401,14 +461,15 @@ def generate_replay(brief: MissionBrief) -> MediaResult:
             detail={"beats": list(brief.arc), "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001
+        status, reason = classify_failure(exc)
         return MediaResult(
             modality="veo",
             model=cfg.veo_model,
-            status=MediaStatus.FAILED,
+            status=status,
             mission_id=brief.mission_id,
             prompt=prompt,
             prompt_sha256=_sha(prompt),
-            reason=f"{type(exc).__name__}: {exc}",
+            reason=reason,
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
         )
@@ -500,14 +561,15 @@ def generate_signal(brief: MissionBrief) -> MediaResult:
             detail={"max_seconds": cfg.lyria_max_seconds, "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001
+        status, reason = classify_failure(exc)
         return MediaResult(
             modality="lyria",
             model=cfg.lyria_model,
-            status=MediaStatus.FAILED,
+            status=status,
             mission_id=brief.mission_id,
             prompt=prompt,
             prompt_sha256=_sha(prompt),
-            reason=f"{type(exc).__name__}: {exc}",
+            reason=reason,
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
         )
@@ -589,11 +651,30 @@ def media_status() -> dict[str, Any]:
         "available": any_available,
         "reason": "" if any_available else gemini_reason,
         "artifact_dir": str(ARTIFACT_DIR),
-        "auth_modes_detected": {
-            "api_key": bool(_api_key()),
-            "vertex_service_account": get_config().has_gcp_credentials,
-        },
+        "auth_modes_detected": _auth_detection_record(),
         "modalities": modalities,
+    }
+
+
+def _auth_detection_record() -> dict[str, Any]:
+    """What credential this process can actually use, for the status panel.
+
+    Reports the RESOLVED state from `lib/gcp_auth`, never a guess about
+    environment variables -- so an operator who has run
+    `gcloud auth application-default login` sees `adc: true` and a project,
+    which is precisely what the previous env-var-only check could not do.
+    """
+    from lib.gcp_auth import api_keys_disallowed, resolve_auth  # noqa: PLC0415
+
+    auth = resolve_auth(allow_api_key=not api_keys_disallowed())
+    return {
+        "mode": auth.mode,
+        "adc": auth.mode == "adc",
+        "api_key": auth.mode == "api_key",
+        "project": auth.project,
+        "source": auth.source,
+        "api_keys_disallowed": api_keys_disallowed(),
+        "reason": auth.reason,
     }
 
 
@@ -617,6 +698,7 @@ __all__ = [
     "GEMINI_INSTRUCTION",
     "MediaResult",
     "MediaStatus",
+    "classify_failure",
     "build_lyria_prompt",
     "build_veo_prompt",
     "generate_replay",

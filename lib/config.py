@@ -168,12 +168,25 @@ class Config:
 
     @property
     def has_gcp_credentials(self) -> bool:
-        """Best-effort: a real deployment sets one of these. Never assumed true."""
-        return bool(
-            os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-            or os.environ.get("GOOGLE_CLOUD_PROJECT")
-            and not self.uses_emulator
-        )
+        """Can this process actually authenticate to Google right now?
+
+        THIS USED TO BE A FALSE NEGATIVE FOR THE MAIN SUPPORTED SETUP.
+        The previous implementation tested only GOOGLE_APPLICATION_CREDENTIALS
+        and GOOGLE_CLOUD_PROJECT. `gcloud auth application-default login`
+        sets NEITHER -- it writes a well-known JSON file -- so an operator
+        who had authenticated correctly was still told there were no
+        credentials, with no hint why. On a Google Cloud project whose org
+        policy disallows API keys, ADC is the ONLY permitted mechanism, so
+        that false negative blocked the only supported path.
+
+        Now delegated to `lib/gcp_auth.resolve_auth`, which asks
+        `google.auth.default()` -- the same resolver google-genai uses, and
+        the one that already knows about the ADC file, an explicit service
+        account, and Cloud Run's metadata-server service identity.
+        """
+        from lib.gcp_auth import resolve_auth  # noqa: PLC0415
+
+        return resolve_auth().available
 
 
 # ---------------------------------------------------------------------------
