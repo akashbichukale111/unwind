@@ -51,7 +51,6 @@ its own reason.
 from __future__ import annotations
 
 import math
-import os
 import re
 import uuid
 from dataclasses import dataclass
@@ -135,8 +134,21 @@ _GEMINI_FAMILY_PREFIXES = ("gemini",)
 DEFAULT_SPEND_COST_BP = 100
 
 
-def _simulation_enabled() -> bool:
-    return os.environ.get("UNWIND_COUNTERSIGN_SIMULATED", "").strip() == "1"
+def _simulated_mint_permitted() -> bool:
+    """May a countersign recorded as `simulated=True` satisfy `mint`'s
+    independent-verification precondition right now?
+
+    Delegates to `lib.simulation.resolve_policy`, which applies the hard
+    production clamp: under `UNWIND_ENV=production` this is False no matter
+    what any other environment variable says. Previously this read
+    `UNWIND_COUNTERSIGN_SIMULATED` directly -- and `command_os/mission.py`
+    SET that variable on itself at request time, so the flag protecting the
+    authority path was controlled by the code the authority path was meant
+    to constrain. See `lib/simulation.py`'s module docstring.
+    """
+    from lib.simulation import resolve_policy  # noqa: PLC0415
+
+    return resolve_policy().simulated_mint_permitted
 
 
 def family_root(model_name: str) -> str:
@@ -512,8 +524,8 @@ def _has_valid_mint_preconditions(case_id: str) -> tuple[bool, str]:
         family = str(entry.payload.get("family", ""))
         if _is_gemini_family(family):
             continue  # must be a non-Gemini family
-        if entry.payload.get("simulated") and not _simulation_enabled():
-            continue  # a simulated countersign only counts with the flag set
+        if entry.payload.get("simulated") and not _simulated_mint_permitted():
+            continue  # a simulated countersign never counts in production
         return True, "ok"
     return (
         False,

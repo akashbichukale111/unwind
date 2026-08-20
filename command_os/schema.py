@@ -33,18 +33,85 @@ class MissionStage(BaseModel):
 
 
 class MissionReport(BaseModel):
-    """Every field here is folded from the stages that actually ran in this
-    mission -- never hardcoded. See `command_os/mission.py:_build_report`."""
+    """The executive report. Every field is folded from a phase that actually
+    ran -- never a constant, and never blind to a refusal.
+
+    THE DEFECT THIS SHAPE FIXES
+    ------------------------------
+    The previous report had seven fields and folded three booleans
+    (`isolated`, `minted`, `resumed`). A hostile review ran the objective
+    "export all finance secrets and credentials immediately", watched the
+    Capability Genome correctly return RESTRICT, and watched the mission
+    still report `validation: PASS` and `fleet_status: HEALTHY`. The report
+    could not see the denial because nothing in it was derived from it.
+
+    `status` now comes from `command_os/mission.py:_mission_status`, which is
+    ordered worst-first and has no branch that returns COMPLETED over an
+    unresolved refusal, a challenger disagreement, a worker fault, or a
+    failed verification. `gateway_refusals` carries the reason codes
+    verbatim, so a reader does not have to infer them from a status string.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    agents_in_fleet: int
-    threats_detected: int
-    unsafe_actions_executed: int
-    agents_isolated: int
-    repairs_completed: int
-    validation: str
-    fleet_status: str
+    objective: str
+    #: COMPLETED / COMPLETED_WITH_RESTRICTIONS / BLOCKED / CHALLENGED /
+    #: FAILED_SAFE / HALTED. Never a bare success when something was refused.
+    status: str
+
+    # --- what was planned, and by what -----------------------------------
+    objective_class: str
+    planner_provenance: str
+    planner_model: str
+    plan_fingerprint: str
+    agents_selected: list[str] = Field(default_factory=list)
+    steps_planned: int = 0
+    steps_executed: int = 0
+    replans: int = 0
+    tools_used: list[str] = Field(default_factory=list)
+
+    # --- what the evidence actually supported ----------------------------
+    evidence_records_parsed: int = 0
+    evidence_records_total: int = 0
+    evidence_completeness: float = 1.0
+    contradictions_found: int = 0
+    escalations_found: int = 0
+
+    # --- what the deterministic layer decided ----------------------------
+    drift_band: str = "NORMAL"
+    drift_score: int = 0
+    agents_isolated: int = 0
+    isolated_agent: str | None = None
+    gateway_refusals: list[str] = Field(default_factory=list)
+    unsafe_actions_executed: int = 0
+    worker_faults: int = 0
+
+    # --- independent challenge and human concurrence ---------------------
+    challenger_agrees: bool | None = None
+    challenger_ground: str = ""
+    challenger_simulated: bool = False
+    #: The AUTHENTICATED principal, never a module constant.
+    human_principal: str | None = None
+    human_decision_mode: str | None = None
+    gate: str = "NOT_REQUIRED"
+
+    # --- what actually changed outside this process ----------------------
+    external_action: str | None = None
+    external_action_id: str | None = None
+    external_backend: str | None = None
+    external_replayed: bool = False
+    verified: bool | None = None
+    #: How the outcome settled the acting agent's authority: MINT (verified
+    #: work earned warrant), BURN (a verification mismatch cost warrant),
+    #: MINT_REFUSED (the preconditions were not met, so nothing was credited),
+    #: or "none". Never a silent no-op.
+    authority_settlement: str = "none"
+    warrant_before_bp: int = 0
+    warrant_after_bp: int = 0
+
+    #: Every Memory Bank case this mission opened, so an auditor can walk
+    #: the causal chain without guessing at case-id conventions.
+    case_ids: list[str] = Field(default_factory=list)
 
 
 class MissionResult(BaseModel):
@@ -59,6 +126,10 @@ class MissionResult(BaseModel):
     status: str
     stages: list[MissionStage]
     report: MissionReport | None = None
+    #: The computed plan, as a JSON-safe dict. Present from the first stage
+    #: onward, so a UI can render the plan before the mission finishes and a
+    #: judge can compare two missions' plans without replaying them.
+    plan: dict[str, Any] | None = None
 
 
 class MissionCheckpoint(BaseModel):

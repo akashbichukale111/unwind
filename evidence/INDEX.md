@@ -150,3 +150,45 @@ here):
 | `evidence/deploy/shots/01-deployed-field.png` | The field renders on the DEPLOYED URL (not localhost) — 4,206 nodes, `T` key hint visible in the legend | The cull itself — that's shot 05-split.png / `make ui-check` |
 | `evidence/deploy/shots/02-deployed-instrument.png` | All four cards render on the DEPLOYED URL with real data — SYNTHETIC/EARNED labels, real agreement rate, real CHALLENGE mark | Nothing about the BURN animation itself — that's shot 03 |
 | `evidence/deploy/shots/03-deployed-burn.png` | A live BURN action against the deployed service, `WARRANT_INSUFFICIENT` refusal rendered with the oxide border | The exact before/after balance at first-ever click — this capture ran after prior test clicks in this same pass already zeroed that bar; see `evidence/firestore/deploy-2026-08-17.md` for the fresh 0→500bp mint that WAS captured on a first call |
+
+---
+
+## 8. Agentic Command OS — the plan-driven rewrite (2026-08-20)
+
+Every row below was produced by a command in this table, on this commit, in
+this environment. Where a capability could not be exercised here, the row says
+so instead of pointing at something weaker and calling it proof.
+
+| Claim | Code | Test / evidence | Reproduction command |
+| --- | --- | --- | --- |
+| Different objectives produce different plans (5/5 unique fingerprints) | `fleet/planner.py` | `tests/test_fleet.py::test_different_objectives_create_different_plans` | `pytest tests/test_fleet.py -k different_objectives -v` |
+| **Detection is causal**: removing the escalation from the evidence changes the trace | `command_os/mission.py:_phase_contain` | `tests/test_mission_causality.py`; `evidence/mission/causality-*.log` | `make causality` |
+| Drift is scored from the evidence's own numbers (147 tool calls, `finance`) | `_phase_contain` | `test_mission_causality.py::test_critical_drift_isolates_the_agent_the_evidence_named` | same |
+| A read-only role cannot write, enforced by the **unmodified** Gateway | `fleet/roles.py` + `tower/gateway.py` | `tests/test_fleet.py::test_recon_cannot_write_even_if_asked_to` | `pytest tests/test_fleet.py -k cannot_write -v` |
+| A model-authored plan cannot widen scope, invent a tool, or invent an action kind | `fleet/planner.py:validate_plan` | `tests/test_adversarial.py` attacks 1–4 | `make redteam` |
+| Uncertainty strictly raises the price of acting | `warrant/economics.py` | `tests/test_warrant_economics.py` (15 tests) | `pytest tests/test_warrant_economics.py -v` |
+| Pricing is model-free by import-graph proof | `warrant/economics.py` lives under `warrant/` | `tests/test_warrant_zero_model.py` | `pytest tests/test_warrant_zero_model.py -v` |
+| The economy sustains: verified work MINTs, mismatch BURNs | `_phase_verify` | `evidence/mission/economy-*.log` — 4 consecutive missions, 80bp → 520bp | `make mission` ×4 |
+| **Anonymous approval is refused (401)**; a service token is refused (403) | `lib/auth.py`, `services/api/security.py` | `tests/test_api_auth.py`, `tests/test_auth.py` (19 tests) | `pytest tests/test_auth.py tests/test_api_auth.py -v` |
+| Every mutating route has an auth dependency — checked by walking the route table | `services/api/security.py` | `test_api_auth.py::test_every_mutating_route_requires_a_principal` | same |
+| The concurrence record names the **authenticated** caller, never a constant | `_phase_gate` | `test_api_auth.py::test_authenticated_principal_is_the_one_recorded` | same |
+| Simulated evidence can never satisfy MINT in production | `lib/simulation.py` clamp | `test_adversarial.py::test_attack_09_...` | `make redteam` |
+| No request-path module mutates `os.environ` — asserted by AST walk | structural | `test_adversarial.py::test_attack_10_...` | `make redteam` |
+| One real external action: idempotent, reversible, independently verified | `command_os/external.py` | `tests/test_external_action.py` (15 tests); replay asserted by **counting lines in the sandbox file** | `pytest tests/test_external_action.py -v` |
+| Replay duplicates no spend, no Hyperion event, no external action | `resume_mission` + idempotency key | `tests/test_command_os_checkpoint.py` | `pytest tests/test_command_os_checkpoint.py -v` |
+| The report can never read COMPLETED over a refusal | `_mission_status` | `test_mission_causality.py::test_hostile_objective_does_not_report_healthy` | `make causality` |
+| 20-attack red team, all defended, plus one **declared undefended gap** | — | `evidence/redteam/redteam-*.log` — 21 passed | `make redteam` |
+| Full suite, emulator up | — | `evidence/tests/full-suite-emulator-*.log` — **586 passed, 1 skipped** | `FIRESTORE_EMULATOR_HOST=localhost:8080 make test` |
+| Full suite, no emulator | — | **458 passed, 129 skipped, 0 failed** | `make test` |
+| Headless-Chromium click-through: plan, auth refusal, mission, gate, external action | — | `evidence/browser/browser-check-*.json` + `command-os-mission.png` — **20/20** | `python evidence/browser/browser_check.py` |
+| **The real ADK Gemma path executes and fails CLOSED** with no credentials | `countersign/verify.py:_run_gemma_async` | `evidence/adk/live-call-attempt-*.log` — real `Runner`, real `Workflow`, `DefaultCredentialsError`, result `available=False, agrees=None` | see that log's header |
+
+### Explicitly NOT evidenced in this pass
+
+| Capability | Status | Why |
+| --- | --- | --- |
+| Live Gemini planning | `CONFIGURED_NOT_EXERCISED` | No Google Cloud credentials in this environment. The code path is real and the failure mode is proven honest (row above); the success path has not run here. |
+| Live Gemma challenge | `CONFIGURED_NOT_EXERCISED` | Same. |
+| Veo / Lyria | `DESIGNED` | Not built. No credentials, and generated media would be presentation rather than evidence. |
+| GitHub external-action backend | `CONFIGURED_NOT_EXERCISED` | Real adapter, no token. It raises rather than reporting success — `test_external_action.py::test_github_backend_refuses_rather_than_faking_success`. |
+| Cloud Run deployment of this commit | **not deployed** | This session has no `gcloud` credentials and its egress proxy blocks `*.run.app`. The last recorded deploy (`unwind-00013-9h7`) predates this rewrite and does **not** contain it. |

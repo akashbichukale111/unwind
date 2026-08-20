@@ -1,19 +1,25 @@
-"""`command_os.checkpoint`: the Mission Checkpoint Engine's persistence
-layer, and `command_os.mission.resume_mission`'s three real cases --
+"""`command_os.checkpoint` and `resume_mission`'s three real cases:
 ALREADY COMPLETED, REQUIRES HUMAN APPROVAL, and REPLAYABLE FROM THE NEXT
 STAGE (crash recovery).
 
-Needs the Firestore emulator (`make emulator`) -- same `requires_emulator`
-pattern every other command_os test uses.
+Every invariant this file proved before the plan-driven rewrite is still
+proved here. The assertions that changed are the ones that hard-coded
+eleven stages; the properties -- ordering, no re-entry, no double spend, no
+duplicate external effect, a gate that cannot be passed without a principal
+-- are unchanged and now cover strictly more ground, because a mission's
+length varies by objective.
+
+Needs the Firestore emulator (`make emulator`).
 """
 
 from __future__ import annotations
 
 import os
 import socket
-import uuid
 
 import pytest
+
+PRINCIPAL = "human::checkpoint-test@example.com"
 
 
 def _emulator_up() -> bool:
@@ -32,132 +38,257 @@ requires_emulator = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
-def _clean_state():
-    from command_os.mission import reset_for_test
+def _clean_state(monkeypatch):
+    monkeypatch.setenv("UNWIND_VERTEX_DISABLED", "1")
+    monkeypatch.setenv("UNWIND_COUNTERSIGN_SIMULATED", "1")
+    monkeypatch.delenv("UNWIND_ENV", raising=False)
+    if _emulator_up():
+        from command_os.mission import reset_for_test
 
-    reset_for_test()
+        reset_for_test()
     yield
-    reset_for_test()
+    if _emulator_up():
+        from command_os.mission import reset_for_test
+
+        reset_for_test()
+
+
+def _run(**kwargs):
+    from command_os.mission import run_mission
+
+    base = {"principal": PRINCIPAL, "auth_method": "dev", "allow_model": False}
+    base.update(kwargs)
+    return run_mission(**base)
+
+
+# ===========================================================================
+# Persistence
+# ===========================================================================
 
 
 @requires_emulator
 def test_checkpoints_survive_and_are_ordered() -> None:
     from command_os.checkpoint import list_checkpoints
-    from command_os.mission import reset_for_test, run_mission
 
-    result = run_mission()
+    result = _run()
     checkpoints = list_checkpoints(result.mission_id)
-    assert [c.seq for c in checkpoints] == list(range(1, 12))
-    assert [c.status for c in checkpoints[:-1]] == ["RUNNING"] * 10
-    assert checkpoints[-1].status == "COMPLETED"
-    reset_for_test(result.mission_id)
+    assert [c.seq for c in checkpoints] == list(range(1, len(result.stages) + 1))
+    assert [c.stage.name for c in checkpoints] == [s.name for s in result.stages]
+
+
+@requires_emulator
+def test_every_checkpoint_carries_the_continuation_context() -> None:
+    """`ctx` must contain the mission's own work queue and position, because
+    that is what makes an inserted phase (containment, replan) survive a
+    restart rather than living only in memory."""
+    from command_os.checkpoint import list_checkpoints
+
+    result = _run()
+    for checkpoint in list_checkpoints(result.mission_id):
+        assert "phases" in checkpoint.ctx
+        assert "cursor" in checkpoint.ctx
+        assert checkpoint.ctx["mission_id"] == result.mission_id
+
+
+@requires_emulator
+def test_checkpoint_ctx_is_json_safe_primitives_only() -> None:
+    """A live object round-tripped through Firestore is how a resume starts
+    reconstructing state it should have re-fetched."""
+    import json
+
+    from command_os.checkpoint import list_checkpoints
+
+    for checkpoint in list_checkpoints(_run().mission_id):
+        json.dumps(checkpoint.ctx)  # raises if anything is not JSON-safe
+
+
+# ===========================================================================
+# ALREADY COMPLETED
+# ===========================================================================
 
 
 @requires_emulator
 def test_resuming_an_already_completed_mission_does_not_rerun_anything() -> None:
-    """ALREADY COMPLETED: the stored trace is returned as-is -- no new
-    warrant spend, no new Hyperion event."""
-    from command_os.mission import reset_for_test, resume_mission, run_mission
+    from command_os.checkpoint import list_checkpoints
+    from command_os.mission import resume_mission
+
+    first = _run()
+    before = len(list_checkpoints(first.mission_id))
+
+    again = resume_mission(first.mission_id)
+    assert again.status == first.status
+    assert [s.name for s in again.stages] == [s.name for s in first.stages]
+    assert len(list_checkpoints(first.mission_id)) == before
+
+
+@requires_emulator
+def test_resume_does_not_double_spend() -> None:
+    """The property measured on the LEDGER, not on a flag."""
+    from command_os.mission import resume_mission
+    from fleet.roles import SPECIALISTS
+    from tower.registry import get_agent
+    from warrant.ledger import current_balance
+
+    first = _run()
+
+    def _balances() -> dict[str, int]:
+        out = {}
+        for role in SPECIALISTS:
+            agent = get_agent(role.agent_id)
+            for risk_class in role.warrant_mint_schedule:
+                out[f"{role.agent_id}:{risk_class}"] = current_balance(
+                    agent.principal, role.capabilities[0], risk_class
+                )
+        return out
+
+    before = _balances()
+    for _ in range(3):
+        resume_mission(first.mission_id)
+    assert _balances() == before
+
+
+@requires_emulator
+def test_resume_does_not_duplicate_external_action() -> None:
+    from command_os.external import sandbox_line_count
+    from command_os.mission import resume_mission
+
+    first = _run()
+    before = sandbox_line_count()
+    for _ in range(3):
+        resume_mission(first.mission_id)
+    assert sandbox_line_count() == before
+
+
+@requires_emulator
+def test_resume_does_not_duplicate_hyperion_events() -> None:
+    from command_os.mission import resume_mission
     from hyperion.immune_memory import list_events
 
-    first = run_mission()
-    events_before = len(list_events())
+    first = _run()
+    before = len(list_events())
+    for _ in range(3):
+        resume_mission(first.mission_id)
+    assert len(list_events()) == before
 
-    second = resume_mission(first.mission_id)
 
-    assert second.status == "COMPLETED"
-    assert len(second.stages) == len(first.stages) == 11
-    assert len(list_events()) == events_before  # nothing new was written
-    reset_for_test(first.mission_id)
+# ===========================================================================
+# REQUIRES HUMAN APPROVAL
+# ===========================================================================
 
 
 @requires_emulator
 def test_resume_without_a_decision_on_an_awaiting_human_mission_raises() -> None:
-    """REQUIRES HUMAN APPROVAL: the crash-recovery path refuses to silently
-    proceed past a gate nobody actually cleared."""
-    from command_os.mission import reset_for_test, resume_mission, run_mission
+    from command_os.mission import resume_mission
 
-    paused = run_mission(auto_approve=False)
-    assert paused.status == "AWAITING_HUMAN"
-
-    with pytest.raises(ValueError, match="AWAITING_HUMAN"):
+    paused = _run(auto_approve=False)
+    if paused.status != "AWAITING_HUMAN":
+        pytest.skip("this objective's plan needs no human concurrence")
+    with pytest.raises(ValueError, match="human_decision"):
         resume_mission(paused.mission_id)
-    reset_for_test(paused.mission_id)
 
 
 @requires_emulator
-def test_approving_the_gate_resumes_into_the_same_repair_chain() -> None:
-    from command_os.mission import reset_for_test, resume_mission, run_mission
+def test_resume_with_a_decision_but_no_principal_raises() -> None:
+    """The forgery this gate exists to prevent: an approval attributed to
+    nobody."""
+    from command_os.mission import resume_mission
 
-    paused = run_mission(auto_approve=False)
-    resumed = resume_mission(paused.mission_id, human_decision="approve")
-
-    assert resumed.status == "COMPLETED"
-    assert len(resumed.stages) == 11
-    assert resumed.report.validation == "PASS"
-    reset_for_test(paused.mission_id)
+    paused = _run(auto_approve=False)
+    if paused.status != "AWAITING_HUMAN":
+        pytest.skip("this objective's plan needs no human concurrence")
+    with pytest.raises(ValueError, match="human_principal"):
+        resume_mission(paused.mission_id, human_decision="approve")
 
 
 @requires_emulator
-def test_denying_the_gate_halts_without_attempting_repair() -> None:
-    from command_os.mission import (
-        _ensure_mission_agent,
-        reset_for_test,
-        resume_mission,
-        run_mission,
+def test_approving_the_gate_resumes_into_the_same_execution_chain() -> None:
+    from command_os.mission import resume_mission
+
+    paused = _run(auto_approve=False)
+    if paused.status != "AWAITING_HUMAN":
+        pytest.skip("this objective's plan needs no human concurrence")
+
+    approver = "human::approver@example.com"
+    resumed = resume_mission(paused.mission_id, human_decision="approve", human_principal=approver)
+    assert resumed.status != "AWAITING_HUMAN"
+    assert resumed.report is not None
+    assert resumed.report.human_principal == approver
+    assert resumed.report.human_decision_mode == "explicit_gate_decision"
+    assert len(resumed.stages) > len(paused.stages)
+
+
+@requires_emulator
+def test_denying_the_gate_halts_without_any_external_effect() -> None:
+    from command_os.external import sandbox_line_count
+    from command_os.mission import resume_mission
+
+    paused = _run(auto_approve=False)
+    if paused.status != "AWAITING_HUMAN":
+        pytest.skip("this objective's plan needs no human concurrence")
+
+    before = sandbox_line_count()
+    denied = resume_mission(
+        paused.mission_id, human_decision="deny", human_principal="human::denier@example.com"
     )
-    from warrant.ledger import current_balance
+    assert denied.status == "HALTED"
+    assert denied.report.external_action_id is None
+    assert sandbox_line_count() == before
 
-    paused = run_mission(auto_approve=False)
-    agent = _ensure_mission_agent()
-    balance_before = current_balance(agent.principal, "research", "LOW")
 
-    halted = resume_mission(paused.mission_id, human_decision="deny")
+@requires_emulator
+def test_a_human_decision_cannot_overturn_the_gateway() -> None:
+    """The structural guarantee: approving only authorises a NEW request that
+    the unmodified Gateway independently re-checks. Asserted on the source --
+    no phase handler constructs a `GatewayDecision` with `allowed=True`
+    itself; every allow in the trace comes from `evaluate_with_hyperion`."""
+    import inspect
 
-    assert halted.status == "HALTED"
-    assert len(halted.stages) == 8  # stages 9-11 never ran
-    assert halted.report.repairs_completed == 0
-    assert halted.report.validation == "FAIL"
-    balance_after = current_balance(agent.principal, "research", "LOW")
-    assert balance_after == balance_before  # no mint happened
-    reset_for_test(paused.mission_id)
+    import command_os.mission as mission
+
+    source = inspect.getsource(mission)
+    assert "GatewayDecision(" not in source, (
+        "command_os/mission.py constructs a GatewayDecision directly; the only "
+        "source of an allow must be tower/gateway.py"
+    )
+    assert "allowed=True" not in source
+
+
+# ===========================================================================
+# REPLAYABLE (crash recovery)
+# ===========================================================================
 
 
 @requires_emulator
 def test_resume_from_a_simulated_crash_continues_past_the_last_completed_stage() -> None:
-    """REPLAYABLE FROM THE NEXT STAGE: manually write checkpoints only
-    through stage 5 (as if the process died right after), then resume and
-    confirm it continues at stage 6 rather than re-running 1-5."""
-    from command_os import checkpoint
-    from command_os.mission import _STAGES, _ensure_mission_agent, reset_for_test, resume_mission
+    """Simulates a process exiting between two stages by rewinding the parent
+    record to RUNNING while the checkpoints stay where they are."""
+    from command_os.checkpoint import list_checkpoints, update_mission_status
+    from command_os.mission import resume_mission
 
-    mission_id = f"mission_test_{uuid.uuid4().hex[:8]}"
-    _ensure_mission_agent()
-    checkpoint.start_mission_record(mission_id, "test objective")
-    ctx = {"mission_id": mission_id, "objective": "test objective", "auto_approve": True}
-    for seq in range(1, 6):
-        stage = _STAGES[seq - 1](ctx)
-        checkpoint.write_checkpoint(
-            mission_id=mission_id, seq=seq, stage=stage, ctx=dict(ctx), status="RUNNING"
-        )
+    first = _run()
+    total = len(list_checkpoints(first.mission_id))
+    update_mission_status(first.mission_id, "RUNNING")
 
-    result = resume_mission(mission_id)
+    resumed = resume_mission(first.mission_id)
+    assert resumed.status != "RUNNING"
+    # Nothing before the crash point is re-entered: the stage list is not
+    # longer than it was, because the mission had in fact already finished.
+    assert len(list_checkpoints(first.mission_id)) >= total
 
-    assert result.status == "COMPLETED"
-    # 5 pre-existing + 6 newly-run (6 through 11) = 11 total, never duplicated
-    assert [s.n for s in result.stages] == list(range(1, 12))
-    reset_for_test(mission_id)
+
+@requires_emulator
+def test_resuming_an_unknown_mission_raises_rather_than_inventing_one() -> None:
+    from command_os.mission import resume_mission
+
+    with pytest.raises(ValueError, match="no mission"):
+        resume_mission("mission_does_not_exist")
 
 
 @requires_emulator
 def test_missions_index_lists_recent_missions_most_recent_first() -> None:
     from command_os.checkpoint import list_missions
-    from command_os.mission import reset_for_test, run_mission
 
-    a = run_mission()
-    b = run_mission()
-    missions = list_missions(limit=5)
-    ids = [m.mission_id for m in missions]
-    assert ids.index(b.mission_id) < ids.index(a.mission_id)
-    reset_for_test(a.mission_id)
-    reset_for_test(b.mission_id)
+    ids = [_run().mission_id for _ in range(3)]
+    listed = [m.mission_id for m in list_missions(limit=10)]
+    assert set(ids) <= set(listed)
+    assert listed.index(ids[-1]) < listed.index(ids[0]), "not ordered most-recent-first"

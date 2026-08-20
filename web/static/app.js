@@ -848,8 +848,8 @@
       return;
     }
     const status = h.events_total > 0
-      ? `<span class="dot">&#9679;</span> IMMUNE CORE ACTIVE — ${h.events_total} decision${h.events_total === 1 ? "" : "s"} observed`
-      : `<span class="dot">&#9679;</span> IMMUNE CORE ACTIVE — no decisions observed yet`;
+      ? `<span class="dot" aria-hidden="true"></span>IMMUNE CORE ACTIVE — ${h.events_total} decision${h.events_total === 1 ? "" : "s"} observed`
+      : `<span class="dot" aria-hidden="true"></span>IMMUNE CORE ACTIVE — no decisions observed yet`;
     $("instr-hyperion-body").innerHTML =
       `<div class="hy-status-line">${status}</div>` + hyperionStatLine(h);
   }
@@ -1195,6 +1195,34 @@
 
   let cmdosMissionId = null;
 
+  // ---- operator credential -------------------------------------------------
+  // Every mutating endpoint refuses an anonymous caller (401). The token lives
+  // in sessionStorage only -- never localStorage, so it does not outlive the
+  // tab -- and is sent as a bearer header. When the server is configured with
+  // UNWIND_DEV_PRINCIPAL the field can stay empty; the auth-mode line below
+  // says which of those is true rather than leaving a judge to guess.
+  const TOKEN_KEY = "unwind.operator.token";
+
+  function operatorToken() {
+    const field = $("cmdos-token");
+    return (field && field.value.trim()) || sessionStorage.getItem(TOKEN_KEY) || "";
+  }
+
+  function authHeaders() {
+    const token = operatorToken();
+    return token ? { Authorization: "Bearer " + token } : {};
+  }
+
+  async function authedFetch(url, options) {
+    const opts = Object.assign({}, options || {});
+    opts.headers = Object.assign({}, opts.headers || {}, authHeaders());
+    const res = await fetch(url, opts);
+    if (res.status === 401 || res.status === 403) {
+      $("cmdos-authfail").hidden = false;
+    }
+    return res;
+  }
+
   function statusClass(status) {
     if (status.indexOf("LIVE") === 0) return "cmdos-live";
     if (status === "SIMULATED") return "cmdos-simulated";
@@ -1217,23 +1245,97 @@
     )).join("");
   }
 
+  //: Status -> headline. Never a bare success over a refusal: the mapping is
+  //: the UI half of `command_os/mission.py:_mission_status`, and the two must
+  //: agree because the report carries the status the server computed.
+  const STATUS_HEADLINE = {
+    COMPLETED: "MISSION: COMPLETED",
+    COMPLETED_WITH_RESTRICTIONS: "MISSION: COMPLETED WITH RESTRICTIONS",
+    BLOCKED: "MISSION: BLOCKED",
+    CHALLENGED: "MISSION: CHALLENGED — minting frozen, routed to a human",
+    FAILED_SAFE: "MISSION: FAILED SAFE",
+    HALTED: "MISSION: HALTED",
+    AWAITING_HUMAN: "MISSION: AWAITING HUMAN",
+  };
+
+  function row(k, v) {
+    return "<div><span class='k'>" + k + "</span><span class='v'>" +
+      (v === null || v === undefined || v === "" ? "—" : v) + "</span></div>";
+  }
+
+  function renderPlan(plan) {
+    const panel = $("cmdos-plan-panel");
+    if (!plan) { panel.hidden = true; return; }
+    panel.hidden = false;
+    const steps = plan.steps.map((st) => (
+      "<div class='cmdos-plan-step'>" +
+        "<span class='cmdos-plan-seq'>" + String(st.seq).padStart(2, "0") + "</span>" +
+        "<span class='cmdos-plan-role cond'>" + st.role + "</span>" +
+        "<span class='cmdos-plan-tool'>" + st.tool + "</span>" +
+        "<span class='cmdos-tag cmdos-reference'>" + st.action_kind + "</span>" +
+        "<span class='cmdos-plan-scope'>" + (st.requested_scope || []).join(", ") + "</span>" +
+      "</div>"
+    )).join("");
+    const clamps = (plan.clamps || []).length
+      ? "<div class='cmdos-plan-clamps'>validator narrowed: " +
+          plan.clamps.map((c) => "<div>· " + c + "</div>").join("") + "</div>"
+      : "";
+    $("cmdos-plan").innerHTML =
+      "<div class='cmdos-plan-head'>" +
+        "<span class='cmdos-tag " + statusClass(plan.provenance === "ZERO_MODEL" ? "SIMULATED" : "LIVE") + "'>" +
+          plan.provenance + "</span>" +
+        "<span class='cmdos-plan-class cond'>" + plan.objective_class + "</span>" +
+        "<span class='cmdos-hint'>" + plan.model + "</span>" +
+      "</div>" +
+      steps + clamps +
+      (plan.notes ? "<div class='cmdos-hint'>" + plan.notes + "</div>" : "");
+  }
+
   function renderMissionReport(report, missionStatus) {
     const el = $("cmdos-report");
     el.hidden = false;
-    const pass = report.validation === "PASS";
-    const headline = missionStatus === "HALTED" && !pass
-      ? "MISSION: HALTED"
-      : "MISSION: " + (pass ? "SUCCESS" : "INCOMPLETE");
+    const headline = STATUS_HEADLINE[report.status] || ("MISSION: " + report.status);
     el.innerHTML =
       "<div class='cmdos-report-title cond'>" + headline + "</div>" +
       "<div class='cmdos-report-grid'>" +
-        "<div><span class='k'>agents in fleet</span><span class='v'>" + report.agents_in_fleet + "</span></div>" +
-        "<div><span class='k'>threats detected</span><span class='v'>" + report.threats_detected + "</span></div>" +
-        "<div><span class='k'>unsafe actions executed</span><span class='v'>" + report.unsafe_actions_executed + "</span></div>" +
-        "<div><span class='k'>agents isolated</span><span class='v'>" + report.agents_isolated + "</span></div>" +
-        "<div><span class='k'>repairs completed</span><span class='v'>" + report.repairs_completed + "</span></div>" +
-        "<div><span class='k'>validation</span><span class='v'>" + report.validation + "</span></div>" +
-        "<div><span class='k'>fleet status</span><span class='v'>" + report.fleet_status + "</span></div>" +
+        row("objective class", report.objective_class) +
+        row("planner", report.planner_provenance + " · " + report.planner_model) +
+        row("agents selected", (report.agents_selected || []).join(", ")) +
+        row("steps planned / executed", report.steps_planned + " / " + report.steps_executed) +
+        row("replans", report.replans) +
+        row("evidence parsed", report.evidence_records_parsed + " / " + report.evidence_records_total +
+            " (" + Math.round((report.evidence_completeness || 0) * 100) + "%)") +
+        row("contradictions found", report.contradictions_found) +
+        row("escalations found", report.escalations_found) +
+        row("drift", report.drift_band + " (" + report.drift_score + ")") +
+        row("agents isolated", report.agents_isolated + (report.isolated_agent ? " · " + report.isolated_agent : "")) +
+        row("gateway refusals", (report.gateway_refusals || []).join(", ")) +
+        row("unsafe actions executed", report.unsafe_actions_executed) +
+        row("worker faults", report.worker_faults) +
+        row("challenger", report.challenger_agrees === null ? "UNAVAILABLE"
+              : (report.challenger_agrees ? "AGREED" : "DISAGREED")) +
+        row("human principal", report.human_principal) +
+        row("gate", report.gate) +
+        row("external action", report.external_action) +
+        row("external id", report.external_action_id) +
+        row("verified", report.verified === null ? "—" : String(report.verified)) +
+      "</div>" +
+      (report.challenger_ground
+        ? "<div class='cmdos-hint cmdos-ground'>challenger ground: " + report.challenger_ground + "</div>"
+        : "");
+  }
+
+  function renderExternal(report) {
+    const panel = $("cmdos-external-panel");
+    if (!report || !report.external_action_id) { panel.hidden = true; return; }
+    panel.hidden = false;
+    $("cmdos-external").innerHTML =
+      "<div class='cmdos-report-grid'>" +
+        row("action", report.external_action) +
+        row("backend", report.external_backend) +
+        row("external id", report.external_action_id) +
+        row("replayed", String(report.external_replayed)) +
+        row("independently verified", String(report.verified)) +
       "</div>";
   }
 
@@ -1267,8 +1369,8 @@
 
   async function loadTrustAndFirewall(missionId) {
     const [trustRes, firewallRes] = await Promise.all([
-      fetch("/api/command-os/mission/" + missionId + "/trust"),
-      fetch("/api/command-os/mission/" + missionId + "/context-firewall"),
+      authedFetch("/api/command-os/mission/" + missionId + "/trust"),
+      authedFetch("/api/command-os/mission/" + missionId + "/context-firewall"),
     ]);
     if (!trustRes.ok || !firewallRes.ok) return;
     renderTrust(await trustRes.json());
@@ -1279,13 +1381,16 @@
   function applyMissionResult(d) {
     cmdosMissionId = d.mission_id;
     renderMissionStages(d.stages);
+    renderPlan(d.plan);
     if (d.status === "AWAITING_HUMAN") {
       $("cmdos-gate").hidden = false;
       $("cmdos-report").hidden = true;
       $("cmdos-trust-firewall").hidden = true;
+      $("cmdos-external-panel").hidden = true;
     } else {
       $("cmdos-gate").hidden = true;
       renderMissionReport(d.report, d.status);
+      renderExternal(d.report);
       loadTrustAndFirewall(d.mission_id);
     }
   }
@@ -1299,25 +1404,33 @@
     $("cmdos-gate").hidden = true;
     $("cmdos-trust-firewall").hidden = true;
     $("cmdos-stages").innerHTML = "";
+    $("cmdos-authfail").hidden = true;
+    $("cmdos-plan-panel").hidden = true;
+    $("cmdos-external-panel").hidden = true;
     try {
       const autoApprove = !$("cmdos-auto-approve").checked;
-      const res = await fetch(
-        "/api/command-os/mission?auto_approve=" + autoApprove, { method: "POST" }
+      const objective = encodeURIComponent($("cmdos-objective-input").value.trim());
+      const res = await authedFetch(
+        "/api/command-os/mission?auto_approve=" + autoApprove + "&objective=" + objective,
+        { method: "POST" }
       );
       if (res.status === 503) {
         $("cmdos-offline").hidden = false;
         return;
       }
+      if (!res.ok) return;
+      const token = operatorToken();
+      if (token) sessionStorage.setItem(TOKEN_KEY, token);
       applyMissionResult(await res.json());
     } finally {
       btn.disabled = false;
-      btn.textContent = "Run mission: build & deploy a secure enterprise service";
+      btn.textContent = "Run autonomous mission";
     }
   }
 
   async function handleGateDecision(decision) {
     if (!cmdosMissionId) return;
-    const res = await fetch(
+    const res = await authedFetch(
       "/api/command-os/mission/" + cmdosMissionId + "/gate?decision=" + decision,
       { method: "POST" }
     );
@@ -1346,10 +1459,64 @@
     )).join("");
   }
 
+  async function renderFleet() {
+    const res = await fetch("/api/command-os/fleet");
+    if (!res.ok) return;
+    const d = await res.json();
+    $("cmdos-fleet").innerHTML = d.roles.map((r) => (
+      "<div class='cmdos-fleet-row' title='" + r.purpose + "'>" +
+        "<div class='cmdos-fleet-id cond'>" + r.agent_id + "</div>" +
+        "<div class='cmdos-fleet-scope'>scope: " + r.authority_scope.join(", ") + "</div>" +
+        "<div class='cmdos-fleet-tools'>tools: " + (r.tools.length ? r.tools.join(", ") : "—") + "</div>" +
+      "</div>"
+    )).join("");
+  }
+
+  async function renderEconomics() {
+    const drift = $("cmdos-econ-drift").value;
+    const completeness = Number($("cmdos-econ-completeness").value) / 100;
+    const disagree = $("cmdos-econ-disagree").checked;
+    const res = await fetch(
+      "/api/command-os/economics?drift_band=" + drift +
+      "&completeness=" + completeness +
+      "&model_disagreement=" + disagree
+    );
+    if (!res.ok) return;
+    const d = await res.json();
+    $("cmdos-economics").innerHTML =
+      "<div class='cmdos-econ-tax'>uncertainty tax <span class='cond'>+" + d.tax_pct + "%</span></div>" +
+      (d.contributions.length
+        ? "<div class='cmdos-hint'>" + d.contributions.map((c) => "· " + c).join("<br>") + "</div>"
+        : "<div class='cmdos-hint'>· no uncertainty signal fired</div>") +
+      d.prices.map((p) => (
+        "<div class='cmdos-reality-row'>" +
+          "<span class='cmdos-reality-feature'>" + p.action_kind.replace(/_/g, " ").toLowerCase() + "</span>" +
+          "<span class='cmdos-tag " + (p.cost_bp > p.base_bp ? "cmdos-simulated" : "cmdos-live") + "'>" +
+            p.cost_bp + "bp</span>" +
+        "</div>"
+      )).join("");
+  }
+
+  async function renderAuthMode() {
+    const res = await fetch("/api/command-os/status");
+    if (!res.ok) return;
+    const d = await res.json();
+    const a = d.auth || {};
+    const parts = ["env " + a.env];
+    if (a.iap_trusted) parts.push("IAP trusted");
+    if (a.bearer_tokens_configured) parts.push(a.bearer_tokens_configured + " bearer token(s) configured");
+    if (a.dev_principal_configured && a.dev_principal_permitted) parts.push("dev principal active — no token needed");
+    parts.push("anonymous mutation: " + (a.anonymous_mutation_possible ? "POSSIBLE" : "refused"));
+    $("cmdos-authmode").textContent = parts.join(" · ");
+  }
+
   async function showCommandOS() {
     hideCore();
     show("command-os");
     renderSystemReality();
+    renderAuthMode();
+    renderFleet();
+    renderEconomics();
   }
 
   $("cmdos-run").addEventListener("click", runMission);
@@ -1357,6 +1524,10 @@
   $("instr-cmdos-link").addEventListener("click", showCommandOS);
   $("cmdos-gate-approve").addEventListener("click", () => handleGateDecision("approve"));
   $("cmdos-gate-deny").addEventListener("click", () => handleGateDecision("deny"));
+  ["cmdos-econ-drift", "cmdos-econ-completeness", "cmdos-econ-disagree"].forEach((id) => {
+    $(id).addEventListener("input", renderEconomics);
+    $(id).addEventListener("change", renderEconomics);
+  });
 
   // ── MISSION TIME MACHINE ────────────────────────────────────────────
 

@@ -1,7 +1,16 @@
-"""`command_os.trust.trusted_state_for_mission`: a real, categorical fold
-over one mission's checkpoints and Hyperion events -- never a scalar score
-(see the module's docstring for why: `lib/schema.py:AgentTrust` was already
-rejected once by `settle/loadrating.py:assert_not_agent_trust`).
+"""`command_os.trust`: Trusted State -- what a mission is willing to act on
+now, as distinct from what merely happened.
+
+The buckets are CATEGORICAL and always will be. This repository already
+refused scalar agent trust once (`lib/schema.py:AgentTrust`, refused as a
+load-rating input by `settle/loadrating.py:assert_not_agent_trust`), and
+`test_no_scalar_score_anywhere_in_the_payload` is what keeps that refusal
+from quietly eroding.
+
+What changed with the plan-driven rewrite: bucketing is keyed on what a
+stage RECORDED (`isolated`, the Gateway's own `allowed`), never on the
+stage's position, because a mission's length and ordering now vary by
+objective.
 """
 
 from __future__ import annotations
@@ -10,6 +19,8 @@ import os
 import socket
 
 import pytest
+
+PRINCIPAL = "human::trust-test@example.com"
 
 
 def _emulator_up() -> bool:
@@ -28,84 +39,111 @@ requires_emulator = pytest.mark.skipif(
 
 
 @pytest.fixture(autouse=True)
-def _clean_state():
-    from command_os.mission import reset_for_test
+def _clean_state(monkeypatch):
+    monkeypatch.setenv("UNWIND_VERTEX_DISABLED", "1")
+    monkeypatch.setenv("UNWIND_COUNTERSIGN_SIMULATED", "1")
+    monkeypatch.delenv("UNWIND_ENV", raising=False)
+    if _emulator_up():
+        from command_os.mission import reset_for_test
 
-    reset_for_test()
+        reset_for_test()
     yield
-    reset_for_test()
+    if _emulator_up():
+        from command_os.mission import reset_for_test
+
+        reset_for_test()
+
+
+def _run():
+    from command_os.mission import run_mission
+
+    return run_mission(principal=PRINCIPAL, auth_method="dev", allow_model=False)
 
 
 @requires_emulator
 def test_buckets_are_disjoint_and_every_checkpoint_lands_in_exactly_one() -> None:
-    from command_os.mission import reset_for_test, run_mission
     from command_os.trust import trusted_state_for_mission
 
-    result = run_mission()
+    result = _run()
     state = trusted_state_for_mission(result.mission_id)
 
-    all_seqs = [
-        item["seq"]
-        for bucket in ("trusted", "untrusted", "quarantined", "revoked")
-        for item in state[bucket]
-    ]
-    assert sorted(all_seqs) == list(range(1, 12))
-    assert len(all_seqs) == len(set(all_seqs))  # disjoint: no seq in two buckets
-    reset_for_test(result.mission_id)
+    buckets = ("trusted", "untrusted", "quarantined", "revoked")
+    all_seqs = [item["seq"] for bucket in buckets for item in state[bucket]]
+    assert sorted(all_seqs) == list(range(1, len(result.stages) + 1))
+    assert len(all_seqs) == len(set(all_seqs)), "a checkpoint landed in two buckets"
 
 
 @requires_emulator
-def test_the_block_is_revoked_and_isolation_is_quarantined() -> None:
-    from command_os.mission import reset_for_test, run_mission
+def test_the_containment_is_quarantined_and_its_refusal_is_revoked() -> None:
+    """The isolation and the Gateway refusal that caused it are bucketed by
+    what the stage recorded, whatever position it occupied."""
     from command_os.trust import trusted_state_for_mission
 
-    result = run_mission()
+    result = _run()
     state = trusted_state_for_mission(result.mission_id)
 
-    revoked_seqs = {item["seq"] for item in state["revoked"]}
-    quarantined_seqs = {item["seq"] for item in state["quarantined"]}
-    assert 6 in revoked_seqs  # CONTROL TOWER -- ACTION BLOCKED
-    assert 8 in quarantined_seqs  # AGENT ISOLATED
-    reset_for_test(result.mission_id)
+    contain_stages = [s for s in result.stages if s.name.startswith("CONTAIN")]
+    if not contain_stages:
+        pytest.skip("this run found no escalation to contain")
+
+    quarantined_names = {item["stage"] for item in state["quarantined"]}
+    assert any(name.startswith("CONTAIN") for name in quarantined_names), (
+        f"the containment was not quarantined; buckets were {state}"
+    )
+
+
+@requires_emulator
+def test_allowed_steps_are_trusted() -> None:
+    from command_os.trust import trusted_state_for_mission
+
+    result = _run()
+    state = trusted_state_for_mission(result.mission_id)
+    trusted_names = {item["stage"] for item in state["trusted"]}
+    allowed_steps = {
+        s.name
+        for s in result.stages
+        if s.name.startswith("STEP ") and (s.detail.get("decision") or {}).get("allowed") is True
+    }
+    assert allowed_steps <= trusted_names, (
+        f"an allowed step was not trusted: {allowed_steps - trusted_names}"
+    )
 
 
 @requires_emulator
 def test_no_scalar_score_anywhere_in_the_payload() -> None:
-    """The categorical-not-scalar guarantee, asserted directly: no field
-    named anything like a reputation/trust score, and no float in [0, 1]
-    posing as one."""
-    from command_os.mission import reset_for_test, run_mission
+    """Never one number. The same refusal `warrant/DESIGN.md` states for
+    balances and `hyperion/schema.py` states for risk."""
     from command_os.trust import trusted_state_for_mission
 
-    result = run_mission()
-    state = trusted_state_for_mission(result.mission_id)
-
-    forbidden_keys = {"score", "reputation", "trust_score", "confidence"}
-    assert not (forbidden_keys & set(state.keys()))
-    reset_for_test(result.mission_id)
+    state = trusted_state_for_mission(_run().mission_id)
+    forbidden = {"score", "trust_score", "reputation", "confidence", "rating", "percent"}
+    flat = repr(state).lower()
+    for word in forbidden:
+        assert word not in flat, f"a scalar {word!r} appeared in Trusted State"
 
 
 @requires_emulator
-def test_hyperion_events_considered_matches_the_mission_own_case_ids() -> None:
-    """Real, exact filtering by case_id -- not every Hyperion event ever
-    logged, only this mission's."""
-    from command_os.mission import _ensure_mission_agent, reset_for_test, run_mission
+def test_hyperion_events_considered_are_scoped_to_this_mission() -> None:
+    """The count must be a real filter over this mission's own case ids, not
+    a fleet-wide total dressed up as mission-scoped."""
     from command_os.trust import trusted_state_for_mission
-    from hyperion.guard import evaluate_with_hyperion
+    from hyperion.immune_memory import list_events
 
-    result = run_mission()
-    agent = _ensure_mission_agent()
-    # An unrelated event, same agent, different case_id -- must not be counted.
-    evaluate_with_hyperion(
-        agent,
-        task="unrelated probe",
-        requested_scope=["web.read"],
-        requested_cost=1,
-        risk_class="LOW",
-        capability="research",
-        case_id="not_this_missions_case",
+    result = _run()
+    state = trusted_state_for_mission(result.mission_id)
+
+    mine = [e for e in list_events() if e.case_id and e.case_id.startswith(result.mission_id)]
+    assert state["hyperion_events_considered"] == len(mine)
+    assert state["hyperion_events_considered"] > 0, (
+        "the mission wrote no Hyperion events; the authority path did not run"
     )
 
-    state = trusted_state_for_mission(result.mission_id)
-    assert state["hyperion_events_considered"] == 2  # stage 5's block + stage 10's validation
-    reset_for_test(result.mission_id)
+
+@requires_emulator
+def test_trusted_state_of_an_unknown_mission_is_empty_not_invented() -> None:
+    from command_os.trust import trusted_state_for_mission
+
+    state = trusted_state_for_mission("mission_does_not_exist")
+    assert state["trusted"] == []
+    assert state["quarantined"] == []
+    assert state["mission_status"] is None

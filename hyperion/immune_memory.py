@@ -67,8 +67,10 @@ def write_event(
 
 def list_events(limit: int | None = None) -> list[HyperionEvent]:
     """Every logged event, most recent first."""
-    query = get_client().collection(COLLECTION_HYPERION_EVENTS).order_by(
-        "recorded_at", direction="DESCENDING"
+    query = (
+        get_client()
+        .collection(COLLECTION_HYPERION_EVENTS)
+        .order_by("recorded_at", direction="DESCENDING")
     )
     if limit is not None:
         query = query.limit(limit)
@@ -104,9 +106,7 @@ def aggregate_fleet_summary(*, recent_limit: int = 25) -> dict[str, Any]:
         "agents_observed": len(agents_observed),
         "events_total": total,
         "threats_detected": len(blocked),
-        "blocked_actions": len(
-            [e for e in blocked if e.reason_code != GatewayReasonCode.ALLOWED]
-        ),
+        "blocked_actions": len([e for e in blocked if e.reason_code != GatewayReasonCode.ALLOWED]),
         "fleet_health_pct": fleet_health_pct,
         "risk_band_counts": band_counts,
         "last_event": last_event.to_firestore() if last_event else None,

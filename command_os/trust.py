@@ -56,8 +56,21 @@ def trusted_state_for_mission(mission_id: str) -> dict[str, Any]:
 
     for cp in checkpoints:
         item = {"seq": cp.seq, "stage": cp.stage.name, "status": cp.stage.status}
-        allowed = cp.stage.detail.get("allowed")
-        if cp.stage.n == 8 and cp.stage.detail.get("isolated"):
+        detail = cp.stage.detail
+        # KEYED ON WHAT THE STAGE RECORDED, NOT ON ITS POSITION.
+        #
+        # This used to read `cp.stage.n == 8`, which was correct only while
+        # every mission ran the same eleven stages in the same order. A
+        # plan-driven mission's length and ordering vary by objective (and a
+        # containment probe or a replan inserts work mid-flight), so a
+        # position-based rule would silently mis-bucket every mission whose
+        # plan was not the one it was written against. The recorded fields --
+        # `isolated`, and the Gateway's own `decision.allowed` -- are stable
+        # across every plan shape.
+        isolated = detail.get("isolated")
+        decision = detail.get("decision") or {}
+        allowed = detail.get("allowed", decision.get("allowed"))
+        if isolated is True:
             quarantined.append(item)
         elif allowed is True:
             trusted.append(item)
@@ -66,9 +79,20 @@ def trusted_state_for_mission(mission_id: str) -> dict[str, Any]:
         else:
             untrusted.append(item)
 
-    case_ids = {
-        v for k, v in (checkpoints[-1].ctx.items() if checkpoints else []) if k.endswith("case_id")
-    }
+    # THE MISSION'S OWN CASE IDS, FROM ITS OWN LIST.
+    #
+    # This used to scan the checkpoint ctx for keys ending in `_case_id`,
+    # which found only the two or three the old fixed mission happened to
+    # name that way. A plan-driven mission opens one case per step plus one
+    # per containment, challenge and execution, and records every one in
+    # `ctx["case_ids"]` -- so the scan silently under-counted, and a count
+    # that looks mission-scoped while quietly dropping most of the mission's
+    # events is precisely the kind of number this repository refuses to
+    # serve. The suffix scan is kept as a fallback so a checkpoint written
+    # before `case_ids` existed still resolves.
+    ctx = checkpoints[-1].ctx if checkpoints else {}
+    case_ids: set[str] = set(ctx.get("case_ids") or [])
+    case_ids |= {v for k, v in ctx.items() if k.endswith("case_id") and isinstance(v, str)}
     hyperion_events = [e for e in list_hyperion_events() if e.case_id in case_ids]
 
     return {

@@ -37,19 +37,106 @@ def system_reality() -> list[dict[str, Any]]:
 
     for feature, status, note in (
         (
+            "mission_planner",
+            "LIVE",
+            "fleet/planner.py classifies the objective and composes a plan whose "
+            "specialists, tools and action kinds differ by objective "
+            "(tests/test_fleet.py::test_different_objectives_create_different_plans)",
+        ),
+        (
+            "gemini_planning",
+            "CONFIGURED_NOT_EXERCISED",
+            "fleet/agents.py builds a real ADK LlmAgent with a real output_schema and "
+            "runs it through a real Runner; NO Google Cloud credentials were available "
+            "in the session that wrote it, so it has not been executed against live "
+            "Vertex. Every plan produced without it is labelled ZERO_MODEL, never GEMINI",
+        ),
+        (
+            "agent_delegation",
+            "LIVE",
+            "five registered identities with distinct principals, scopes, budgets and "
+            "warrant rows; the Orchestrator cannot delegate to itself and a read-only "
+            "role is refused SCOPE_EXCEEDED by the unmodified Gateway",
+        ),
+        (
+            "specialist_agents",
+            "LIVE",
+            "Recon / Risk / Remediation / Verifier. Tool execution is deterministic "
+            "(fleet/tools.py, zero-model by import-graph test); the LlmAgent objects "
+            "for each role exist but their model path shares gemini_planning's status",
+        ),
+        (
+            "causal_detection",
+            "LIVE",
+            "the containment probe exists only when parsed evidence names an "
+            "escalation, and tests the scope and agent that evidence named "
+            "(tests/test_mission_causality.py)",
+        ),
+        (
+            "replanning",
+            "LIVE",
+            "deterministic revision after a refusal or worker fault: retry at narrowest "
+            "held scope, downgrade unaffordable mutations, narrow to read-only under drift",
+        ),
+        (
+            "warrant_market",
+            "LIVE",
+            "warrant/economics.py prices every action kind; the price is the "
+            "requested_cost handed to the unmodified Gateway budget check",
+        ),
+        (
+            "uncertainty_tax",
+            "LIVE",
+            "six independent signals raise the cost of acting under uncertainty; "
+            "computed in warrant/, which tests/test_warrant_zero_model.py proves "
+            "cannot reach a model",
+        ),
+        (
+            "messy_data_synthesis",
+            "LIVE",
+            "fleet/data/incident/ is a free-text handover note, a CSV with a blank id, "
+            "a missing integer and a corrupt timestamp, and a JSON feed with two "
+            "contradicting records; measured coverage is 16/20, and that number feeds "
+            "the uncertainty tax",
+        ),
+        (
+            "independent_challenger",
+            "LIVE (ZERO-MODEL)",
+            "countersign/verify.py re-derives its own verdict from the evidence on five "
+            "named grounds and can genuinely disagree; the Gemma model path is real "
+            "code and shares gemini_planning's credential status",
+        ),
+        (
+            "external_action",
+            "LIVE (SANDBOX BACKEND)",
+            "command_os/external.py appends to a real file outside this process, keyed "
+            "by an idempotency key, reversible by compensation. The GitHub backend is "
+            "real code that has never been executed -- see /api/command-os/status's "
+            "external_action block",
+        ),
+        (
+            "authenticated_human_gate",
+            "LIVE",
+            "the concurrence record names the AUTHENTICATED principal; anonymous "
+            "mutation is refused 401 and a service identity is refused 403",
+        ),
+        (
             "master_orchestrator",
             "LIVE",
-            "command_os/mission.py sequences real engine calls end-to-end for one mission",
+            "command_os/mission.py executes the computed plan through the unmodified "
+            "authority path; it constructs no GatewayDecision of its own",
         ),
         (
             "dynamic_agent_factory",
             "SIMULATED",
-            "static 7-role roster (singularity/fleet.py); no live agent spawning",
+            "five roles are registered from static definitions (fleet/roles.py); no "
+            "agent process is spawned at runtime",
         ),
         (
             "red_team_chaos_testing",
-            "SIMULATED",
-            "one scripted adversarial scenario per mission run; no autonomous red agent",
+            "LIVE (TEST SUITE)",
+            "tests/test_adversarial.py runs 20 attacks with asserted defences, plus one "
+            "explicitly undefended gap (cross-tenant isolation)",
         ),
         (
             "digital_twin",
@@ -62,46 +149,54 @@ def system_reality() -> list[dict[str, Any]]:
             "department names are documentation grouping only, not enforced routing",
         ),
         (
-            "self_healing_repair",
-            "LIVE",
-            "genome re-negotiation + real re-mint via warrant/ledger.py, now checkpoint-aware "
-            "(resumes from the last completed stage after any interruption, not a fixed script)",
+            "multi_tenancy",
+            "DESIGNED",
+            "no tenant dimension exists on any collection; any authenticated principal "
+            "can read any mission. Stated in docs/SECURITY.md and pinned by "
+            "tests/test_adversarial.py::test_known_gap_cross_tenant_isolation_is_not_implemented",
+        ),
+        (
+            "veo_mission_replay",
+            "DESIGNED",
+            "not built. Generated video would be presentation, never evidence, and no "
+            "credentials were available to generate any",
+        ),
+        (
+            "lyria_mission_audio",
+            "DESIGNED",
+            "not built, same reason as veo_mission_replay",
         ),
         (
             "mission_checkpoint_engine",
             "LIVE",
-            "real Firestore writes per stage (command_os/checkpoint.py); command_os_missions/"
-            "{id}/checkpoints/{seq}",
+            "real Firestore writes per stage (command_os/checkpoint.py); the mission's "
+            "own work queue and cursor live in the checkpointed context, so inserted "
+            "work survives a restart",
         ),
         (
             "resumability",
             "LIVE",
-            "resume_mission distinguishes ALREADY COMPLETED / REQUIRES HUMAN APPROVAL / "
-            "REPLAYABLE FROM THE NEXT STAGE -- see docs/mission-state.md",
+            "resume distinguishes ALREADY COMPLETED / REQUIRES HUMAN APPROVAL / "
+            "REPLAYABLE, and replay duplicates no spend, no Hyperion event and no "
+            "external action -- measured on the ledger and the sandbox file, not on a flag",
         ),
         (
             "trusted_state",
             "LIVE",
-            "categorical fold (TRUSTED/UNTRUSTED/QUARANTINED/REVOKED), never a score -- "
-            "command_os/trust.py",
+            "categorical fold (TRUSTED/UNTRUSTED/QUARANTINED/REVOKED), never a score, "
+            "keyed on what a stage recorded rather than its position",
         ),
         (
             "context_firewall",
-            "LIVE",
-            "three real signals (freshness, trust, relevance), not a ten-field model -- "
-            "command_os/context_firewall.py",
-        ),
-        (
-            "human_override_gate",
-            "LIVE",
-            "cannot overturn the Gateway's original refusal, by construction -- "
-            "command_os/mission.py's _GATE_AFTER_SEQ",
+            "LIVE (DISPLAY FILTER)",
+            "three real signals (freshness, trust, relevance). It scores what a caller "
+            "should treat as trusted context; it does not gate what resume_mission "
+            "reconstructs, and its docstring says so",
         ),
         (
             "mission_time_machine",
             "LIVE",
-            "historical checkpoint inspection, not a digital twin -- see digital_twin, above, "
-            "which stays DESIGNED",
+            "historical checkpoint inspection, not a digital twin -- see digital_twin",
         ),
     ):
         rows.append(

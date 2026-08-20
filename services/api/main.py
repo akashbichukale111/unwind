@@ -23,12 +23,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from lib.auth import Principal
 from lib.config import ALL_TOPICS, COLLECTION_AGENTS, get_config
 from lib.telemetry import configure_telemetry
+from services.api.security import require_human_principal, require_principal
 
 BUILD_STAGE = "task-5-interface"
 REPO = Path(__file__).resolve().parents[2]
@@ -843,7 +845,7 @@ async def instrument() -> dict[str, Any]:
 
 
 @app.post("/api/instrument/burn")
-async def instrument_burn() -> dict[str, Any]:
+async def instrument_burn(caller: Principal = Depends(require_principal)) -> dict[str, Any]:
     """The demo moment: a human overturns `extractor_veteran`'s HIGH-risk
     judgement. Real BURN (`warrant/ledger.py`), then a real Gateway
     re-check (`tower/gateway.py`) proving the very next case of that class
@@ -890,7 +892,7 @@ async def instrument_burn() -> dict[str, Any]:
 
 
 @app.post("/api/instrument/earn")
-async def instrument_earn() -> dict[str, Any]:
+async def instrument_earn(caller: Principal = Depends(require_human_principal)) -> dict[str, Any]:
     """The cold-start demo moment: `extractor_rookie` earns its first
     delegation live -- human concurrence, a labelled SIMULATED countersign
     (live Gemma is unreachable in this environment; see
@@ -992,7 +994,7 @@ async def hyperion_summary() -> dict[str, Any]:
 
 
 @app.post("/api/hyperion/probe")
-async def hyperion_probe() -> dict[str, Any]:
+async def hyperion_probe(caller: Principal = Depends(require_principal)) -> dict[str, Any]:
     """The demo moment: an agent scoped to `claim.read` requests a claim's
     confidential settlement terms -- outside its granted scope. The real
     Gateway (`tower/gateway.py`) refuses it as `SCOPE_EXCEEDED` before any
@@ -1098,7 +1100,9 @@ async def singularity_summary() -> dict[str, Any]:
 
 
 @app.post("/api/singularity/genome/probe")
-async def singularity_genome_probe(scenario: str = Query("normal")) -> dict[str, Any]:
+async def singularity_genome_probe(
+    scenario: str = Query("normal"), caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     """The Capability Genome demo moment. Two canned, in-domain requests --
     the same "one real, on-camera event" discipline `/api/hyperion/probe`
     already uses -- driven through the real `compute_genome` engine:
@@ -1142,7 +1146,9 @@ async def singularity_genome_probe(scenario: str = Query("normal")) -> dict[str,
 
 
 @app.post("/api/singularity/behavior/probe")
-async def singularity_behavior_probe(scenario: str = Query("normal")) -> dict[str, Any]:
+async def singularity_behavior_probe(
+    scenario: str = Query("normal"), caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     """The Behavioral DNA demo moment, driven through the real
     `detect_drift` engine:
 
@@ -1201,27 +1207,43 @@ async def singularity_behavior_probe(scenario: str = Query("normal")) -> dict[st
 
 @app.post("/api/command-os/mission")
 async def command_os_mission(
-    objective: str = Query(""), auto_approve: bool = Query(True)
+    objective: str = Query(""),
+    auto_approve: bool = Query(True),
+    caller: Principal = Depends(require_human_principal),
 ) -> dict[str, Any]:
-    """`auto_approve=false` runs stages 1-8 and then pauses at the Human
-    Override Gate (`status: "AWAITING_HUMAN"`, `report: null`) instead of
-    auto-concurring into repair -- see `command_os/mission.py`'s module
-    docstring for exactly what a human decision at the gate can and cannot
-    do."""
+    """Run one mission under the CALLER'S OWN identity.
+
+    `caller` is not decoration. It becomes `ctx["principal"]`, and therefore
+    the principal written into the decision-memory concurrence record that
+    `warrant.ledger.mint` treats as human agreement. Before this dependency
+    existed, that record named a module constant (`"human::mission_operator"`)
+    for any caller including an anonymous one, which made an authentic-looking
+    audit entry for a human who was never there.
+
+    `auto_approve=false` pauses at the Human Override Gate; the decision must
+    then be supplied through `/gate`, which requires a human principal too.
+    """
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
 
     from command_os.mission import DEFAULT_OBJECTIVE, run_mission
 
-    result = run_mission(objective.strip() or DEFAULT_OBJECTIVE, auto_approve=auto_approve)
-    return result.model_dump(mode="json")
+    result = run_mission(
+        objective.strip() or DEFAULT_OBJECTIVE,
+        principal=caller.principal,
+        auth_method=caller.method,
+        auto_approve=auto_approve,
+    )
+    return {**result.model_dump(mode="json"), "correlation_id": caller.correlation_id}
 
 
 @app.get("/api/command-os/missions")
-async def command_os_missions(limit: int = Query(25)) -> dict[str, Any]:
+async def command_os_missions(
+    limit: int = Query(25), caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     """The Mission Time Machine's index: real missions, most recent first."""
     if not _firestore_available():
-        return {"available": False, "reason": "Firestore emulator not reachable."}
+        return {"available": False, "reason": "Firestore not reachable."}
     from command_os.checkpoint import list_missions
 
     return {
@@ -1231,9 +1253,11 @@ async def command_os_missions(limit: int = Query(25)) -> dict[str, Any]:
 
 
 @app.get("/api/command-os/mission/{mission_id}/checkpoints")
-async def command_os_mission_checkpoints(mission_id: str) -> dict[str, Any]:
+async def command_os_mission_checkpoints(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
     from command_os.checkpoint import list_checkpoints
 
     checkpoints = list_checkpoints(mission_id)
@@ -1246,12 +1270,14 @@ async def command_os_mission_checkpoints(mission_id: str) -> dict[str, Any]:
 
 
 @app.post("/api/command-os/mission/{mission_id}/resume")
-async def command_os_mission_resume(mission_id: str) -> dict[str, Any]:
-    """Crash-recovery resume only. A mission `AWAITING_HUMAN` refuses here
-    -- use the gate endpoint below, which is the only path that can carry a
-    human decision."""
+async def command_os_mission_resume(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """Crash-recovery resume only. A mission AWAITING_HUMAN refuses here --
+    `/gate` is the only path that can carry a human decision, and it requires
+    a human principal."""
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
     from command_os.mission import resume_mission
 
     try:
@@ -1262,48 +1288,150 @@ async def command_os_mission_resume(mission_id: str) -> dict[str, Any]:
 
 
 @app.post("/api/command-os/mission/{mission_id}/gate")
-async def command_os_mission_gate(mission_id: str, decision: str = Query(...)) -> dict[str, Any]:
-    """The Human Override Gate. `decision` must be `approve` or `deny` --
-    approve continues into the SAME repair->re-mint->re-validate chain the
-    automatic path already uses; deny halts the mission without ever
-    attempting repair. Neither choice can overturn the Gateway's original
-    refusal -- see `command_os/mission.py`'s module docstring."""
+async def command_os_mission_gate(
+    mission_id: str,
+    decision: str = Query(...),
+    caller: Principal = Depends(require_human_principal),
+) -> dict[str, Any]:
+    """The Human Override Gate. The concurrence record names `caller`.
+
+    Neither choice can overturn the Gateway's original refusal: approving
+    only authorises a NEW, narrower request that the unmodified
+    `tower/gateway.py:evaluate_gateway` independently re-checks. See
+    `command_os/mission.py`'s module docstring.
+    """
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
     if decision not in ("approve", "deny"):
         raise HTTPException(422, "decision must be 'approve' or 'deny'")
     from command_os.mission import resume_mission
 
     try:
-        result = resume_mission(mission_id, human_decision=decision)
+        result = resume_mission(
+            mission_id, human_decision=decision, human_principal=caller.principal
+        )
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
-    return result.model_dump(mode="json")
+    return {
+        **result.model_dump(mode="json"),
+        "decided_by": caller.principal,
+        "auth_method": caller.method,
+        "correlation_id": caller.correlation_id,
+    }
 
 
 @app.get("/api/command-os/mission/{mission_id}/trust")
-async def command_os_mission_trust(mission_id: str) -> dict[str, Any]:
+async def command_os_mission_trust(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
     from command_os.trust import trusted_state_for_mission
 
     return trusted_state_for_mission(mission_id)
 
 
 @app.get("/api/command-os/mission/{mission_id}/context-firewall")
-async def command_os_mission_context_firewall(mission_id: str) -> dict[str, Any]:
+async def command_os_mission_context_firewall(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
     if not _firestore_available():
-        raise HTTPException(503, "Firestore emulator not reachable.")
+        raise HTTPException(503, "Firestore not reachable.")
     from command_os.context_firewall import filter_context
 
     return {"mission_id": mission_id, "decisions": filter_context(mission_id)}
 
 
+@app.get("/api/command-os/fleet")
+async def command_os_fleet() -> dict[str, Any]:
+    """The agent fleet's real, bounded identities.
+
+    Served from `fleet/roles.py` -- the SAME constants `ensure_registered`
+    writes into `tower.registry` and the planner's menu is generated from, so
+    the UI cannot show a scope the registry does not enforce. Public: it
+    reveals no secret, and a judge should be able to read the fleet's
+    permissions without a credential.
+    """
+    from fleet.roles import ALL_ROLES
+    from fleet.tools import TOOL_REGISTRY
+
+    return {
+        "roles": [
+            {
+                "agent_id": r.agent_id,
+                "principal": r.principal,
+                "title": r.title,
+                "agent_role": r.agent_role.value,
+                "purpose": r.purpose,
+                "authority_scope": list(r.authority_scope),
+                "data_scope": list(r.data_scope),
+                "tools": list(r.tools),
+                "permitted_actions": sorted(a.value for a in r.permitted_actions),
+                "max_budget": r.max_budget,
+                "warrant_spend_schedule": dict(r.warrant_spend_schedule),
+            }
+            for r in ALL_ROLES
+        ],
+        "tools": TOOL_REGISTRY,
+    }
+
+
+@app.get("/api/command-os/economics")
+async def command_os_economics(
+    drift_band: str = Query("NORMAL"),
+    completeness: float = Query(1.0),
+    evidence_age_seconds: float = Query(0.0),
+    model_disagreement: bool = Query(False),
+) -> dict[str, Any]:
+    """Price every action kind under the supplied uncertainty. Live arithmetic.
+
+    Public and parameterised on purpose: a judge can move one signal and watch
+    every price change, which is a stronger demonstration that the uncertainty
+    tax is real than any screenshot. `warrant/economics.py` contains no model
+    and `tests/test_warrant_zero_model.py` proves it.
+    """
+    from warrant.economics import ActionKind, UncertaintySignals, assess_uncertainty, price_action
+
+    signals = UncertaintySignals(
+        evidence_age_seconds=evidence_age_seconds,
+        evidence_completeness=completeness,
+        drift_band=drift_band,
+        model_disagreement=model_disagreement,
+    )
+    assessment = assess_uncertainty(signals)
+    return {
+        "signals": {
+            "drift_band": drift_band,
+            "evidence_completeness": completeness,
+            "evidence_age_seconds": evidence_age_seconds,
+            "model_disagreement": model_disagreement,
+        },
+        "tax_pct": assessment.tax_pct,
+        "contributions": assessment.contributions,
+        "prices": [price_action(k, signals).as_record() for k in ActionKind],
+    }
+
+
 @app.get("/api/command-os/status")
 async def command_os_status() -> dict[str, Any]:
-    from command_os.status import system_reality
+    """System Reality: what is LIVE, SIMULATED, REFERENCE, ARCHITECTURE or
+    DESIGNED, plus the security and simulation posture this process is
+    actually running under.
 
-    return {"rows": system_reality()}
+    Public and independently queryable. If this disagrees with the UI, the
+    UI is wrong.
+    """
+    from command_os.external import backend_status
+    from command_os.status import system_reality
+    from lib.auth import auth_mode
+    from lib.simulation import resolve_policy
+
+    return {
+        "rows": system_reality(),
+        "auth": auth_mode(),
+        "simulation_policy": resolve_policy().as_record(),
+        "external_action": backend_status(),
+    }
 
 
 @app.get("/api/command-os/concept-map")

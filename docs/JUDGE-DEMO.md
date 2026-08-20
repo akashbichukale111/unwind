@@ -1,110 +1,181 @@
-# The Agentic Command OS demo — four minutes
+# Judge demo — four minutes, no Google Cloud account required
 
-**Every number below is produced live by the running system, from a real
-call into the engines named in `docs/architecture.md`.** The one input that
-is scripted (stage 4's adversarial observation) is labelled `SIMULATED` on
-screen, in the API response, and here — never presented as organically
-observed. If a figure here disagrees with what the screen shows, the screen
-is right and this document is stale.
-
-This is the demo for the layer added on top of the existing four-minute
-UNWIND-core walkthrough (`docs/DEMO.md`) — it does not replace that script,
-it sits above it, exactly as `command_os/` sits above `spine/`.
-
-## Before you start
+Everything below runs on a cold clone against the Firestore emulator. Nothing
+in this script needs credentials, and nothing in it is scripted output — every
+number you will see is computed at the moment you see it.
 
 ```bash
 make install
-make emulator                 # separate terminal — Command OS writes real events
-make ui                       # http://127.0.0.1:8000
+make emulator          # terminal 1 (needs Java 11+)
+UNWIND_DEV_PRINCIPAL="you@example.com" make dev   # terminal 2
+open http://127.0.0.1:8000
 ```
 
-No GCP account needed for this layer specifically: the mission always sets
-`UNWIND_COUNTERSIGN_SIMULATED=1`, so it makes zero model calls (see
-`command_os/mission.py`'s module docstring). Full screen, 1600×900 or wider.
+---
+
+## The 30-second version, in a terminal
+
+```bash
+python -m command_os.cli "Investigate an anomalous finance capability request."
+python -m command_os.cli "Trace the impact of a changed operational premise."
+```
+
+Two objectives. Two different plans, two different agent rosters, two different
+outcomes. The second contains **no remediation role at all**, so it cannot
+reach an external effect — that is a structural property of the plan, not a
+policy someone remembered to apply.
 
 ---
 
-## The script
+## The four-minute walkthrough
 
-| Time | Screen | What you say |
-| --- | --- | --- |
-| **0:00–0:25** | Landing: AGENTIC COMMAND OS | "One high-level objective, one system that plans, builds a fleet, governs it, and recovers from an attack on its own — a closed loop, not a chatbot that stops at 'create → execute.'" |
-| **0:25–0:55** | Click "Run mission" | "The objective is fixed for this demo: build and deploy a secure enterprise service. Watch the eleven stages run — every one of them is a real function call, not a slide." |
-| **0:55–1:35** | Stage 1: AGENT FACTORY | "Seven roles from the real fleet topology — Sentinel, Orchestrator, five workers. This mission assigns Worker #04, Browser/Research — `singularity/fleet.py` already documents this worker as the fleet's designated attack surface, before this demo existed. Reused, not written for the occasion." |
-| **1:35–2:00** | Stages 2–3: CAPABILITY GENOME, BEHAVIORAL DNA | "The genome negotiates what this agent may do for this task, right now — `ALLOW`, two actions, LOW risk. Behavioral DNA takes a baseline reading — `NORMAL`, score near zero. Both zero-model, pure functions, the same `compute_genome`/`detect_drift` that already had their own unit tests before this orchestration existed." |
-| **2:00–2:40** | Stage 4 → 6: DRIFT → HYPERION → BLOCKED | "One scripted event: 147 tool calls, the finance dataset, a secret-access attempt. Labelled `SIMULATED` — say it out loud. Everything after it is real: `detect_drift` scores it `CRITICAL`. Hyperion scores the attempted action and logs it. The Gateway — the same one choke point Control Tower has always had — refuses it `SCOPE_EXCEEDED` before any work happens. Watch the reason code on screen; it is not a caption someone wrote, it is `decision.reason_code` from `tower/gateway.py`." |
-| **2:40–3:15** | Stage 7–9: COUNTERSIGN, ISOLATED, SELF-HEAL | "An independent verifier — scripted, labelled, zero model calls — confirms the block was correct. The agent is isolated, mission-scoped, not a new enforcement layer pretending to be one. Then repair: a narrower genome is negotiated, a human concurs, the verifier agrees again, and warrant is re-minted — the exact `record_human_concurrence` → `verify_and_record` → `mint` chain `/api/instrument/earn` already uses for its own cold-start moment." |
-| **3:15–3:40** | Stage 10–11: VALIDATION, RESUME | "The Gateway is asked again, at the narrowed genome. `ALLOWED`. The mission resumes. Nothing here is asserted — it is the same `evaluate_with_hyperion` call from stage 5, run a second time, returning a different, real answer." |
-| **3:40–4:00** | Executive report + System Reality panel | "Agents in fleet, threats detected, agents isolated, repairs completed, validation: PASS, fleet status: HEALTHY — every number folded from the stages that just ran. Below it, System Reality: LIVE, SIMULATED, REFERENCE, DESIGNED, stated for every feature on this screen, including the ones this demo does *not* claim — no Digital Twin, no autonomous Red Team agent, no live agent spawning." |
+### 0:00 — The Unlikely Hero (20s)
 
-**Closing card:** `CREATE → CAPABILITY → BEHAVIOR → RISK → AUTHORITY → EXECUTION → CHALLENGE → DETECTION → ISOLATION → REPAIR → VALIDATION → RESUME.` That closed loop is the product story, not any single card in it.
+Open `fleet/data/incident/ops-note.txt`. It is a real handover note, typed in a
+hurry at 06:40:
+
+> *"supplier K lead time is NOT 11 days any more… someone needs to check which
+> agents are still planning against 11… **I do not have a list. I never have a
+> list.**"*
+
+That person is the user. Not a CTO — the operations coordinator who currently
+*is* the dependency index. The system parses that note, and the parser reports
+`NO_DEPENDENCY_INDEX` as a finding.
+
+### 0:20 — Anonymous is refused (20s)
+
+Leave the **operator credential** field empty. Click **Run autonomous mission**.
+
+> `NOT AUTHENTICATED — every mutating endpoint refuses an anonymous caller.`
+
+That is a real 401. Before this pass, this exact request minted warrant and
+wrote an audit record naming a human who was never there. Now put the token in.
+
+### 0:40 — The plan is computed (40s)
+
+Run it. The **Plan** panel appears *before* the trace:
+
+```
+ZERO_MODEL   SECURITY_INVESTIGATION   unwind-deterministic-planner@1
+01  WORKER_DOCUMENT    recon.extract_claims    READ_INTERNAL   evidence.read
+02  WORKER_COMPLIANCE  risk.probe              ANALYZE         risk.analyze
+03  WORKER_PYTHON      remediation.prepare     ANALYZE         remediation.prepare
+04  WORKER_PYTHON      remediation.execute     CREATE_TICKET   sandbox.write
+05  SENTINEL           verify.check            READ_INTERNAL   sandbox.read
+```
+
+**Say the provenance out loud.** `ZERO_MODEL` means no model produced this
+plan, because this environment has no Vertex credentials. The Gemini planner is
+real code with a real `output_schema` and a real `Runner`
+(`fleet/agents.py`); it has not run here, and the label says so rather than
+implying otherwise. **Change the objective in the box and re-run** — the plan
+changes.
+
+### 1:20 — Messy evidence, measured honestly (30s)
+
+Step 1 parses a free-text note, a CSV with a blank agent id / a missing integer
+/ the literal string `NOT_A_TIMESTAMP`, and a JSON feed with two contradicting
+records.
+
+> `16 / 20 parsed (80%)` · `contradictions found: 2` · `escalations found: 1`
+
+**80% is not a rounding error, it is the point.** Watch what it does to the
+next step's price.
+
+### 1:50 — The causal seam (50s) — *the most important minute*
+
+```
+04  CONTAIN — fleet_recon ISOLATED
+    behaviour CRITICAL (score 100) from the evidence's own 147 tool calls on
+    'finance'; Gateway SCOPE_EXCEEDED: agent 'fleet_recon' requested
+    ['finance.secret_read'], which is outside its granted scope
+```
+
+Every input here came from the CSV: the agent, the scope, the tool-call count,
+the dataset. Now falsify it:
+
+```bash
+make causality
+```
+
+The test runs the **same mission** over evidence with the escalating rows
+removed. No containment phase. No isolation. Status `COMPLETED` instead of
+`COMPLETED_WITH_RESTRICTIONS`. Committed output:
+`evidence/mission/causality-*.log`.
+
+The previous version of this system failed exactly this test — forcing drift to
+NORMAL produced a byte-identical mission. That is why the test exists.
+
+### 2:40 — Uncertainty is priced (40s)
+
+```
+05  STEP 3 — ALLOWED at 13bp (5bp +145% tax)
+```
+
+Scroll to **Warrant Market — live pricing** and move the drift selector to
+`CRITICAL`. Every price changes, live, with each contribution named. This is
+`warrant/economics.py`, which lives inside `warrant/` — a package
+`tests/test_warrant_zero_model.py` proves cannot import a model client.
+
+> **A model may propose an action. It can never price it, discount it, or argue
+> the tax down.**
+
+More uncertainty → higher cost → the same balance buys fewer actions → the
+Gateway refuses sooner → more work reaches a human.
+
+### 3:20 — Double consent, then one real action (40s)
+
+The independent challenger re-derives its own verdict from the evidence on five
+named grounds and **can disagree** — when it does, minting freezes and the
+mission routes to a human (`test_adversarial.py::test_attack_20`).
+
+Tick **require human approval**, re-run, and the mission stops at the gate.
+Approve it. The concurrence record names *you* — the authenticated principal,
+not a constant. Then:
+
+```
+EXECUTE — REVOKE_CAPABILITY_REQUEST -> sandbox_file#sbx-… (applied), 123bp spent
+VERIFY  — recorded effect matches the proposal field for field ·
+          authority settled MINT: 80bp -> 280bp
+```
+
+A real file was written outside this process. Check it: `cat .sandbox/actions.jsonl`.
+Re-run and the replay writes **nothing** — asserted by counting lines in that
+file, not by trusting a flag.
+
+### 4:00 — The honesty panel
+
+**System Reality** is served by `GET /api/command-os/status`, a second
+independently queryable source. If it disagrees with the screen, the screen is
+wrong. It reports `gemini_planning: CONFIGURED_NOT_EXERCISED`,
+`veo_mission_replay: DESIGNED`, `multi_tenancy: DESIGNED`, and
+`external_action: LIVE (SANDBOX BACKEND)`.
 
 ---
 
-## Extended beat: Human Override Gate + Mission Time Machine (+60s, optional)
+## If a judge wants to attack it
 
-If there's time after the closing card, this is the second story worth
-showing — Continuous Mission State, not just one mission running once:
+```bash
+make redteam        # 20 attacks, asserted defences, 21 passed
+```
 
-1. Check **"require human approval before repair"** and run the mission
-   again. It pauses after stage 8 with a visible **HUMAN OVERRIDE GATE**
-   panel — say out loud that this is a real pause, not a scripted delay:
-   `POST /api/command-os/mission?auto_approve=false` genuinely stops before
-   calling `compute_genome` or `mint` for the repair.
-2. Click **Deny**. The mission finalises `HALTED`, 8 stages only, zero
-   repairs — the isolated agent stays isolated. Run it once more and click
-   **Approve** instead: it resumes into the *exact same* repair chain the
-   automatic path used, because it's the same function underneath.
-3. Open **Mission Time Machine**, pick either run, and click through its
-   checkpoints — real, persisted Firestore documents, not the trace
-   replayed from memory. Point at the Trusted State panel underneath the
-   report: four categorical buckets, never a score, and say why (a past
-   design decision this repository already made once, in
-   `settle/loadrating.py`).
+Covers prompt injection, scope escalation, tool poisoning, anonymous approval,
+forged principals, service-token escalation, simulation contamination, memory
+poisoning, replay/double-spend, worker loops, hallucinated tool output, an
+unavailable model read as agreement, and a challenger talked into agreeing.
 
-## The one moment that carries it
+It also contains one test that documents an attack the system **does not**
+defend — cross-tenant isolation, because tenancy does not exist here. The full
+list of gaps is `docs/SECURITY.md` §6.
 
-**Stage 6's reason code.** Everything before it is setup; everything after
-it is recovery. A judge who reads `SCOPE_EXCEEDED` on screen and understands
-that it came from the same four-check Gateway Control Tower has always had —
-not a new "AI safety" layer bolted on for the demo — has understood the
-whole architecture.
+---
 
-## If a step fails
+## What a judge should not be told
 
-The mission endpoint (`POST /api/command-os/mission`) returns `503` if
-Firestore is unreachable, the same honest-degrade discipline every other
-write-backed endpoint in this app already uses (`/api/instrument/burn`,
-`/api/instrument/earn`, `/api/hyperion/probe`). The UI shows
-`FIRESTORE UNREACHABLE` — never a fabricated trace. Start the emulator and
-retry.
+- That Gemini or Gemma ran here. They did not — no credentials.
+- That this commit is deployed. It is not; the last recorded Cloud Run
+  revision predates this rewrite.
+- That Veo or Lyria exist. They do not.
 
-## What a judge will ask, and the short answer
-
-- **"Is this fifteen new agent products?"** No — see
-  `docs/COMMAND-OS-CONCEPT-MAP.md`. Fifteen buzzwords map onto six real
-  modules and one new orchestrator; none of the fifteen names existed in
-  this codebase before that mapping document.
-- **"Did you build a new security layer, or reuse the old one?"** Reused.
-  `command_os/mission.py` contains no new decision logic — every check is a
-  call into `singularity/`, `hyperion/`, `tower/`, `warrant/`, or
-  `countersign/`, unchanged.
-- **"What's actually simulated here?"** Exactly one input: the adversarial
-  `BehaviorObservation` in stage 4. Everything downstream reacts to it for
-  real. The System Reality panel states this for every feature, not just
-  this one.
-- **"Why didn't UNWIND core (the claim-retraction engine) run in this
-  mission?"** Because no claim was retracted — see "What this mission does
-  not do" in `docs/architecture.md`. It stays fully live and reachable as
-  its own card.
-- **"Can a human bypass the security block?"** No, and that's checkable,
-  not just asserted: `command_os/mission.py`'s Human Override Gate can only
-  ever call `evaluate_gateway` again with a *narrower* request; there is no
-  code path that flips stage 6's `SCOPE_EXCEEDED` decision itself. See
-  `docs/mission-state.md`'s "Human Override Gate" section.
-- **"Is Mission Time Machine a digital twin?"** No — it's read-only
-  inspection of already-persisted checkpoints, never a forecast or a
-  simulated future state. Chronos-Void (Digital Twin) stays `DESIGNED`;
-  the two are kept explicitly separate in `docs/COMMAND-OS-CONCEPT-MAP.md`
-  rather than letting one borrow the other's status.
+`evidence/INDEX.md` §8 lists what each claim is backed by and what is
+explicitly not evidenced.

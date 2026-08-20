@@ -14,6 +14,21 @@ from fastapi.testclient import TestClient
 from services.api.main import app
 from singularity.lifecycle import IMPLEMENTATION_STATUS
 
+#: The probe endpoints WRITE to the mesh event log, so they are mutating and
+#: therefore authenticated -- see `tests/test_api_auth.py`'s route-table walk.
+#: Reads stay public. This header is what a probe caller now supplies.
+AUTH = {"Authorization": "Bearer probe-tok"}
+
+
+@pytest.fixture(autouse=True)
+def _probe_credential(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("UNWIND_OPERATOR_TOKENS", "probe-tok:probe@example.com")
+    from services.api.security import reset_rate_limits
+
+    reset_rate_limits()
+    yield
+    reset_rate_limits()
+
 
 def _emulator_up() -> bool:
     host = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
@@ -47,8 +62,10 @@ def test_singularity_summary_serves_reference_content_even_offline() -> None:
 @requires_emulator
 def test_genome_probe_normal_scenario_allows() -> None:
     with TestClient(app) as client:
-        client.post("/api/singularity/behavior/probe?scenario=normal")  # warm the collection
-        resp = client.post("/api/singularity/genome/probe?scenario=normal")
+        client.post(
+            "/api/singularity/behavior/probe?scenario=normal", headers=AUTH
+        )  # warm the collection
+        resp = client.post("/api/singularity/genome/probe?scenario=normal", headers=AUTH)
     assert resp.status_code == 200
     body = resp.json()
     assert body["genome"]["decision"] == "ALLOW"
@@ -57,7 +74,7 @@ def test_genome_probe_normal_scenario_allows() -> None:
 @requires_emulator
 def test_genome_probe_attack_scenario_denies_the_export() -> None:
     with TestClient(app) as client:
-        resp = client.post("/api/singularity/genome/probe?scenario=attack")
+        resp = client.post("/api/singularity/genome/probe?scenario=attack", headers=AUTH)
     assert resp.status_code == 200
     body = resp.json()
     assert "export_all" in body["genome"]["denied_actions"]
@@ -66,7 +83,7 @@ def test_genome_probe_attack_scenario_denies_the_export() -> None:
 @requires_emulator
 def test_behavior_probe_drift_scenario_isolates() -> None:
     with TestClient(app) as client:
-        resp = client.post("/api/singularity/behavior/probe?scenario=drift")
+        resp = client.post("/api/singularity/behavior/probe?scenario=drift", headers=AUTH)
     assert resp.status_code == 200
     body = resp.json()
     assert body["assessment"]["drift_band"] == "CRITICAL"
@@ -79,8 +96,8 @@ def test_probes_are_reflected_in_the_summary_aggregate() -> None:
         from singularity.mesh_memory import reset_for_test
 
         reset_for_test()
-        client.post("/api/singularity/genome/probe?scenario=attack")
-        client.post("/api/singularity/behavior/probe?scenario=drift")
+        client.post("/api/singularity/genome/probe?scenario=attack", headers=AUTH)
+        client.post("/api/singularity/behavior/probe?scenario=drift", headers=AUTH)
         body = client.get("/api/singularity").json()
         reset_for_test()
     assert body["mesh_available"] is True

@@ -132,7 +132,10 @@ def main() -> int:
         page.click("#instr-card0-head")
         page.wait_for_selector("#warrant-detail:not([hidden])", timeout=10000)
         wd_text = page.inner_text("#wd-bars")
-        check("warrant detail shows EARNED/SYNTHETIC tags", "EARNED" in wd_text or "SYNTHETIC" in wd_text)
+        check(
+            "warrant detail shows EARNED/SYNTHETIC tags",
+            "EARNED" in wd_text or "SYNTHETIC" in wd_text,
+        )
         page.keyboard.press("Escape")
 
         check("no page errors", len(errors) == 0)

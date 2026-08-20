@@ -30,6 +30,21 @@ dev: ## Run the API against the Firestore emulator + in-process Pub/Sub shim
 test: ## Run the test suite
 	$(PY) -m pytest -q
 
+.PHONY: redteam
+redteam: ## Run the 20-attack red-team suite and record the log under evidence/
+	@mkdir -p evidence/redteam
+	$(PY) -m pytest tests/test_adversarial.py -v -p no:warnings \
+	  | tee "evidence/redteam/redteam-$$(date -u +%Y%m%dT%H%M%SZ).log"
+
+.PHONY: mission
+mission: ## Run one mission end to end against the emulator, zero-model
+	@UNWIND_VERTEX_DISABLED=1 UNWIND_COUNTERSIGN_SIMULATED=1 \
+	  $(PY) -m command_os.cli
+
+.PHONY: causality
+causality: ## THE falsification test: same mission, evidence with and without the escalation
+	$(PY) -m pytest tests/test_mission_causality.py -v -p no:warnings
+
 .PHONY: lint
 lint: ## Lint and format-check
 	.venv/bin/ruff check .

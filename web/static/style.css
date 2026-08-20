@@ -531,7 +531,21 @@ html, body {
 .hy-stat .n { color: var(--amber); font-size: 15px; display: block; }
 .hy-stat .l { color: var(--bone); opacity: 0.6; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
 .hy-status-line { color: var(--bone); opacity: 0.85; }
-.hy-status-line .dot { color: var(--verdigris); }
+/* The status dot is a GRAPHICAL OBJECT, not text: the sentence beside it
+   ("IMMUNE CORE ACTIVE — N decisions observed") carries the meaning, and the
+   dot only echoes it. Rendered as a shape rather than a coloured glyph so it
+   is held to WCAG's 3:1 non-text threshold, which verdigris (4.08:1) clears,
+   instead of the 4.5:1 text threshold it did not. `scripts/check_contrast.py`
+   flagged the old `color: var(--verdigris)` form and was right to. */
+.hy-status-line .dot {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--verdigris);
+  vertical-align: baseline;
+  margin-right: 0.15em;
+}
 
 .instr-card0 {
   border: 1px solid var(--slate);
@@ -1002,5 +1016,94 @@ html, body {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Agentic Command OS: plan, fleet, economics, external action ─────────────
+   Additive only. Reuses the existing cmdos-* tokens (tag colours, row layout,
+   mono/cond faces) rather than introducing a second visual language for the
+   new panels — the contrast floor `scripts/check_contrast.py` enforces is a
+   property of those tokens, so inheriting them keeps the check meaningful. */
+
+.cmdos-auth,
+.cmdos-objective {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.cmdos-auth label,
+.cmdos-objective label {
+  min-width: 11rem;
+  opacity: 0.75;
+}
+
+.cmdos-auth input,
+.cmdos-objective input[type="text"] {
+  flex: 1 1 22rem;
+  min-width: 12rem;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: inherit;
+  font: inherit;
+}
+
+.cmdos-panel { margin: 1.5rem 0; }
+
+.cmdos-plan-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.cmdos-plan-step {
+  display: grid;
+  grid-template-columns: 2.5rem 11rem 12rem 9rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.cmdos-plan-seq { opacity: 0.6; }
+.cmdos-plan-scope,
+.cmdos-plan-clamps { opacity: 0.75; }
+.cmdos-plan-clamps { margin-top: 0.5rem; }
+
+.cmdos-fleet-row {
+  padding: 0.4rem 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.cmdos-fleet-scope,
+.cmdos-fleet-tools { opacity: 0.75; font-size: 0.9em; }
+
+.cmdos-econ-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.cmdos-econ-controls label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.cmdos-econ-tax { margin: 0.4rem 0; }
+.cmdos-ground { margin-top: 0.5rem; }
+
+@media (max-width: 900px) {
+  .cmdos-plan-step {
+    grid-template-columns: 2.5rem 1fr;
+    row-gap: 0.15rem;
   }
 }
