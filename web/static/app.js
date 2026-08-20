@@ -52,6 +52,20 @@
   const ctx = canvas.getContext("2d", { alpha: false });
 
   const $ = (id) => document.getElementById(id);
+
+  //: Escape text before it goes into innerHTML. A mission objective is
+  //: OPERATOR-SUPPLIED free text that round-trips through Firestore and back
+  //: into the Time Machine's mission list, so interpolating it raw was a
+  //: stored-XSS path: an objective containing a script tag would execute for
+  //: the next operator who opened the panel. Every interpolation of
+  //: server-derived text in the Time Machine goes through this.
+  const esc = (s) =>
+    String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   const state = {
     nodes: null,
     n: 0,
@@ -1517,6 +1531,125 @@
     renderAuthMode();
     renderFleet();
     renderEconomics();
+    renderMediaLab();
+  }
+
+  // ── MISSION MEDIA LAB ────────────────────────────────────────────────
+  //
+  // Three cards, one shared input. Each card's status comes from
+  // `/api/media/status`, which is the SAME `_availability()` check a real
+  // call makes -- so a card can never advertise itself as more available
+  // than the call behind it. A NOT_CONFIGURED card still shows its model ID
+  // and still lets you inspect the grounded brief that WOULD be sent; what
+  // it does not do is pretend to have generated anything.
+  const MEDIA_ICONS = { gemini: "◆", veo: "▶", lyria: "≋" };
+
+  async function renderMediaLab() {
+    const host = $("media-lab");
+    if (!host) return;
+    let d;
+    try {
+      d = await (await fetch("/api/media/status")).json();
+    } catch (err) {
+      host.innerHTML = "<div class='cmdos-hint mono'>media status unavailable</div>";
+      return;
+    }
+    host.innerHTML = d.modalities
+      .map(
+        (m) =>
+          "<div class='media-card' data-modality='" + esc(m.modality) + "'>" +
+          "<div class='media-card-head'>" +
+          "<span class='media-glyph'>" + (MEDIA_ICONS[m.modality] || "•") + "</span>" +
+          "<span class='media-name cond'>" + esc(m.modality.toUpperCase()) + "</span>" +
+          "<span class='cmdos-tag " + statusClass(m.status) + "'>" + esc(m.status) + "</span>" +
+          "</div>" +
+          "<div class='media-title cond'>" + esc(m.title) + "</div>" +
+          "<div class='cmdos-hint mono'>" + esc(m.purpose) + "</div>" +
+          "<div class='media-model mono'>model <b>" + esc(m.model) + "</b></div>" +
+          "<button type='button' class='btn btn-quiet media-go' data-modality='" +
+          esc(m.modality) + "'>" + (m.modality === "gemini" ? "Synthesize" :
+            m.modality === "veo" ? "Generate replay" : "Generate signal") + "</button>" +
+          "<div class='media-out mono' id='media-out-" + esc(m.modality) + "'></div>" +
+          "</div>"
+      )
+      .join("");
+
+    // The note is the honest part: it says why the buttons will fail-closed
+    // BEFORE anyone presses one, rather than after.
+    $("media-note").textContent = d.available
+      ? "credentials present — pressing a button makes a real model call"
+      : "NOT CONFIGURED — " + d.reason +
+        ". The adapters, prompts and model IDs are complete; pressing a button " +
+        "returns NOT_CONFIGURED with this reason rather than a fabricated artefact.";
+
+    host.querySelectorAll(".media-go").forEach((btn) => {
+      btn.addEventListener("click", () => runMedia(btn.dataset.modality, btn));
+    });
+  }
+
+  const MEDIA_ROUTE = { gemini: "synthesize", veo: "replay", lyria: "signal" };
+
+  async function runMedia(modality, btn) {
+    // Reuse the Command OS's own mission id -- the Media Lab must describe
+    // the mission the operator just watched run, not a separately-tracked one
+    // that could drift out of sync with what is on screen.
+    const missionId = cmdosMissionId;
+    const out = $("media-out-" + modality);
+    if (!missionId) {
+      out.textContent = "run a mission first — there is no mission state to read from";
+      return;
+    }
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "working…";
+    out.textContent = "";
+    try {
+      const res = await authedFetch(
+        "/api/media/mission/" + encodeURIComponent(missionId) + "/" + MEDIA_ROUTE[modality],
+        { method: "POST" }
+      );
+      if (res.status === 401 || res.status === 403) {
+        out.textContent = "NOT AUTHENTICATED — enter an operator token above";
+        return;
+      }
+      const r = await res.json();
+      renderMediaResult(out, r);
+    } catch (err) {
+      out.textContent = "request failed: " + err;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  function renderMediaResult(out, r) {
+    const head =
+      "<div class='media-result-head'><span class='cmdos-tag " +
+      statusClass(r.status === "GENERATED" ? "LIVE" : r.status === "FAILED" ? "UNAVAILABLE" : "DESIGNED") +
+      "'>" + esc(r.status) + "</span> <span class='mono'>" + esc(r.model) + "</span></div>";
+    if (r.status === "GENERATED") {
+      let body = "";
+      if (r.text) body += "<pre class='media-text'>" + esc(r.text) + "</pre>";
+      if (r.artifact_path && r.modality === "veo") {
+        body += "<video class='media-player' controls src='/media-artifact/" +
+          esc(r.artifact_path.split('/').pop()) + "'></video>";
+      }
+      if (r.artifact_path && r.modality === "lyria") {
+        body += "<audio class='media-player' controls src='/media-artifact/" +
+          esc(r.artifact_path.split('/').pop()) + "'></audio>";
+      }
+      out.innerHTML = head + body +
+        "<div class='cmdos-hint mono'>grounded on " +
+        esc(String((r.detail && r.detail.grounded_on_checkpoints) || "the mission brief")) +
+        " · prompt sha " + esc(r.prompt_sha256) + " · " + r.latency_ms + "ms</div>";
+      return;
+    }
+    // NOT_CONFIGURED or FAILED. Show the real reason AND the prompt that
+    // would have been sent -- the work is real even when the call cannot run.
+    out.innerHTML = head +
+      "<div class='cmdos-hint mono'>" + esc(r.reason) + "</div>" +
+      "<details class='media-details'><summary class='mono'>the grounded prompt this would send</summary>" +
+      "<pre class='media-text'>" + esc(r.prompt) + "</pre></details>";
   }
 
   $("cmdos-run").addEventListener("click", runMission);
@@ -1531,51 +1664,287 @@
 
   // ── MISSION TIME MACHINE ────────────────────────────────────────────
 
+  // THE BUG THIS SECTION FIXES, STATED PLAINLY
+  // ------------------------------------------------
+  // `/api/command-os/missions` and `.../checkpoints` were placed behind
+  // `require_principal` when authentication was added. The two fetches below
+  // were NOT updated at the same time: they used the bare `fetch`, so they
+  // sent no bearer token, got 401, and `d.available` came back undefined.
+  // The `!d.available` branch then rendered "no missions recorded yet" --
+  // the SAME empty state as a genuinely empty database. The panel opened,
+  // showed nothing, and reported the cause as "no missions" while the real
+  // cause was "not authenticated". Worse, the bare `fetch` bypassed
+  // `authedFetch`'s 401 handler, so the `#cmdos-authfail` banner that exists
+  // precisely to say "your token is missing" never appeared.
+  //
+  // Both fetches now go through `authedFetch`, and -- the part that actually
+  // matters -- NOT AUTHENTICATED, EMPTY and FAILED are three distinct
+  // rendered states. An empty panel must never be able to mean two different
+  // things again.
+
+  function mtmNotice(text, hint) {
+    return (
+      "<li class='cmdos-stage'><div class='cmdos-stage-summary'>" +
+      esc(text) +
+      "</div>" +
+      (hint ? "<div class='cmdos-hint mono'>" + esc(hint) + "</div>" : "") +
+      "</li>"
+    );
+  }
+
   async function showTimeMachine() {
     hideCore();
     show("mission-time-machine");
     $("mtm-checkpoints").innerHTML = "";
     $("mtm-detail").hidden = true;
-    const res = await fetch("/api/command-os/missions");
-    const d = await res.json();
+    $("mtm-timeline").innerHTML = "";
+    $("mtm-state").hidden = true;
     const list = $("mtm-missions");
-    if (!d.available || d.missions.length === 0) {
-      list.innerHTML = "<li class='cmdos-stage'><div class='cmdos-stage-summary'>no missions recorded yet — run one from Agentic Command OS first</div></li>";
+    list.innerHTML = mtmNotice("loading missions…");
+
+    let res;
+    try {
+      res = await authedFetch("/api/command-os/missions");
+    } catch (err) {
+      list.innerHTML = mtmNotice(
+        "could not reach the mission index",
+        String(err)
+      );
       return;
     }
-    list.innerHTML = d.missions.map((m) => (
-      "<li class='cmdos-stage cmdos-clickable' data-mission='" + m.mission_id + "'>" +
-        "<div class='cmdos-stage-head'>" +
-          "<span class='cmdos-stage-name cond'>" + m.mission_id + "</span>" +
-          "<span class='cmdos-tag " + statusClass(m.status === "COMPLETED" ? "LIVE" : m.status === "HALTED" ? "UNAVAILABLE" : "SIMULATED") + "'>" + m.status + "</span>" +
-        "</div>" +
-        "<div class='cmdos-stage-summary'>" + m.objective + "</div>" +
-      "</li>"
-    )).join("");
+
+    // STATE 1 — NOT AUTHENTICATED. Distinct from "empty", and actionable.
+    if (res.status === 401 || res.status === 403) {
+      list.innerHTML = mtmNotice(
+        "NOT AUTHENTICATED — mission history is a protected read",
+        "enter an operator token in Agentic Command OS, then reopen the Time Machine. " +
+          "Mission history names who approved what, so it is not an anonymous read."
+      );
+      return;
+    }
+    if (!res.ok) {
+      list.innerHTML = mtmNotice("mission index unavailable (HTTP " + res.status + ")");
+      return;
+    }
+
+    const d = await res.json();
+    // STATE 2 — Firestore unreachable. Honestly distinct from empty.
+    if (!d.available) {
+      list.innerHTML = mtmNotice(
+        "FIRESTORE UNREACHABLE",
+        d.reason || "checkpoints are persisted in Firestore; without it there is no history to show"
+      );
+      return;
+    }
+    // STATE 3 — genuinely empty.
+    if (!d.missions || d.missions.length === 0) {
+      list.innerHTML = mtmNotice(
+        "no missions recorded yet",
+        "run one from Agentic Command OS — every mission writes a checkpoint per phase"
+      );
+      return;
+    }
+
+    // STATE 4 — loaded.
+    list.innerHTML = d.missions
+      .map(
+        (m) =>
+          "<li class='cmdos-stage cmdos-clickable' data-mission='" +
+          esc(m.mission_id) +
+          "' role='button' tabindex='0'>" +
+          "<div class='cmdos-stage-head'>" +
+          "<span class='cmdos-stage-name cond'>" +
+          esc(m.mission_id) +
+          "</span>" +
+          "<span class='cmdos-tag " +
+          missionStatusClass(m.status) +
+          "'>" +
+          esc(m.status) +
+          "</span>" +
+          "</div>" +
+          "<div class='cmdos-stage-summary'>" +
+          esc(m.objective) +
+          "</div>" +
+          "</li>"
+      )
+      .join("");
     list.querySelectorAll("[data-mission]").forEach((li) => {
-      li.addEventListener("click", () => loadCheckpointTimeline(li.dataset.mission));
+      const open = () => loadCheckpointTimeline(li.dataset.mission);
+      li.addEventListener("click", open);
+      li.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          open();
+        }
+      });
     });
+    // Open the most recent mission immediately. Landing on a list that needs
+    // one more click before it shows anything is what made this panel read
+    // as broken in the first place.
+    loadCheckpointTimeline(d.missions[0].mission_id);
+  }
+
+  //: A mission's status is a closed vocabulary from `command_os/schema.py`.
+  //: COMPLETED_WITH_RESTRICTIONS is deliberately NOT painted as a clean pass:
+  //: the mission finished with something denied, and the badge says so.
+  function missionStatusClass(status) {
+    if (status === "COMPLETED") return "cmdos-live";
+    if (status === "HALTED" || status === "BLOCKED" || status === "FAILED_SAFE") {
+      return "cmdos-unavailable";
+    }
+    return "cmdos-simulated";
   }
 
   async function loadCheckpointTimeline(missionId) {
     $("mtm-detail").hidden = true;
-    const res = await fetch("/api/command-os/mission/" + missionId + "/checkpoints");
-    if (!res.ok) return;
-    const d = await res.json();
     const el = $("mtm-checkpoints");
-    el.innerHTML = d.checkpoints.map((c) => (
-      "<li class='cmdos-stage cmdos-clickable' data-seq='" + c.seq + "'>" +
-        "<div class='cmdos-stage-head'>" +
-          "<span class='cmdos-stage-n'>" + String(c.seq).padStart(2, "0") + "</span>" +
-          "<span class='cmdos-stage-name cond'>" + c.stage.name + "</span>" +
-          "<span class='cmdos-tag " + statusClass(c.status === "COMPLETED" ? "LIVE" : c.status === "HALTED" ? "UNAVAILABLE" : "SIMULATED") + "'>" + c.status + "</span>" +
-        "</div>" +
-        "<div class='cmdos-stage-summary'>" + c.stage.summary + "</div>" +
-      "</li>"
-    )).join("");
+    el.innerHTML = mtmNotice("loading checkpoints…");
+    const res = await authedFetch("/api/command-os/mission/" + missionId + "/checkpoints");
+    if (res.status === 401 || res.status === 403) {
+      el.innerHTML = mtmNotice("NOT AUTHENTICATED — checkpoints are a protected read");
+      return;
+    }
+    if (!res.ok) {
+      el.innerHTML = mtmNotice("checkpoints unavailable (HTTP " + res.status + ")");
+      return;
+    }
+    const d = await res.json();
+    el.innerHTML = d.checkpoints
+      .map(
+        (c) =>
+          "<li class='cmdos-stage cmdos-clickable' data-seq='" +
+          c.seq +
+          "' role='button' tabindex='0'>" +
+          "<div class='cmdos-stage-head'>" +
+          "<span class='cmdos-stage-n'>" +
+          String(c.seq).padStart(2, "0") +
+          "</span>" +
+          "<span class='cmdos-stage-name cond'>" +
+          esc(c.stage.name) +
+          "</span>" +
+          "<span class='cmdos-tag " +
+          statusClass(c.stage.status) +
+          "'>" +
+          esc(c.stage.status) +
+          "</span>" +
+          "</div>" +
+          "<div class='cmdos-stage-summary'>" +
+          esc(c.stage.summary) +
+          "</div>" +
+          "</li>"
+      )
+      .join("");
     el.querySelectorAll("[data-seq]").forEach((li, i) => {
-      li.addEventListener("click", () => showCheckpointDetail(d.checkpoints[i]));
+      const open = () => showCheckpointDetail(d.checkpoints[i]);
+      li.addEventListener("click", open);
+      li.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          open();
+        }
+      });
     });
+    renderMissionArc(missionId, d.checkpoints);
+  }
+
+  // ── The mission arc: PAST → … → CURRENT TRUSTED STATE ────────────────
+  //
+  // Every row below is derived from a checkpoint that was actually written.
+  // Nothing is inferred, and a phase the mission never reached is not drawn
+  // -- an arc that always shows DRIFT → THREAT → REPAIR regardless of what
+  // happened would be exactly the narrative-shaped fiction this repository
+  // refuses everywhere else.
+  async function renderMissionArc(missionId, checkpoints) {
+    const arc = $("mtm-timeline");
+    arc.innerHTML = checkpoints
+      .map((c, i) => {
+        const last = i === checkpoints.length - 1;
+        return (
+          "<li class='mtm-arc-node'>" +
+          "<span class='mtm-arc-dot " +
+          (last ? "mtm-arc-dot-current" : "") +
+          "'></span>" +
+          "<span class='mtm-arc-label cond'>" +
+          esc(c.stage.name.split("—")[0].trim()) +
+          "</span>" +
+          "<span class='cmdos-tag " +
+          statusClass(c.stage.status) +
+          "'>" +
+          esc(c.stage.status) +
+          "</span>" +
+          "</li>"
+        );
+      })
+      .join("");
+
+    // Current trusted state + what resume can genuinely do, side by side.
+    const state = $("mtm-state");
+    state.hidden = false;
+    state.innerHTML = "<div class='cmdos-hint mono'>reading trusted state…</div>";
+    const tRes = await authedFetch("/api/command-os/mission/" + missionId + "/trust");
+    if (!tRes.ok) {
+      state.innerHTML = "<div class='cmdos-hint mono'>trusted state unavailable</div>";
+      return;
+    }
+    const t = await tRes.json();
+    const status = t.mission_status || "UNKNOWN";
+    // RESUME is genuinely implemented (command_os/mission.py:resume_mission)
+    // but only MEANS anything for a mission that has not reached a final
+    // status. Rather than offer a button that silently no-ops, the control is
+    // disabled and says which of the three real cases this mission is in.
+    const resumable = status === "RUNNING" || status === "AWAITING_HUMAN";
+    state.innerHTML =
+      "<div class='cmdos-report-title cond'>CURRENT MISSION STATE</div>" +
+      "<div class='cmdos-report-grid'>" +
+      "<div><span class='k'>mission</span><span class='v'>" + esc(missionId) + "</span></div>" +
+      "<div><span class='k'>status</span><span class='v'>" + esc(status) + "</span></div>" +
+      "<div><span class='k'>checkpoints</span><span class='v'>" + checkpoints.length + "</span></div>" +
+      "<div><span class='k'>trusted</span><span class='v'>" + t.trusted.length + "</span></div>" +
+      "<div><span class='k'>quarantined</span><span class='v'>" + t.quarantined.length + "</span></div>" +
+      "<div><span class='k'>revoked</span><span class='v'>" + t.revoked.length + "</span></div>" +
+      "</div>" +
+      "<div class='mtm-caps'>" +
+      "<div class='mtm-cap'>" +
+      "<span class='cmdos-tag cmdos-live'>LIVE</span>" +
+      "<span class='mtm-cap-name cond'>RESUME FROM LAST CHECKPOINT</span>" +
+      "<div class='cmdos-hint mono'>" +
+      (resumable
+        ? "this mission is " + esc(status) + " and can be continued"
+        : "this mission is " + esc(status) +
+          " — a final mission returns its stored trace and re-runs nothing (no duplicate spend, no duplicate external action)") +
+      "</div>" +
+      "<button type='button' id='mtm-resume' class='btn btn-quiet'" +
+      (resumable ? "" : " disabled") +
+      ">Resume mission</button>" +
+      "</div>" +
+      "<div class='mtm-cap'>" +
+      "<span class='cmdos-tag cmdos-designed'>NOT IMPLEMENTED</span>" +
+      "<span class='mtm-cap-name cond'>REPLAY FROM AN ARBITRARY CHECKPOINT</span>" +
+      "<div class='cmdos-hint mono'>" +
+      "resume_mission() continues strictly after the LAST persisted checkpoint. " +
+      "Re-entering the mission at checkpoint N &lt; last is not implemented, and " +
+      "would need compensation for the external action and warrant already spent " +
+      "beyond N. Not faked here." +
+      "</div>" +
+      "</div>" +
+      "</div>";
+
+    const btn = document.getElementById("mtm-resume");
+    if (btn && resumable) {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        btn.textContent = "resuming…";
+        const r = await authedFetch(
+          "/api/command-os/mission/" + missionId + "/resume",
+          { method: "POST" }
+        );
+        const body = await r.json().catch(() => ({}));
+        btn.textContent = r.ok
+          ? "resumed → " + (body.status || "?")
+          : "resume refused (HTTP " + r.status + ")";
+        if (r.ok) loadCheckpointTimeline(missionId);
+      });
+    }
   }
 
   function showCheckpointDetail(cp) {
@@ -1708,6 +2077,12 @@
       // it. Honesty is the one true peek and restores whichever of
       // instrument/Core it was opened from, not always the instrument.
       if (state.screen === "honesty") { hideAll(); restorePeekedFrom(); return; }
+      // The Time Machine is opened FROM Agentic Command OS and is part of
+      // it, not part of the instrument -- so Escape returns where the user
+      // came from. Sending them to the instrument instead (the previous
+      // behaviour) stranded them one screen away from the panel they had
+      // just been on, with no indication anything had happened.
+      if (state.screen === "mission-time-machine") { showCommandOS(); return; }
       if (state.screen !== "instrument") showInstrument();
     }
   });

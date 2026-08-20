@@ -218,3 +218,30 @@ Full account: [`evidence/merge/MERGE-VERIFICATION.md`](merge/MERGE-VERIFICATION.
 | Lyria mission audio | — | — | — | no credentials | **NOT_BUILT** |
 | Cloud Run deploy of this branch | `infra/deploy.sh` | `./infra/deploy.sh` | **not run** — no `gcloud`, proxy blocks `*.run.app` | sandbox | **NOT_DEPLOYED** |
 | Live URL serves this branch | — | `curl .../api/healthz` | **HTTP 000** (proxy 403) | sandbox | **UNVERIFIABLE HERE** — last revision `unwind-00013-9h7` predates this rewrite |
+
+---
+
+## 10. Mission Time Machine fix + Mission Media Lab (2026-08-20)
+
+Full root-cause account:
+[`evidence/timemachine/TIME-MACHINE-FIX.md`](timemachine/TIME-MACHINE-FIX.md).
+
+| Claim | Source | Command / test | Result | Environment | Status |
+| --- | --- | --- | --- | --- | --- |
+| Time Machine button opened a blank panel | `web/static/app.js` (before) | reproduced in Chromium | section visible, 402 chars of text, console 401 | local | **ROOT CAUSE CONFIRMED** |
+| Cause: protected route fetched without a token | `/api/command-os/missions` | `curl -o /dev/null -w '%{http_code}'` | **401** anonymous, **200** authed | local | VERIFIED |
+| Fix: NOT AUTHENTICATED ≠ no missions | `web/static/app.js` | browser walkthrough | four distinct states render | local | VERIFIED |
+| Time Machine opens with real history | `command_os/checkpoint.py` | `verify_timemachine_and_media.py` | 5 missions, **12 checkpoints**, 12 arc nodes | local + emulator | VERIFIED |
+| ESC returns to Agentic Command OS | `web/static/app.js` | same | `#command-os` visible, `#instrument` not | local | VERIFIED |
+| RESUME is genuinely implemented | `command_os/mission.py:resume_mission` | same | labelled LIVE; disabled + explained when final | local | **LIVE** |
+| REPLAY from arbitrary checkpoint | — | — | not implemented; UI says so | — | **NOT IMPLEMENTED** |
+| Stored XSS in the objective | `web/static/app.js` | mission run with `<img src=q onerror=…>` | payload rendered as text, `window.__XSS__=0`, 0 `<img>` injected | local | **FIXED + TESTED** |
+| Media: one brief, three modalities | `media/grounding.py` | `tests/test_media.py` | 17 passed | local | VERIFIED |
+| Media cannot enter the authority path | `tests/test_media.py` | import-graph walk over `tower/warrant/hyperion/singularity` | no imports of `media` | local | VERIFIED |
+| Grounded brief is inspectable | `GET /api/media/mission/{id}/brief` | `grounded-brief-20260820T092845Z.json` | 12 checkpoints, real arc, real isolated agent | local + emulator | VERIFIED |
+| Gemini mission synthesis | `media/adapters.py:synthesize_mission` | `synthesize-attempt-20260820T092845Z.json`, `live-attempt-no-flag-20260820T092845Z.log` | `NOT_CONFIGURED`, no text, no artefact | no credentials | **CONFIGURED_NOT_EXERCISED** |
+| Veo mission replay | `media/adapters.py:generate_replay` | `replay-attempt-20260820T092845Z.json`, same log | `NOT_CONFIGURED`, **no video exists** | no credentials | **CONFIGURED_NOT_EXERCISED** |
+| Lyria mission signal | `media/adapters.py:generate_signal` | `signal-attempt-20260820T092845Z.json`, same log | `NOT_CONFIGURED`, **no audio exists** | no credentials | **CONFIGURED_NOT_EXERCISED** |
+| Model IDs are current, not deprecated | `lib/config.py` | `tests/test_media.py::test_model_ids_are_current_not_deprecated` | `veo-3.1-generate-001` (3.0 shut down 2026-06-30), `lyria-002` GA | local | VERIFIED |
+| Seven cards still intact | all | `verify_timemachine_and_media.py` | **33/33 checks** | local + emulator | VERIFIED |
+| Full suite after these changes | `pytest` | `FIRESTORE_EMULATOR_HOST=… make test` | **603 passed, 1 skipped** | local + emulator | VERIFIED |

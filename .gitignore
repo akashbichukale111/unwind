@@ -32,3 +32,8 @@ poetry.lock
 # Runtime sandbox system of record (command_os/external.py). Real side effects
 # from local mission runs; runtime state, never source.
 .sandbox/
+
+# Generated media artefacts (Mission Media Lab). Output, never source:
+# a generated video/audio file is not reproducible by any test and must not
+# be committed as if it were evidence of a call that this repo can re-run.
+.media/

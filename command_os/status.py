@@ -107,6 +107,35 @@ def system_reality() -> list[dict[str, Any]]:
             "code and shares gemini_planning's credential status",
         ),
         (
+            "mission_media_grounding",
+            "LIVE",
+            "media/grounding.py folds real checkpoints into the one brief all three "
+            "modalities read; runs with no credentials at all, and GET "
+            "/api/media/mission/{id}/brief returns the exact model input so it can be "
+            "diffed against the checkpoints themselves",
+        ),
+        (
+            "gemini_mission_synthesis",
+            "CONFIGURED_NOT_EXERCISED",
+            "media/adapters.py:_run_gemini is a real ADK Runner call; shares "
+            "gemini_planning's credential status and fails closed to NOT_CONFIGURED "
+            "with the real reason plus the prompt it would have sent",
+        ),
+        (
+            "veo_mission_replay",
+            "CONFIGURED_NOT_EXERCISED",
+            "media/adapters.py:_run_veo is a real google-genai long-running-operation "
+            "call against a current model ID (veo-3.0 shut down 2026-06-30 and would "
+            "404); never executed here -- no artefact exists and none is fabricated",
+        ),
+        (
+            "lyria_mission_signal",
+            "CONFIGURED_NOT_EXERCISED",
+            "media/adapters.py:_run_lyria is a real google-genai generate_music call "
+            "against lyria-002 (GA); never executed here -- no audio exists and none "
+            "is fabricated",
+        ),
+        (
             "external_action",
             "LIVE (SANDBOX BACKEND)",
             "command_os/external.py appends to a real file outside this process, keyed "
@@ -154,17 +183,6 @@ def system_reality() -> list[dict[str, Any]]:
             "no tenant dimension exists on any collection; any authenticated principal "
             "can read any mission. Stated in docs/SECURITY.md and pinned by "
             "tests/test_adversarial.py::test_known_gap_cross_tenant_isolation_is_not_implemented",
-        ),
-        (
-            "veo_mission_replay",
-            "DESIGNED",
-            "not built. Generated video would be presentation, never evidence, and no "
-            "credentials were available to generate any",
-        ),
-        (
-            "lyria_mission_audio",
-            "DESIGNED",
-            "not built, same reason as veo_mission_replay",
         ),
         (
             "mission_checkpoint_engine",

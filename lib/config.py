@@ -65,6 +65,39 @@ GEMINI_MODEL = MODEL_FAST
 # panel says so rather than implying otherwise.
 GEMMA_MODEL = "gemma-3-27b-it"
 
+# ---------------------------------------------------------------------------
+# Media models (Mission Media Lab). Presentation layer ONLY -- see
+# `media/DESIGN.md`. Neither of these strings may ever reach an authority
+# decision: `tests/test_media.py::test_media_is_not_in_the_authority_path`
+# walks the import graph to prove `tower/`, `warrant/` and `hyperion/` never
+# import `media/`.
+#
+# ⚠ VERSION CURRENCY MATTERS HERE AND WAS CHECKED, NOT ASSUMED.
+# `veo-3.0-generate-001` and `veo-3.0-fast-generate-001` are DEPRECATED with a
+# shutdown date of 2026-06-30 -- already past as of this writing -- so pinning
+# them would ship a model ID that returns 404 on the first real call. The
+# current generally-available generation is Veo 3.1.
+#
+# [UNVERIFIED AGAINST A LIVE MODEL GARDEN LISTING IN THIS ENVIRONMENT --
+# same standing caveat as GEMMA_MODEL above: no GCP credentials were
+# available, so these were taken from Google's published model
+# documentation rather than confirmed by a successful call. The Media Lab
+# reports CONFIGURED_NOT_EXERCISED for exactly this reason, and the first
+# real call is what will confirm or refute them.]
+VEO_MODEL = "veo-3.1-generate-001"
+
+# Lyria 2 (`lyria-002`) is the GA music-generation model: max 32.8s per clip,
+# 48kHz, audio/wav. Lyria 3 exists but is public preview at time of writing,
+# and this repository's convention is to pin GA over preview unless the
+# preview capability is actually needed -- a 30-second mission signal does
+# not need Lyria 3 Pro's three-minute compositions.
+LYRIA_MODEL = "lyria-002"
+
+#: Lyria 2's hard ceiling, from its published model card. Stated here rather
+#: than in `media/lyria.py` so the request builder cannot drift past a limit
+#: the API will reject.
+LYRIA_MAX_SECONDS = 32
+
 # Vertex AI location. Pinned, not inferred from ambient environment, so a cascade
 # cannot silently move jurisdictions between runs.
 #
@@ -110,6 +143,9 @@ class Config:
     model_fast: str
     model_deep: str
     gemma_model: str
+    veo_model: str
+    lyria_model: str
+    lyria_max_seconds: int
 
     firestore_emulator_host: str | None
     firestore_database: str
@@ -262,6 +298,9 @@ def get_config() -> Config:
         model_fast=MODEL_FAST,
         model_deep=MODEL_DEEP,
         gemma_model=GEMMA_MODEL,
+        veo_model=VEO_MODEL,
+        lyria_model=LYRIA_MODEL,
+        lyria_max_seconds=LYRIA_MAX_SECONDS,
         firestore_emulator_host=emulator_host,
         firestore_database=os.environ.get("UNWIND_FIRESTORE_DATABASE", "(default)"),
         vertex_disabled=_env_flag("UNWIND_VERTEX_DISABLED", default=False),

@@ -1442,6 +1442,111 @@ async def command_os_concept_map() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# MISSION MEDIA LAB -- one mission state, three modalities
+#
+# These routes READ a mission and call a model. They never write mission
+# state, never touch the warrant ledger, and cannot change an authority
+# decision -- `media/` imports none of those, and `tests/test_media.py`
+# proves it by import-graph walk. A generation is an illustration OF
+# evidence, never evidence itself.
+#
+# Generation is a privileged read: it costs money and it reads a mission's
+# full history, so it requires a principal exactly as the checkpoint reads
+# do. The status route is public because it reports CONFIGURATION, not data.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/media/status")
+async def media_lab_status() -> dict[str, Any]:
+    """What each modality will actually do if its button is pressed, right now.
+
+    Public: it names model IDs and whether credentials are present, never a
+    credential and never mission data. The UI renders it verbatim, and it
+    cannot be more optimistic than a real call, because both go through
+    `media.adapters._availability`.
+    """
+    from media.adapters import media_status
+
+    return media_status()
+
+
+def _brief_or_404(mission_id: str):
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore not reachable.")
+    from media.grounding import load_brief
+
+    try:
+        return load_brief(mission_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.get("/api/media/mission/{mission_id}/brief")
+async def media_brief(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """The grounded brief itself, before any model sees it.
+
+    Exposed deliberately: a judge can read exactly what was sent to Gemini,
+    Veo and Lyria and check it against
+    `GET /api/command-os/mission/{id}/checkpoints`. A media layer whose
+    input cannot be inspected is a media layer that can quietly invent.
+    """
+    brief = _brief_or_404(mission_id)
+    return {"brief": brief.as_record(), "grounding_block": brief.as_grounding_block()}
+
+
+@app.get("/media-artifact/{filename}")
+async def media_artifact(filename: str) -> FileResponse:
+    """Serve one generated artefact back to the player element.
+
+    PATH TRAVERSAL IS REFUSED, NOT SANITISED. The filename is compared
+    against the actual directory listing rather than string-cleaned: only a
+    name this process itself wrote is servable, so `..%2f..%2fetc%2fpasswd`
+    has nothing to match and 404s. Sanitising is a game of catching every
+    encoding; matching a known set is not.
+    """
+    from media.adapters import ARTIFACT_DIR
+
+    if not ARTIFACT_DIR.is_dir():
+        raise HTTPException(404, "no artefacts generated in this environment")
+    allowed = {p.name for p in ARTIFACT_DIR.iterdir() if p.is_file()}
+    if filename not in allowed:
+        raise HTTPException(404, "no such artefact")
+    return FileResponse(ARTIFACT_DIR / filename)
+
+
+@app.post("/api/media/mission/{mission_id}/synthesize")
+async def media_synthesize(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """GEMINI — explain this mission from its own checkpoints."""
+    from media.adapters import synthesize_mission
+
+    return synthesize_mission(_brief_or_404(mission_id)).as_record()
+
+
+@app.post("/api/media/mission/{mission_id}/replay")
+async def media_replay(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """VEO — turn the mission arc into a visual replay."""
+    from media.adapters import generate_replay
+
+    return generate_replay(_brief_or_404(mission_id)).as_record()
+
+
+@app.post("/api/media/mission/{mission_id}/signal")
+async def media_signal(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """LYRIA — turn the mission's state transitions into an audio signal."""
+    from media.adapters import generate_signal
+
+    return generate_signal(_brief_or_404(mission_id)).as_record()
+
+
+# ---------------------------------------------------------------------------
 # STATIC UI -- mounted last so it cannot shadow an API route
 # ---------------------------------------------------------------------------
 

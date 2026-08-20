@@ -292,6 +292,14 @@
     </div>
   </div>
 
+  <h3 class="mono cmdos-h">Mission Media Lab</h3>
+  <p class="cmdos-hint mono">one mission. three AI modalities. one machine-verifiable source of
+    truth — all three read the same grounded brief, built from the checkpoints this mission
+    actually persisted (<span class="cond">GET /api/media/mission/{id}/brief</span> returns the
+    exact input, so it can be checked against the checkpoints themselves)</p>
+  <div id="media-lab" class="media-lab"></div>
+  <p id="media-note" class="cmdos-hint mono"></p>
+
   <h3 class="mono cmdos-h">System Reality</h3>
   <p class="cmdos-hint mono">every feature below carries its own honest status — nothing here claims
     to be live that is not</p>
@@ -308,6 +316,11 @@
   <h2 class="cond overlay-h">MISSION TIME MACHINE</h2>
   <p class="mono cmdos-lede">historical mission state, reconstructed from real checkpoints — not a
     literal reversal of time, a replay of what was actually persisted</p>
+
+  <h3 class="mono cmdos-h">Mission arc — past to current trusted state</h3>
+  <ol id="mtm-timeline" class="mtm-arc mono"></ol>
+
+  <div id="mtm-state" class="cmdos-report mono mtm-state" hidden></div>
 
   <div class="cmdos-tf-grid">
     <div>

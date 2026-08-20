@@ -993,6 +993,97 @@ html, body {
 .cmdos-gate-title { color: var(--bone); font-size: 15px; margin-bottom: 10px; }
 .cmdos-gate-body { color: var(--bone); opacity: 0.78; line-height: 1.7; margin: 0 0 16px; max-width: 68ch; }
 
+/* ── MISSION MEDIA LAB ───────────────────────────────────────────────
+ * Three cards, one row. Same seven tokens, same thin borders, same badge
+ * vocabulary as every other panel -- this is part of the instrument, not a
+ * separate dashboard bolted onto it. */
+.media-lab {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  margin-bottom: 14px; max-width: 100%;
+}
+.media-card {
+  border: 1px solid var(--slate); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+}
+.media-card-head { display: flex; align-items: center; gap: 10px; }
+.media-glyph { color: var(--amber); font-size: 14px; line-height: 1; }
+.media-name { font-size: 13px; letter-spacing: 0.08em; color: var(--bone); }
+.media-title {
+  font-size: 12px; letter-spacing: 0.05em; color: var(--bone); opacity: 0.86;
+  text-transform: uppercase;
+}
+.media-model { color: var(--bone); opacity: 0.62; }
+.media-model b { color: var(--amber); font-weight: 500; }
+.media-out { width: 100%; }
+.media-result-head { display: flex; gap: 10px; align-items: center; margin: 8px 0 6px; }
+.media-text {
+  white-space: pre-wrap; word-break: break-word; margin: 6px 0 0;
+  font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  color: var(--bone); opacity: 0.78; max-height: 260px; overflow-y: auto;
+  border-left: 1px solid var(--slate); padding-left: 10px;
+}
+/* The prompt stays collapsed by default: it is proof the work is real, not
+ * something a reader must scroll past to reach the status. */
+.media-details { width: 100%; margin-top: 8px; }
+.media-details summary {
+  cursor: pointer; color: var(--bone); opacity: 0.62; font-size: 10px;
+}
+.media-details summary:hover { opacity: 0.9; }
+.media-player { width: 100%; margin-top: 8px; border: 1px solid var(--slate); }
+@media (max-width: 1100px) {
+  .media-lab { grid-template-columns: 1fr; }
+}
+
+/* ── MISSION TIME MACHINE ────────────────────────────────────────────
+ * The arc is a horizontal ladder of the checkpoints that were ACTUALLY
+ * written, so its length varies per mission -- it scrolls rather than
+ * compressing, because a fixed-width arc would have to drop nodes and a
+ * dropped node is a phase the reader never learns ran.
+ * Colours are the existing tokens only: --amber for the current node,
+ * --graphite (6.39:1 on --bone, 4.5:1-clearing on --ink per the header
+ * note) for structure. No new hue is introduced. */
+.mtm-arc {
+  list-style: none; padding: 0 0 6px; margin: 0 0 22px;
+  display: flex; gap: 0; overflow-x: auto; max-width: 100%;
+}
+.mtm-arc-node {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-width: 15ch; padding-right: 18px; position: relative; flex: 0 0 auto;
+}
+/* The connector: a hairline from each node to the next, never after the
+ * last one -- an arc that trails off implies a phase that did not happen. */
+.mtm-arc-node:not(:last-child)::after {
+  content: ""; position: absolute; left: 9px; top: 4px;
+  width: calc(100% - 18px); height: 1px; background: var(--slate);
+}
+.mtm-arc-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  border: 1px solid var(--graphite); background: var(--ink);
+  position: relative; z-index: 1;
+}
+.mtm-arc-dot-current { border-color: var(--amber); background: var(--amber); }
+.mtm-arc-label {
+  font-size: 11px; letter-spacing: 0.04em; color: var(--bone);
+  text-transform: uppercase; line-height: 1.25; max-width: 14ch;
+}
+.mtm-state { margin-bottom: 26px; max-width: 78ch; }
+.mtm-caps {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px;
+}
+.mtm-cap {
+  border: 1px solid var(--slate); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+}
+.mtm-cap-name { font-size: 12px; letter-spacing: 0.05em; color: var(--bone); }
+.mtm-cap .btn { margin-top: 4px; }
+/* A disabled control must LOOK unavailable, not merely refuse the click --
+ * a button that looks live and does nothing is the defect this whole panel
+ * was fixed for. */
+.mtm-cap .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 900px) {
+  .mtm-caps { grid-template-columns: 1fr; }
+}
+
 .cmdos-tf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 40px; margin-bottom: 26px; max-width: 78ch; }
 .cmdos-trust, .cmdos-firewall { display: flex; flex-direction: column; }
 

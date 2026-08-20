@@ -132,8 +132,12 @@ behaving:
   `ZERO_MODEL`, never `GEMINI`. `evidence/adk/live-call-attempt-*.log` shows the
   real path executing, failing on credentials, and reporting `UNAVAILABLE` —
   never a silent `AGREE`.
-- **Veo / Lyria.** Not built. Generated media would be presentation, never
-  evidence, and there were no credentials to generate any.
+- **Veo / Lyria have never run.** The adapters, grounded prompt builders and
+  current model IDs are complete (`media/adapters.py`), and the Mission Media
+  Lab renders them — but with no credentials **no call has ever succeeded and
+  no artefact exists**. Both report `CONFIGURED_NOT_EXERCISED`, and pressing a
+  button returns `NOT_CONFIGURED` with the real reason plus the prompt it
+  would have sent. Generated media would be presentation, never evidence.
 - **A live agent-spawning fleet.** Five roles are registered from static
   definitions; no agent process is spawned.
 - **Multi-tenancy, token rotation, distributed rate limiting, gate expiry.**
@@ -255,6 +259,86 @@ Component-by-component justification — one sentence each, and a component
 without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
+
+## Mission Media Lab
+
+UNWIND executes one machine-verifiable autonomous mission. Its checkpoints
+are the shared evidence substrate — and three Google AI modalities read
+**the same grounded brief** built from them:
+
+```
+        command_os_missions/{id}/checkpoints        <- the source of truth
+                          |
+                media/grounding.py:build_brief      <- pure, deterministic, no model
+                          |
+          +---------------+---------------+
+          |               |               |
+       GEMINI            VEO            LYRIA
+     explanation        visual          audio
+          |               |               |
+          +---------------+---------------+
+                          |
+                   mission evidence
+```
+
+The point is not that three models were called. It is that **one machine-
+verifiable state becomes reasoning, visual evidence and audio evidence** — so
+if the three disagree, the models disagree, because the input was identical
+and machine-derived. `GET /api/media/mission/{id}/brief` returns the exact
+model input, so a reader can diff it against the checkpoints themselves.
+
+| Modality | Purpose | Model | Status |
+| --- | --- | --- | --- |
+| **Gemini** | Explain the mission from its own checkpoints | `lib/config.py:MODEL_DEEP` | `CONFIGURED_NOT_EXERCISED` |
+| **Veo** | Turn the mission arc into a visual replay | `lib/config.py:VEO_MODEL` | `CONFIGURED_NOT_EXERCISED` |
+| **Lyria** | Turn state transitions into a mission signal | `lib/config.py:LYRIA_MODEL` | `CONFIGURED_NOT_EXERCISED` |
+
+**`CONFIGURED_NOT_EXERCISED` means exactly what it says.** The adapters,
+prompt builders and model IDs are complete and the call code is the code that
+runs when credentials appear — but no credentials existed in the environment
+that built this, so **no model call has ever succeeded and no artefact
+exists**. Pressing a button returns `NOT_CONFIGURED` with the real reason and
+shows the grounded prompt it *would* have sent. Nothing is fabricated.
+
+Model IDs were checked for currency rather than assumed: `veo-3.0-generate-001`
+is **deprecated with a 2026-06-30 shutdown**, so pinning it would 404 on the
+first real call — `lib/config.py` pins the current generation and says why.
+
+**The media layer is never the source of truth.** Nothing under `media/`
+writes to Firestore, the warrant ledger, the registry or decision memory, and
+no authority package imports it — `tests/test_media.py` proves both directions
+by import-graph walk. Delete `media/` and every authority test still passes.
+
+**To enable it**, set Google Cloud credentials and unset `UNWIND_VERTEX_DISABLED`:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or run on Cloud Run
+unset UNWIND_VERTEX_DISABLED
+```
+
+`GET /api/media/status` then reports `available: true`, and the buttons make
+real calls. Generated artefacts land in `.media/` (gitignored — a generated
+video is output, not source).
+
+### Mission Time Machine
+
+Historical mission state reconstructed from real Firestore checkpoints: the
+mission arc from first phase to current trusted state, per-checkpoint status,
+full `ctx` inspection, and the current trusted/quarantined/revoked fold.
+
+- **RESUME FROM LAST CHECKPOINT — LIVE.** `command_os/mission.py:resume_mission`
+  handles three real cases (final → returns the stored trace and re-runs
+  nothing; `AWAITING_HUMAN` → requires a decision *and* an authenticated
+  principal; `RUNNING` → continues strictly after the last persisted `seq`).
+  The button is disabled, with the reason stated, when a mission is final.
+- **REPLAY FROM AN ARBITRARY CHECKPOINT — NOT IMPLEMENTED.** Re-entering at
+  checkpoint N &lt; last would need compensation for the external action and
+  warrant already spent beyond N. The UI says so rather than offering a
+  control that silently does nothing.
+
+Mission history is a protected read — it names who approved what — so the
+Time Machine requires an operator token. Without one it says **NOT
+AUTHENTICATED**, which is deliberately distinct from "no missions recorded".
 
 ## Deployed
 
