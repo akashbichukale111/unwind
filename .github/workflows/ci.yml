@@ -183,22 +183,39 @@ jobs:
       # `make verify-live` must FAIL without credentials rather than falling
       # back to the stub. CI has no credentials, which makes it the ideal place
       # to prove the refusal actually happens.
+      # Two properties, and the second is checked by CONTENT HASH rather than
+      # by grepping for a placeholder string.
+      #
+      # The original form required docs/LIVE-VERIFICATION.md to contain
+      # "NOT YET RUN". That was a proxy for "the script wrote nothing", and it
+      # stopped being true the moment a REAL credentialed run legitimately
+      # replaced the placeholder with measured results (commit ba46aaa). The
+      # step then failed on every push -- invisibly, because CI was dying at
+      # the Lint step before ever reaching it. Fixing the lint gate is what
+      # surfaced it.
+      #
+      # Hashing before and after tests the property the step actually cares
+      # about ("an uncredentialed run must not modify this file") and keeps
+      # working whether the file holds a placeholder or real results. It is
+      # strictly stronger than the grep: the grep would have passed a run that
+      # appended garbage while leaving the placeholder line intact.
       - name: verify-live refuses to run without credentials
         env:
           UNWIND_OTEL_CONSOLE: "0"
         run: |
+          test -f docs/LIVE-VERIFICATION.md || { echo "the doc is missing" >&2; exit 1; }
+          before=$(sha256sum docs/LIVE-VERIFICATION.md | cut -d" " -f1)
           if .venv/bin/python scripts/verify_live.py; then
             echo "verify_live.py exited 0 with no credentials; it must not" >&2
             exit 1
           fi
-          code=$?
-          echo "verify-live exited $code as required"
-          if [ ! -f docs/LIVE-VERIFICATION.md ]; then
-            echo "the placeholder should still be present" >&2; exit 1
+          echo "verify-live exited non-zero as required"
+          after=$(sha256sum docs/LIVE-VERIFICATION.md | cut -d" " -f1)
+          if [ "$before" != "$after" ]; then
+            echo "verify-live modified docs/LIVE-VERIFICATION.md without credentials" >&2
+            exit 1
           fi
-          if ! grep -q "NOT YET RUN" docs/LIVE-VERIFICATION.md; then
-            echo "verify-live wrote results without credentials" >&2; exit 1
-          fi
+          echo "docs/LIVE-VERIFICATION.md unchanged ($before)"
 
       # infra/deploy.sh has never executed. The preflight is the only thing
       # standing between a bad input and a Cloud Build that fails six minutes
