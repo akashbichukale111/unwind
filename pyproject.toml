@@ -29,7 +29,15 @@ dev = [
   "playwright>=1.40",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
-    "ruff>=0.7.0",
+    # PINNED, NOT FLOORED. `ruff>=0.7.0` was the defect that turned CI red for
+    # 25 consecutive runs from 2026-08-13: CI installs the newest ruff, whose
+    # formatter legitimately disagreed with the committed formatting, and the
+    # Lint step is step 4 of 9 -- so the test suite, the corpus determinism
+    # check, the eval harness AND `eval-vertex-off` (the zero-model guarantee
+    # this repository's README calls a required check) all silently stopped
+    # running. A formatter is a moving target; a moving target must be pinned
+    # or it is not a gate, it is a coin flip.
+    "ruff==0.16.3",
     "httpx>=0.27.0",
 ]
 
@@ -52,6 +60,21 @@ select = ["E", "F", "I", "UP", "B"]
 #        documents and Pub/Sub payloads where a silent change of wire format
 #        would be expensive to notice.
 ignore = ["E501", "UP042"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 ("no function call in an argument default") is correct for mutable
+# defaults and WRONG for FastAPI's dependency markers: `Depends(...)` and
+# `Query(...)` in a parameter default are the framework's declaration syntax,
+# not a default value that gets shared across calls. Declaring them immutable
+# is bugbear's own documented configuration for this, which is why it is done
+# here rather than with a `# noqa` on twelve endpoints -- a per-line
+# suppression would also silence a genuine B008 on the next line someone adds.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Query",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

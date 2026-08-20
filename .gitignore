@@ -28,3 +28,7 @@ poetry.lock
 # corpus/data/ IS COMMITTED ON PURPOSE. A cold clone must not need a generation
 # step, and the manifest is how the committed bytes are proven reproducible.
 !corpus/data/
+
+# Runtime sandbox system of record (command_os/external.py). Real side effects
+# from local mission runs; runtime state, never source.
+.sandbox/

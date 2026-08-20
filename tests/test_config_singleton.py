@@ -66,6 +66,18 @@ def test_gemini_model_string_appears_only_in_config() -> None:
             continue
         if path.suffix == ".md":
             continue
+        # EVIDENCE ARTEFACTS ARE EXEMPT, for the same reason prose is.
+        #
+        # A captured run log records the model a real execution actually
+        # reached for; that is the whole point of the artefact, and redacting
+        # it would make the evidence less true, not the code safer. The rule
+        # this test enforces is "no second CODE PATH may quietly run a
+        # different model" -- a log under evidence/ is not a code path, and
+        # cannot become one. Note the asymmetry that keeps this honest: a
+        # SOURCE file under evidence/ would still be caught, because only
+        # recorded output (.log/.json/.txt) is skipped here.
+        if rel.startswith("evidence/") and path.suffix in {".log", ".json", ".txt"}:
+            continue
         offenders.append(rel)
     assert not offenders, f"gemini model string found outside lib/config.py: {offenders}"
 

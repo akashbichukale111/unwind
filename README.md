@@ -20,76 +20,136 @@ Google "All Things Agentic" Hackathon
 
 ---
 
-## Agentic Command OS — the master orchestration layer
+## Agentic Command OS — consequence clearing for autonomous AI systems
 
-**One line:** an integrated closed-loop control architecture for autonomous
-AI-agent fleets — create, negotiate capability, monitor behaviour, detect
-drift, block, isolate, repair, validate, resume — sitting above UNWIND's six
-existing control layers, not replacing any of them.
+**The Unlikely Hero.** Not a CTO. The **operations coordinator who currently
+*is* the dependency index** — the person whose 06:40 handover note says
+"supplier K lead time is NOT 11 days any more… someone needs to check which
+agents are still planning against 11… *I do not have a list. I never have a
+list.*" That note is committed in this repository
+(`fleet/data/incident/ops-note.txt`) and the system genuinely parses it.
 
-UNWIND (this repository) already had six independently-working control
-layers before this pass: **UNWIND** (consequence clearing, above), **WARRANT**
-(append-only capability ledger), **CONTROL TOWER** (the one Gateway choke
-point), **COUNTERSIGN** (independent verification), **HYPERION-ZERO**
-(read-only immune layer over the Gateway), and **SINGULARITY-MESH**
-(Capability Genome + Behavioral DNA — two more real, zero-model decision
-engines). What was missing was a single narrative that runs a mission
-*through* all of them in order and reports the outcome honestly.
-`command_os/mission.py` is that narrative — one function, no new decision
-logic, that sequences real calls into the six layers above and reports what
-each one actually returned.
+**The problem.** When a business premise changes — a lead time, a tariff, a
+credential, a policy — somebody has to work out which decisions rested on it,
+**which autonomous agents are still acting under it**, which of their actions
+are now unsafe, what must be revoked, what can safely continue, and what needs
+a human. Today that is memory and email. The agents do not stop. Nothing points
+backwards from the claim to the things built on it.
 
-**The wow moment, live:** open the app, click **"Run mission: build & deploy
-a secure enterprise service."** A 7-role fleet is discovered. An agent
-negotiates its Capability Genome. Behavioral DNA takes a normal baseline,
-then — one scripted, clearly-labelled adversarial event — scores `CRITICAL`
-drift. Hyperion scores the attempted action; the real Gateway (`tower/gateway.py`,
-unchanged) refuses it `SCOPE_EXCEEDED` before any work happens. An independent
-Countersign verifier confirms the block. The agent is isolated. A narrower
-genome is negotiated, a human concurs, warrant is re-minted — real Firestore
-writes, the same `record_human_concurrence` → `verify_and_record` → `mint`
-chain `/api/instrument/earn` already used for its own cold-start moment. The
-Gateway is asked again and allows it. The mission resumes. The executive
-report at the end is folded from the stages that actually ran — never
-hardcoded.
+**What the system does.** One objective in. Then, unattended:
 
-**Continuous Mission State:** a mission isn't a fire-and-forget call. Every
-stage writes a real Firestore checkpoint (`command_os/checkpoint.py`), so a
-mission survives a process restart — `resume_mission` distinguishes ALREADY
-COMPLETED, REQUIRES HUMAN APPROVAL, and REPLAYABLE FROM THE NEXT STAGE, and
-never re-enters a completed stage (no duplicate warrant spend, no duplicate
-Hyperion event). Set **"require human approval before repair"** and the
-mission pauses at a real **Human Override Gate** after isolating the agent
-instead of auto-concurring — approve resumes into the same repair chain,
-deny halts it, and neither choice can overturn the Gateway's original
-refusal (true by construction, not by promise — see
-`docs/mission-state.md`). **Trusted State** folds the mission into four
-named buckets (TRUSTED/UNTRUSTED/QUARANTINED/REVOKED), deliberately never a
-score — this repository already rejected scalar agent trust once
-(`lib/schema.py:AgentTrust`, refused by
-`settle/loadrating.py:assert_not_agent_trust`). The **Context Firewall**
-scores what a resumed mission actually sees on three real signals
-(freshness, trust, relevance). The **Mission Time Machine** UI inspects any
-past mission's real checkpoint history — historical-state reconstruction,
-not a digital twin (Chronos-Void stays honestly `DESIGNED`).
+```
+OBJECTIVE
+  → PLAN            computed from the objective (fleet/planner.py)
+  → DELEGATE        to the specialists whose scope actually covers each step
+  → RECON           parses messy evidence into structured claims  [16/20 parsed]
+  → RISK            finds the escalation the evidence names
+  → CONTAIN         tests THAT scope, for THAT agent, at the real Gateway
+  → PRICE           uncertainty raises what the next action costs
+  → CHALLENGE       an independent challenger can and does disagree
+  → HUMAN GATE      an AUTHENTICATED person concurs — or it stops
+  → EXECUTE         one real, idempotent, reversible external action
+  → VERIFY          re-read the record; settle the agent's authority
+  → REPORT          a status that can never read COMPLETED over a refusal
+```
+
+### The three things a hostile judge should check first
+
+**1. The plan is computed, not fixed.** Change the objective, the plan changes —
+different specialists, different tools, different action kinds. `Investigate an
+anomalous finance capability request` plans five steps across four roles ending
+in a correction; `Trace the impact of a changed operational premise` plans three
+read-only steps and **contains no remediation role at all**, so it cannot reach
+an external effect. Proved by comparing plan fingerprints:
+`tests/test_fleet.py::test_different_objectives_create_different_plans`.
+
+**2. Detection is causal, and the cause is parsed evidence.** The containment
+probe exists *only* when `risk.probe` finds a scope escalation; it tests the
+scope that evidence named, for the agent that evidence named, scoring drift
+from the tool-call count and dataset that evidence recorded. Delete the
+escalating rows from `fleet/data/incident/capability-requests.csv` and the
+mission takes a **visibly different path** — no containment, no isolation,
+status `COMPLETED` instead of `COMPLETED_WITH_RESTRICTIONS`. That experiment is
+a test (`tests/test_mission_causality.py`) and its output is committed
+(`evidence/mission/causality-*.log`).
+
+**3. Nothing anonymous can move authority.** `POST .../gate?decision=approve`
+with no credential returns **401**. With a *service* credential, **403**. The
+concurrence record names the authenticated caller — never a constant. See
+[`docs/SECURITY.md`](docs/SECURITY.md), which also lists the seven things that
+are **not** defended.
+
+### The invention: authority as an economy, priced by uncertainty
+
+An agent does not act because a policy says it may. It acts because it holds
+warrant it **earned**, and acting **spends** it. `warrant/economics.py` adds the
+price half:
+
+```
+cost_bp = BASE_COST[action_kind] × (1 + uncertainty_tax)
+```
+
+Stale evidence, incomplete tool output, behavioural drift, challenger
+disagreement and risk divergence each raise the tax. The consequence is
+mechanical, not advisory: **more uncertainty → higher cost → the same balance
+buys fewer actions → the Gateway refuses sooner → more work reaches a human.**
+An agent that is unsure literally cannot afford to act broadly.
+
+The loop closes on outcome. A verified correction **MINTs**; a verification
+mismatch **BURNs**. Four consecutive missions, no reset
+(`evidence/mission/economy-*.log`):
+
+```
+mission 1: COMPLETED_WITH_RESTRICTIONS  settle=MINT  warrant  80bp ->  280bp  verified=True
+mission 4: COMPLETED_WITH_RESTRICTIONS  settle=MINT  warrant 320bp ->  520bp  verified=True
+```
+
+The tax is computed in `warrant/`, which `tests/test_warrant_zero_model.py`
+proves cannot import a model client. **A model may propose an action; it can
+never price it, discount it, or argue the tax down.** Try it live:
+`GET /api/command-os/economics?drift_band=CRITICAL&completeness=0.4`.
+
+### The fleet
+
+Five identities, each with its own principal, scope, budget and warrant row.
+The separation is enforced by the **unmodified** Gateway, not by the planner
+behaving:
+
+| Agent | Holds | Cannot |
+| --- | --- | --- |
+| `fleet_orchestrator` | `mission.plan` | execute anything, or delegate to itself |
+| `fleet_recon` | `evidence.read`, `corpus.read` | **write anywhere** |
+| `fleet_risk` | `policy.read`, `risk.analyze` | write anywhere |
+| `fleet_remediation` | `sandbox.write`, `sandbox.read` | **read any secret** |
+| `fleet_verifier` | `sandbox.read`, `verify.read` | write the thing it verifies |
+
+### What is honestly NOT built
+
+- **Live Gemini / Gemma.** `fleet/agents.py` builds a real ADK `LlmAgent` with a
+  real `output_schema` and runs it through a real `Runner`; **no Google Cloud
+  credentials were available in the session that wrote it**, so it has not
+  executed against live Vertex. Plans produced without it are labelled
+  `ZERO_MODEL`, never `GEMINI`. `evidence/adk/live-call-attempt-*.log` shows the
+  real path executing, failing on credentials, and reporting `UNAVAILABLE` —
+  never a silent `AGREE`.
+- **Veo / Lyria.** Not built. Generated media would be presentation, never
+  evidence, and there were no credentials to generate any.
+- **A live agent-spawning fleet.** Five roles are registered from static
+  definitions; no agent process is spawned.
+- **Multi-tenancy, token rotation, distributed rate limiting, gate expiry.**
+  See `docs/SECURITY.md` §6.
+
+`GET /api/command-os/status` states this for every feature on screen — a second,
+independently queryable source that must agree with the UI or the UI is wrong.
 
 | | |
 | --- | --- |
+| Security posture and its gaps | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | Full architecture, diagram, component table | [`docs/architecture.md`](docs/architecture.md) |
 | Checkpointing, resumability, trust, gate, firewall | [`docs/mission-state.md`](docs/mission-state.md) |
-| Four-minute demo script | [`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md) |
-| Where each of the 15 concept names in the hackathon brief actually lives | [`docs/COMMAND-OS-CONCEPT-MAP.md`](docs/COMMAND-OS-CONCEPT-MAP.md) |
-| API | `POST /api/command-os/mission[?auto_approve=]`, `.../resume`, `.../gate`, `.../trust`, `.../context-firewall`, `GET .../missions`, `.../checkpoints`, `.../status`, `.../concept-map` |
-| Code | `command_os/` (new); reuses `singularity/`, `hyperion/`, `tower/`, `warrant/`, `countersign/` unchanged |
-
-**What is honestly not built:** a live agent-spawning fleet (the roster is
-reference data, `singularity/fleet.py`, unchanged from before this pass), an
-autonomous red-team agent (one scripted scenario per mission run, not an
-adversarial agent that improvises), and a Digital Twin / simulation engine
-(does not exist). The mission's own `GET /api/command-os/status` states this
-for every feature on screen — a "System Reality" panel is not a marketing
-page, it is a second, independently-queryable source that has to agree with
-the UI or the UI is wrong.
+| Judge demo script | [`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md) |
+| API | `POST /api/command-os/mission[?objective=&auto_approve=]`, `.../gate`, `.../resume`, `GET .../fleet`, `.../economics`, `.../status`, `.../missions`, `.../checkpoints`, `.../trust`, `.../context-firewall` |
+| Code | `fleet/` and `warrant/economics.py` (new); `command_os/` (rewritten, plan-driven); `singularity/`, `hyperion/`, `tower/`, `warrant/ledger.py`, `countersign/` reused with the authority path unchanged |
 
 ---
 
@@ -127,17 +187,33 @@ make test                                 # 441 passed, 1 skipped (with `make em
 make ui                                   # http://127.0.0.1:8000
 ```
 
-**Re-verified 2026-08-19** after adding Continuous Mission State
-(checkpointing, resumability, Trusted State, the Human Override Gate, and
-the Context Firewall — see below) on top of the Agentic Command OS layer:
-`make install` exit 0; `make test` **441 passed, 1 skipped** with the
-Firestore emulator running, **364 passed, 78 skipped, 0 failed** without it
-— both runs, same clone, same commit. The one emulator-mode skip is by
-design (`tests/test_command_os_api.py`'s no-emulator-path test skips itself
-when the emulator is up). `ruff check` and `ruff format --check` both
-clean. Full command-by-command breakdown in
-[`docs/architecture.md`](docs/architecture.md) and
-[`docs/JUDGE-DEMO.md`](docs/JUDGE-DEMO.md).
+**Re-verified 2026-08-20** after the plan-driven rewrite (real planner, five
+specialist agents, causal detection, the Warrant Market, an authenticated
+human gate and one genuine external action):
+
+| check | result |
+| --- | --- |
+| `make test` **with** the Firestore emulator | **586 passed, 1 skipped, 0 failed** |
+| `make test` **without** it | **458 passed, 129 skipped, 0 failed** |
+| `ruff check .` | clean |
+| `ruff format --check .` | clean |
+| `python scripts/check_contrast.py` | clean |
+| 20-attack red team (`make redteam`) | **21 passed** |
+| headless-Chromium click-through (`evidence/browser/`) | **20/20 checks** |
+
+Both test runs are the same clone at the same commit. The one emulator-mode
+skip is by design (`tests/test_command_os_api.py`'s no-emulator-path test
+skips itself when the emulator is up). Logs: `evidence/tests/`,
+`evidence/redteam/`, `evidence/browser/`.
+
+**On CI:** it had been red on 25 consecutive runs since 2026-08-13, failing at
+the `ruff format --check` step — which is step 4 of 9, so the test suite, the
+corpus determinism check, the eval harness and `eval-vertex-off` (the
+zero-model guarantee this README calls a required check) had not executed in
+CI for six days. Root cause: `pyproject.toml` pinned `ruff>=0.7.0` with no
+ceiling, so CI installed a newer formatter than the committed formatting was
+written against. Ruff is now pinned exactly. A formatter is a moving target,
+and a moving target is not a gate.
 
 Then type `supplier_K lead time is now 20 days` into the bar and watch 2,594
 become 78. Press **`T`** to open the four-card instrument (Cards 0–3) — see

@@ -183,14 +183,31 @@
      #instrument changes) ─────────── -->
 <section id="command-os" class="overlay cmdos">
   <h2 class="cond overlay-h">AGENTIC COMMAND OS</h2>
-  <p class="mono cmdos-lede">the master orchestration layer above UNWIND's six control layers — one
-    mission, run end to end through the real engines beneath it</p>
+  <p class="mono cmdos-lede">consequence clearing for autonomous AI systems — a premise changes,
+    the fleet is planned, delegated, challenged, governed and corrected, and every step leaves
+    evidence</p>
+
+  <div class="cmdos-auth mono">
+    <label for="cmdos-token">operator credential</label>
+    <input id="cmdos-token" type="password" placeholder="Bearer token (UNWIND_OPERATOR_TOKENS)"
+           autocomplete="off" spellcheck="false" />
+    <span id="cmdos-authmode" class="cmdos-hint"></span>
+  </div>
+
+  <div class="cmdos-objective mono">
+    <label for="cmdos-objective-input">mission objective</label>
+    <input id="cmdos-objective-input" type="text" spellcheck="false"
+           value="Investigate an anomalous finance capability request."
+           aria-describedby="cmdos-objective-hint" />
+    <span id="cmdos-objective-hint" class="cmdos-hint">change this and the PLAN changes — the
+      specialists, tools and action kinds are computed from the objective, not fixed</span>
+  </div>
 
   <div class="cmdos-actions">
-    <button id="cmdos-run" type="button" class="btn">Run mission: build &amp; deploy a secure enterprise service</button>
+    <button id="cmdos-run" type="button" class="btn">Run autonomous mission</button>
     <label class="cmdos-gate-toggle mono">
       <input id="cmdos-auto-approve" type="checkbox" />
-      require human approval before repair
+      require human approval before any external action
     </label>
     <button id="cmdos-open-instrument" type="button" class="btn btn-quiet">the six-layer instrument &#9658;</button>
     <button id="cmdos-open-timemachine" type="button" class="btn btn-quiet">Mission Time Machine &#9658;</button>
@@ -198,6 +215,17 @@
 
   <div id="cmdos-offline" class="mono instr-offline" hidden>
     FIRESTORE UNREACHABLE — start the emulator (<span class="cond">make emulator</span>) to run a mission.
+  </div>
+  <div id="cmdos-authfail" class="mono instr-offline" hidden>
+    NOT AUTHENTICATED — every mutating endpoint refuses an anonymous caller. Supply an operator
+    credential above, or set <span class="cond">UNWIND_DEV_PRINCIPAL</span> for local development.
+  </div>
+
+  <div id="cmdos-plan-panel" class="cmdos-panel" hidden>
+    <h3 class="mono cmdos-h">Plan</h3>
+    <p class="cmdos-hint mono">computed from the objective · provenance is set by the code path that
+      actually ran, never claimed</p>
+    <div id="cmdos-plan" class="cmdos-plan mono"></div>
   </div>
 
   <div id="cmdos-gate" class="cmdos-gate mono" hidden>
@@ -229,13 +257,49 @@
     </div>
   </div>
 
+  <div id="cmdos-external-panel" class="cmdos-panel" hidden>
+    <h3 class="mono cmdos-h">External Action</h3>
+    <p class="cmdos-hint mono">the one place this system changes anything outside its own process —
+      idempotent, reversible, and re-read to verify</p>
+    <div id="cmdos-external" class="cmdos-external mono"></div>
+  </div>
+
+  <div class="cmdos-tf-grid">
+    <div>
+      <h3 class="mono cmdos-h">Agent Fleet</h3>
+      <p class="cmdos-hint mono">five identities with their own principals and bounded scope —
+        served from the same constants the registry enforces</p>
+      <div id="cmdos-fleet" class="cmdos-fleet mono"></div>
+    </div>
+    <div>
+      <h3 class="mono cmdos-h">Warrant Market — live pricing</h3>
+      <p class="cmdos-hint mono">move a signal, watch every price change. Computed in
+        <span class="cond">warrant/economics.py</span>, which cannot reach a model</p>
+      <div class="cmdos-econ-controls mono">
+        <label>drift
+          <select id="cmdos-econ-drift">
+            <option>NORMAL</option><option>ELEVATED</option><option>DRIFT</option><option>CRITICAL</option>
+          </select>
+        </label>
+        <label>evidence coverage
+          <input id="cmdos-econ-completeness" type="range" min="0" max="100" value="100" />
+        </label>
+        <label class="cmdos-econ-check">
+          <input id="cmdos-econ-disagree" type="checkbox" /> challenger disagreed
+        </label>
+      </div>
+      <div id="cmdos-economics" class="cmdos-economics mono"></div>
+    </div>
+  </div>
+
   <h3 class="mono cmdos-h">System Reality</h3>
   <p class="cmdos-hint mono">every feature below carries its own honest status — nothing here claims
     to be live that is not</p>
   <div id="cmdos-reality" class="cmdos-reality mono"></div>
 
-  <p class="instr-hint mono">every stage below calls a real engine one layer down · exactly one input
-    per mission is scripted, and it is labelled SIMULATED</p>
+  <p class="instr-hint mono">every stage above calls a real engine one layer down · every status
+    label is served by <span class="cond">/api/command-os/status</span>, a second independently
+    queryable source that must agree with this page or this page is wrong</p>
 </section>
 
 <!-- ─────────── MISSION TIME MACHINE ─────────── -->

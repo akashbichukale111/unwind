@@ -83,11 +83,16 @@ def test_simulated_countersign_is_labelled(monkeypatch: pytest.MonkeyPatch) -> N
         "c1", {"class": "clean"}, judging_family=MODEL_DEEP, judging_principal="agent::x"
     )
     assert on.simulated is True
-    assert (
-        "simulated" in on.family
-        or "SIMULATED" in on.family.upper()
-        or on.family == "gemma-simulated"
-    )
+    # The family name changed from "gemma-simulated" to
+    # "zero-model-challenger" when the marker-lookup stand-in was replaced by
+    # a real evidence-based challenger. What must hold is the PROPERTY, not
+    # the string: the family must be independent of the judging side, and it
+    # must not be Gemini-family, or `warrant.ledger.mint` would accept it as
+    # independent verification when it is not.
+    from warrant.ledger import family_root
+
+    assert family_root(on.family) != family_root(MODEL_DEEP)
+    assert not family_root(on.family).startswith("gemini")
 
 
 def test_simulated_countersign_disagrees_on_adversarial_material(

@@ -39,12 +39,24 @@ from typing import Any
 #: measured from production traffic that does not exist in this repository.
 _STALE_AFTER_SECONDS = 3600
 
-#: Stage numbers whose detail a LATER stage's `ctx` actually reads (see
-#: `command_os/mission.py`'s stage functions: 6 reads 5's decision, 7 reads
-#: 5/6's case id and reason code, 8 reads 5's decision, 9/10 read 5-8's case
-#: id and isolation state). Stages 1-3 establish the fleet/baseline once and
-#: are never read again by a later stage function.
-_RELEVANT_STAGES = {4, 5, 6, 7, 8, 9, 10}
+#: Stage KINDS whose recorded detail a later phase's `ctx` actually reads.
+#:
+#: This used to be a set of stage NUMBERS ({4,...,10}), which was correct only
+#: while every mission ran the same eleven stages. A plan-driven mission's
+#: length varies by objective and a containment probe or replan inserts work
+#: mid-flight, so relevance is now keyed on the phase kind -- a static fact
+#: about `command_os/mission.py`'s own handlers, not a guess, and stable
+#: across every plan shape.
+#:
+#: PLAN is excluded deliberately: its detail (the plan, the registration, the
+#: opening balances) is established once and is never re-read from a
+#: checkpoint by a later phase -- `resume_mission` reads the plan from `ctx`,
+#: not from the PLAN stage's detail.
+_RELEVANT_PREFIXES = ("STEP", "CONTAIN", "REPLAN", "CHALLENGE", "GATE", "EXECUTE")
+
+
+def _is_relevant(stage_name: str) -> bool:
+    return stage_name.split(" ")[0].upper().startswith(_RELEVANT_PREFIXES)
 
 
 def filter_context(mission_id: str, *, as_of: datetime | None = None) -> list[dict[str, Any]]:
@@ -71,7 +83,7 @@ def filter_context(mission_id: str, *, as_of: datetime | None = None) -> list[di
     for cp in checkpoints:
         age_seconds = max(0.0, (now - cp.created_at).total_seconds())
         stale = age_seconds > _STALE_AFTER_SECONDS
-        relevant = cp.stage.n in _RELEVANT_STAGES
+        relevant = _is_relevant(cp.stage.name)
 
         if cp.seq in revoked_seqs:
             decision, reason = "REJECT", "revoked: the underlying decision was not allowed"

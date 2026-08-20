@@ -26,7 +26,9 @@ def _decision(reason_code: GatewayReasonCode, *, allowed: bool) -> GatewayDecisi
 
 
 def test_allowed_scores_low() -> None:
-    assessment = score_decision(_decision(GatewayReasonCode.ALLOWED, allowed=True), risk_class="LOW")
+    assessment = score_decision(
+        _decision(GatewayReasonCode.ALLOWED, allowed=True), risk_class="LOW"
+    )
     assert assessment.risk_level is RiskLevel.LOW
     assert assessment.threat_type == "Nominal"
 

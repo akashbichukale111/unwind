@@ -171,12 +171,8 @@ def test_fleet_summary_is_a_real_aggregate_over_logged_events() -> None:
 def test_empty_log_reports_honest_zeros_and_full_fleet_health(monkeypatch) -> None:
     """No emulator required: `aggregate_fleet_summary` over an empty log
     returns zeros and 100% health, never a fabricated placeholder number."""
-    monkeypatch.setattr(
-        "hyperion.immune_memory.list_events", lambda: []
-    )
-    monkeypatch.setattr(
-        "tower.registry.list_agents", lambda: []
-    )
+    monkeypatch.setattr("hyperion.immune_memory.list_events", lambda: [])
+    monkeypatch.setattr("tower.registry.list_agents", lambda: [])
     summary = aggregate_fleet_summary()
     assert summary["events_total"] == 0
     assert summary["threats_detected"] == 0

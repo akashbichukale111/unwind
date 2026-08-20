@@ -1,106 +1,154 @@
 # Agentic Command OS — master architecture
 
-This is the architecture of the layer `command_os/` adds on top of UNWIND's
-six existing control layers. It does not replace `ARCHITECTURE.md` (the
-UNWIND-core / consequence-clearing architecture, one level down) — it sits
-above it and names the same components, not new ones.
+This is the architecture of the layer `command_os/` and `fleet/` add on top of
+UNWIND's six existing control layers. It does not replace `ARCHITECTURE.md`
+(the UNWIND-core / consequence-clearing architecture, one level down).
 
-**Read this in under 90 seconds:** one function
-(`command_os/mission.py:run_mission`) calls, in order, six modules that
-already existed and were already live before this layer was added. Nothing
-in this document is a component that doesn't have a file.
+**Read this in under 90 seconds.** A model authors a plan. Arithmetic decides
+whether each step of it may run. Those are different layers, they are in
+different packages, and the second one cannot import a model client — a
+property `tests/test_warrant_zero_model.py` and `tests/test_tower_zero_model.py`
+prove by walking the import graph.
 
 ## The chain
 
 ```mermaid
 flowchart TD
-    U["User / Executive\nAskUserQuestion: one mission objective"] --> COS
+    U["Operator\none objective, one boolean"] --> AUTH
 
-    subgraph COS["AGENTIC COMMAND OS — command_os/mission.py:run_mission"]
-        direction TB
-        S1["1. AGENT FACTORY\nsingularity/fleet.py:full_fleet()\nstatus: REFERENCE"]
-        S2["2. CAPABILITY GENOME\nsingularity/genome.py:compute_genome()\nstatus: LIVE"]
-        S3["3. BEHAVIORAL DNA (normal)\nsingularity/behavior.py:detect_drift()\nstatus: LIVE"]
-        S4["4. ADVERSARIAL EVENT\none scripted observation\nstatus: SIMULATED"]
-        S5["5. HYPERION\nhyperion/guard.py:evaluate_with_hyperion()\nstatus: LIVE, reacting to SIMULATED input"]
-        S6["6. CONTROL TOWER\ntower/gateway.py:evaluate_gateway()\n(called BY step 5, not duplicated)"]
-        S7["7. COUNTERSIGN\ncountersign/verify.py:verify_and_record()\nstatus: LIVE (simulated verifier)"]
-        S8["8. ISOLATED\nmission-local flag"]
-        S9["9. SELF-HEAL / REPAIR\nnarrower compute_genome() +\nwarrant/ledger.py: record_human_concurrence, mint"]
-        S10["10. VALIDATION\nevaluate_with_hyperion() again"]
-        S11["11. RESUME + REPORT\nhyperion/immune_memory.py +\nsingularity/mesh_memory.py aggregates"]
-        S1-->S2-->S3-->S4-->S5-->S6-->S7-->S8-->S9-->S10-->S11
+    AUTH["lib/auth.py\nauthenticate() — IAP / bearer / explicit dev\nNO anonymous branch"]:::gov --> PLAN
+
+    subgraph MODEL["THE MODEL LAYER — proposes"]
+        PLAN["fleet/planner.py:build_plan\nclassify → compose → validate\nprovenance: GEMINI | GEMINI_CLAMPED | ZERO_MODEL"]:::model
+        VAL["validate_plan — THE TOOL BOUNDARY\nrole ∈ registry · tool ∈ registry ·\naction kind must PRICE · scope ∩ granted scope"]:::gov
+        PLAN --> VAL
     end
 
-    S1 -.checkpointed after every stage.-> CKPT
-    S2 -.-> CKPT
-    S3 -.-> CKPT
-    S4 -.-> CKPT
-    S5 -.-> CKPT
-    S6 -.-> CKPT
-    S7 -.-> CKPT
-    S8 -.-> CKPT
-    S9 -.-> CKPT
-    S10 -.-> CKPT
-    S11 -.-> CKPT
-    CKPT["MISSION CHECKPOINT ENGINE\ncommand_os/checkpoint.py\ncommand_os_missions/{id}/checkpoints/{seq}\nstatus: LIVE"]
+    VAL --> LOOP
 
-    S8 -->|auto_approve=False pauses here| GATE["HUMAN OVERRIDE GATE\nAWAITING_HUMAN\napprove -> stage 9 · deny -> HALTED\ncannot overturn stage 6's refusal\nstatus: LIVE"]
-    GATE -->|approve| S9
+    subgraph LOOP["PER PLAN STEP — command_os/mission.py"]
+        direction TB
+        PRICE["warrant/economics.py:price_action\ncost = base × (1 + uncertainty tax)"]:::det
+        NARROW["causal narrowing\ndrift ≥ DRIFT ⇒ read-only scope only"]:::det
+        GENOME["singularity/genome.py:compute_genome"]:::det
+        GATE["hyperion/guard.py → tower/gateway.py\nUNMODIFIED · the only source of an ALLOW"]:::det
+        TOOL["fleet/tools.py\ndeterministic · structured output only"]:::det
+        OBSERVE["singularity/behavior.py:detect_drift\nreal observation, real detector"]:::det
+        PRICE --> NARROW --> GENOME --> GATE
+        GATE -->|ALLOWED| TOOL --> OBSERVE
+        GATE -->|REFUSED| REPLAN["fleet/planner.py:replan_after_refusal"]:::model
+    end
 
-    CKPT --> TRUST["TRUSTED STATE\ncommand_os/trust.py\nTRUSTED/UNTRUSTED/QUARANTINED/REVOKED\n(categorical, never a score)\nstatus: LIVE"]
-    CKPT --> FW["CONTEXT FIREWALL\ncommand_os/context_firewall.py\nfreshness + trust + relevance ->\nINCLUDE/SUMMARIZE/REJECT/QUARANTINE\nstatus: LIVE"]
-    CKPT --> TM["MISSION TIME MACHINE\nweb/static #mission-time-machine\nhistorical state inspection, not replay\nstatus: LIVE"]
+    LOOP --> CONTAIN["CONTAIN — only if the evidence named an escalation\ntests THAT scope, for THAT agent"]:::det
+    CONTAIN --> CHAL["countersign/verify.py\nindependent re-derivation · five grounds to DISAGREE"]:::gov
+    CHAL -->|DISAGREE| FROZEN["mint frozen · routed to a human"]:::stop
+    CHAL -->|AGREE| HUMAN["HUMAN GATE\nconcurrence recorded under the AUTHENTICATED principal"]:::gov
+    HUMAN -->|deny| STOP["HALTED"]:::stop
+    HUMAN -->|approve| EXEC["command_os/external.py:execute_action\nthe ONE external effect\nauthorized · idempotent · reversible"]:::det
+    EXEC --> VERIFY["re-read the record, compare field by field\nverified ⇒ MINT · mismatch ⇒ BURN"]:::det
+    VERIFY --> REPORT["status: worst-first fold\nnever COMPLETED over a refusal"]:::gov
 
-    COS --> OBS["OBSERVABILITY\nFleetGuard/AutoAudit/ShadowAudit/Nexus Command\n= hyperion_events + singularity_mesh_events\n(append-only, real aggregates)"]
+    LOOP -.every phase checkpointed.-> CKPT[("Firestore\ncommand_os_missions/{id}/checkpoints/{seq}")]
+    GATE -.SPEND / refuse.-> LEDGER[("warrant_events\nappend-only")]
+    HUMAN -.concurrence.-> MEM[("decision_memory\ncausal chain")]
 
-    S6 -.blocked path.-> RT["RED TEAM (Pandora)\none scripted scenario per run\nstatus: SIMULATED"]
-    S9 -.-> SH["SELF-HEALING (Phoenix)\nreal re-mint via warrant/ledger.py,\nnow checkpoint-aware recovery\nstatus: LIVE"]
-    S1 -.-> DT["DIGITAL TWIN (Chronos-Void)\nno simulation/forecasting engine exists\n(Mission Time Machine, above, is a\nDIFFERENT thing -- historical inspection,\nnot a twin -- see the note below)\nstatus: DESIGNED"]
+    classDef model fill:#2a2118,stroke:#c88a2e,color:#e8e0d4
+    classDef det fill:#18211a,stroke:#4a8a5e,color:#e8e0d4
+    classDef gov fill:#1a1d28,stroke:#5e7aa8,color:#e8e0d4
+    classDef stop fill:#2a1818,stroke:#a85e5e,color:#e8e0d4
 ```
 
-**Mission Time Machine is not Chronos-Void / Digital Twin, and the diagram
-deliberately keeps them separate nodes.** A digital twin means a live
-simulated model used to forecast a hypothetical future state; the Mission
-Time Machine reconstructs *already-happened, already-persisted* checkpoints
-— read-only history, never a forecast or a what-if branch. Digital Twin
-stays `DESIGNED` (not built); Mission Time Machine is its own real, `LIVE`
-capability with its own honest scope, documented in `docs/mission-state.md`.
+**Amber proposes. Green decides. Blue governs. Red stops.** No amber box can
+write to the ledger, price an action, or produce an ALLOW.
+
+## The one property everything else rests on
+
+`tower/gateway.py` is the only module in this repository that constructs a
+`GatewayDecision`, and `command_os/external.py:execute_action` is the only
+function that can affect anything outside the process — and it refuses to run
+without an authorization minted by the gateway path. Both are checked
+mechanically:
+
+```bash
+grep -rn "GatewayDecision(" --include="*.py" . | grep -v tests/   # tower/ only
+grep -rn "execute_action" --include="*.py" . | grep -v tests/     # one caller
+```
 
 ## Component table
 
-| Layer in the chain | Real module | Function | Status |
-| --- | --- | --- | --- |
-| Agent Factory | `singularity/fleet.py` | `full_fleet()` | REFERENCE — static 7-role topology, no live spawning |
-| Capability Genome | `singularity/genome.py` | `compute_genome()` | LIVE — pure function, zero model calls |
-| Behavioral DNA | `singularity/behavior.py` | `detect_drift()` | LIVE — pure function, zero model calls |
-| Hyperion-Zero | `hyperion/guard.py` | `evaluate_with_hyperion()` | LIVE — read-only wrapper, never overturns the Gateway |
-| Control Tower | `tower/gateway.py` | `evaluate_gateway()` | LIVE — the one choke point; principal → scope → budget → warrant, in that fixed order |
-| Warrant | `warrant/ledger.py` | `spend_or_refuse`, `mint`, `record_human_concurrence` | LIVE — append-only ledger, atomic transaction |
-| Countersign | `countersign/verify.py` | `verify_and_record()` | LIVE — simulated verifier in this mission (`UNWIND_COUNTERSIGN_SIMULATED=1`); the real Gemma path exists in `countersign/agent.py` and is exercised elsewhere (`docs/LIVE-VERIFICATION.md`) |
-| UNWIND core | `spine/cascade.py` | `run_cascade()` | LIVE, but **not invoked by this mission** — see "What this mission does not do," below |
-| Observability | `hyperion/immune_memory.py`, `singularity/mesh_memory.py` | `aggregate_fleet_summary()`, `aggregate_mesh_summary()` | LIVE — real folds over append-only logs, empty log returns honest zeros |
-| Red Team | one scripted `BehaviorObservation` in `command_os/mission.py` stage 4 | — | SIMULATED — one scripted scenario per mission, no autonomous red agent |
-| Self-Healing (Phoenix) | `command_os/mission.py` stages 9–10 | narrower `compute_genome()` + real `mint()` | LIVE — now checkpoint-aware: resumable from `_GATE_AFTER_SEQ` regardless of what interrupted the mission |
-| Mission Checkpoint Engine | `command_os/checkpoint.py` | `write_checkpoint`, `list_checkpoints`, `resume_mission` (in `mission.py`) | LIVE — real Firestore writes, single-field queries only — see "Google Cloud services," below |
-| Trusted State | `command_os/trust.py` | `trusted_state_for_mission()` | LIVE — categorical fold, never a score (see `docs/mission-state.md`) |
-| Context Firewall | `command_os/context_firewall.py` | `filter_context()` | LIVE — three real signals (freshness, trust, relevance), not the full ten-field model a fuller version could have |
-| Human Override Gate | `command_os/mission.py` (`_GATE_AFTER_SEQ`), `POST /api/command-os/mission/{id}/gate` | `resume_mission(..., human_decision=...)` | LIVE — cannot overturn stage 6's Gateway refusal, by construction |
-| Mission Time Machine | `web/static/index.html` `#mission-time-machine` | `GET /api/command-os/missions`, `.../checkpoints` | LIVE — historical-state inspection; explicitly not Chronos-Void / a digital twin, see below |
-| Digital Twin (Chronos-Void) | — | — | DESIGNED — not built, no simulation/forecasting engine exists |
+Every row names a file. A layer without one gets deleted rather than described.
 
-## What this mission does not do
+### The model layer — proposes, never decides
 
-The stage list above deliberately does not force a call into `spine/cascade.py`
-(UNWIND core's claim-retraction consequence engine). UNWIND core's job is
-computing what must be un-sent, un-paid, or apologised for when a **claim**
-turns out false — it has no natural role in an "agent drifts, gets blocked,
-gets repaired" security narrative, and no claim is retracted anywhere in this
-mission. Forcing an unrelated call into that path to check a box would be
-exactly the kind of decorative, disconnected wiring this repository's honesty
-discipline exists to refuse. UNWIND core remains fully live and independently
-reachable as its own card (`#instrument` → UNWIND CORE, or `enterCore()` in
-`web/static/app.js`) — it is simply not part of this particular chain.
+| Component | Module | Status |
+| --- | --- | --- |
+| Planner (Gemini) | `fleet/agents.py:build_planner_agent` — real `LlmAgent`, real `output_schema`, real `Runner` | **CONFIGURED_NOT_EXERCISED** — no GCP credentials in this pass; see `evidence/adk/` |
+| Planner (deterministic) | `fleet/planner.py:deterministic_plan` | LIVE — five objective classes, five distinct plans |
+| Plan validator — **the tool boundary** | `fleet/planner.py:validate_plan` | LIVE — drops unknown roles/tools, rejects unpriceable actions, intersects scope with the registry |
+| Replanner | `fleet/planner.py:replan_after_refusal` | LIVE — retry at narrowest scope, downgrade unaffordable mutations, narrow under drift. Never reclassifies risk to afford an action |
+| Specialist agents | `fleet/agents.py:build_specialist_agent` × 4 | Objects LIVE; their model path shares the planner's credential status |
+
+### The deterministic layer — decides, cannot call a model
+
+| Component | Module | Status |
+| --- | --- | --- |
+| Warrant Market | `warrant/economics.py:price_action` | LIVE — `cost = base × (1 + tax)`, integer only, ceiling-rounded |
+| Uncertainty tax | `warrant/economics.py:assess_uncertainty` | LIVE — six independent signals, each named in the result |
+| Capability Genome | `singularity/genome.py:compute_genome` | LIVE — pure function |
+| Behavioral DNA | `singularity/behavior.py:detect_drift` | LIVE — pure function, real observations |
+| Hyperion-Zero | `hyperion/guard.py:evaluate_with_hyperion` | LIVE — read-only; never overturns the Gateway |
+| Control Tower | `tower/gateway.py:evaluate_gateway` | LIVE — **the only source of an ALLOW in the repository** |
+| Warrant ledger | `warrant/ledger.py` | LIVE — append-only, atomic spend, mint gated on two independent records |
+| Specialist tools | `fleet/tools.py` | LIVE — deterministic parse/compare/verify; structured output only |
+
+### The governance layer
+
+| Component | Module | Status |
+| --- | --- | --- |
+| Authentication | `lib/auth.py` | LIVE — IAP / bearer / explicit dev, **no anonymous branch** |
+| Route protection | `services/api/security.py` | LIVE — route-table walk fails the build on an unprotected mutation |
+| Simulation policy | `lib/simulation.py` | LIVE — explicit, immutable, hard production clamp |
+| Independent challenger | `countersign/verify.py:_zero_model_challenge` | LIVE (ZERO-MODEL) — five named grounds to disagree |
+| Challenger (Gemma) | `countersign/agent.py` + `_run_gemma_async` | CONFIGURED_NOT_EXERCISED — real path; `evidence/adk/live-call-attempt-*.log` shows it failing closed |
+| Human Override Gate | `command_os/mission.py:_phase_gate` | LIVE — records the **authenticated** principal; cannot overturn a Gateway refusal |
+| Decision Memory | `tower/memory.py` | LIVE — append-only causal chain, not a vector store |
+
+### State, effect and evidence
+
+| Component | Module | Status |
+| --- | --- | --- |
+| Mission checkpoints | `command_os/checkpoint.py` | LIVE — the work queue and cursor live in the checkpointed context |
+| Resumability | `command_os/mission.py:resume_mission` | LIVE — no double spend, no duplicate event, no duplicate external action |
+| External action | `command_os/external.py` | LIVE (SANDBOX BACKEND) — the one external effect; GitHub adapter CONFIGURED_NOT_EXERCISED |
+| Messy-data synthesis | `fleet/tools.py:recon_extract_claims` over `fleet/data/incident/` | LIVE — measured coverage 16/20, and that number feeds the tax |
+| Trusted State | `command_os/trust.py` | LIVE — categorical, never a score |
+| Context Firewall | `command_os/context_firewall.py` | LIVE (DISPLAY FILTER) — scores context; does not gate what resume reconstructs |
+| Red team | `tests/test_adversarial.py` | LIVE (TEST SUITE) — 20 attacks + one declared undefended gap |
+| Digital Twin / Veo / Lyria / multi-tenancy | — | DESIGNED — not built |
+
+## What this system does not do
+
+**It does not force a call into `spine/cascade.py`.** UNWIND core's job is
+computing what must be un-sent, un-paid, or apologised for when a *claim*
+turns out false. This layer's missions are about agent authority, and no claim
+is retracted in them. Forcing an unrelated call into that path to check a box
+would be exactly the decorative wiring this repository's honesty discipline
+exists to refuse. UNWIND core is fully live and independently reachable as its
+own card. The two layers share a thesis — a premise moved, so something built
+on it is now wrong — and they share the incident fixture's contradicting
+`supplier_K` lead-time records, which `recon.extract_claims` genuinely finds.
+
+**It does not spawn agent processes.** Five roles are registered from static
+definitions in `fleet/roles.py`. They have real, separate identities in the
+registry with real, separately-enforced scope — but nothing forks.
+
+**It does not call a model in the authority path, and structurally cannot.**
+`warrant/` and `tower/` are covered by import-graph tests, and
+`tower/gateway.py`'s warrant check is an ADK `FunctionNode`, a node type the
+framework itself guarantees contains no model.
+
+**It has not run against live Vertex in this pass.** See `evidence/INDEX.md`
+§8's "Explicitly NOT evidenced" table.
 
 ## Google Cloud services actually used
 

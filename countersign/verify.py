@@ -11,25 +11,33 @@ Three outcomes, the same "unavailable is a class, not an exception" honesty
                    refuses without a valid countersign record, so silence
                    here is the safe default -- never a silent AGREE.
 
-SIMULATED, LABELLED
----------------------
-`UNWIND_COUNTERSIGN_SIMULATED=1` (the SAME flag `warrant/ledger.py` already
-gates its MINT precondition on) switches this module to a deterministic,
-scripted verdict -- no model call, no Vertex dependency, reproducible for
-tests and offline eval runs. Every simulated outcome carries
-`simulated=True`, and `warrant.ledger.record_countersign` refuses to let a
-simulated record satisfy MINT unless this same flag is set at mint time too
--- the label cannot be dropped by one caller and picked back up by another.
+ZERO-MODEL CHALLENGER, LABELLED, AND ABLE TO DISAGREE
+--------------------------------------------------------
+When `lib.simulation.SimulationPolicy.simulated_countersign` is set, this
+module runs `_zero_model_challenge` instead of calling Gemma: a
+deterministic, reproducible, credential-free INDEPENDENT RE-DERIVATION from
+the presented evidence. It is not a stand-in that always agrees -- it has
+five named grounds for DISAGREE and exercises the real CHALLENGE ->
+mint-freeze path (see that function's docstring for what changed and why it
+mattered).
+
+The policy is passed in EXPLICITLY (`policy=`), never read from a mutable
+process-wide environment variable inside the call. `lib/simulation.py`
+explains the defect that motivated the change; the short version is that
+the flag protecting the authority path used to be settable by the code the
+authority path constrains. `warrant.ledger` applies the matching clamp:
+under `UNWIND_ENV=production` a simulated countersign can never satisfy
+MINT, whatever any environment variable says.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import re
 from dataclasses import dataclass
 
 from lib.config import get_config
+from lib.simulation import SimulationPolicy, resolve_policy
 from lib.telemetry import model_call_span
 from lib.vertex import VertexDisabledError
 from warrant.ledger import family_root
@@ -163,31 +171,117 @@ async def _run_gemma_async(case_id: str, material: dict) -> str:
     return "".join(text_parts)
 
 
-def _simulation_enabled() -> bool:
-    return os.environ.get("UNWIND_COUNTERSIGN_SIMULATED", "").strip() == "1"
+#: The zero-model challenger's family. `family_root` reduces it to `"zero"`,
+#: which collides with neither `"gemini"` (the judging side) nor `"gemma"`,
+#: so `assert_independent` and `warrant.ledger`'s non-Gemini-family MINT
+#: precondition both hold for it on their own terms rather than by exemption.
+_SIMULATED_FAMILY = "zero-model-challenger"
+
+#: Legacy alias. The previous name claimed to be a stand-in for Gemma; it was
+#: not one -- it read a marker. Kept only so an already-written Firestore
+#: countersign record still deserialises and still reads as simulated.
+_LEGACY_SIMULATED_FAMILY = "gemma-simulated"
+
+#: [ASSUMPTION] Thresholds for the zero-model challenge below. Chosen to be
+#: demo-legible and stated as chosen, the same discipline `hyperion/risk.py`'s
+#: weight table and `singularity/behavior.py`'s baselines already use for
+#: themselves -- not measured from production traffic that does not exist in
+#: this repository.
+_STALE_EVIDENCE_SECONDS = 3600
+_MIN_COMPLETENESS_FOR_HIGH_RISK = 0.75
+_UNRESOLVED_DRIFT_BANDS = {"DRIFT", "CRITICAL"}
+_MUTATING_SCOPE_MARKERS = ("write", "create", "delete", "mutate", "execute", "secret")
 
 
-#: [SCRIPTED, LABELLED — see judgment/model.py:ScriptedT2Model for the same
-#: discipline applied to T2]. The simulated countersigner's verdict is a
-#: deterministic function of `material`, never randomness: reproducible eval
-#: runs, no model call, no Vertex dependency. It agrees UNLESS the material
-#: is explicitly marked adversarial/forged -- a stand-in for "an independent
-#: reader would catch what an adversarial input was built to slip past",
-#: which is a plausible enough shape to exercise the DISAGREE/CHALLENGE path
-#: in tests and offline demos without pretending to be a real judgement.
-_SIMULATED_FAMILY = "gemma-simulated"
+def _zero_model_challenge(case_id: str, material: dict) -> CountersignOutcome:
+    """A REAL independent check, computed from the evidence -- not a marker lookup.
 
+    WHAT CHANGED, AND WHY IT MATTERED
+    ------------------------------------
+    The previous implementation agreed unless `material["class"] ==
+    "adversarial"`. `command_os/mission.py` never set that key, so the
+    mission's "an independent verifier confirmed the block" step was
+    tautologically AGREE on every run, forever. A verifier that cannot
+    disagree is not a verifier.
 
-def _simulated_outcome(case_id: str, material: dict) -> CountersignOutcome:
-    flagged = str(material.get("class", "")).lower() == "adversarial" or bool(
-        material.get("forged")
-    )
-    agrees = not flagged
+    This function re-derives its own verdict from the same evidence the
+    proposing side saw, by a DIFFERENT procedure than any other component
+    in the repository:
+
+      - `hyperion/risk.py` scores the Gateway's *reason code*.
+      - `singularity/behavior.py` scores an *observation* against a baseline.
+      - This scores the *proposal against its own evidence*: does the
+        evidence presented actually support the authority being requested?
+
+    Five independent grounds for DISAGREE, each individually sufficient and
+    each named in the returned `ground` so the record says why:
+
+      1. AUTHORITY EXCEEDS EVIDENCE -- the requested authority cost is not
+         covered by the balance the proposal itself reports.
+      2. UNRESOLVED DRIFT -- behaviour is still DRIFT/CRITICAL and the
+         proposal nonetheless requests a mutating scope.
+      3. STALE EVIDENCE -- the evidence behind a mutating action is older
+         than `_STALE_EVIDENCE_SECONDS`.
+      4. INCOMPLETE EVIDENCE -- a HIGH/CRITICAL-risk proposal rests on
+         evidence below `_MIN_COMPLETENESS_FOR_HIGH_RISK` coverage.
+      5. DECLARED ADVERSARIAL -- the material is explicitly labelled
+         adversarial or forged (the original rule, kept: an explicitly
+         declared forgery should still be caught).
+
+    Deterministic, no I/O, no clock beyond what the caller supplied in
+    `material`, no model. The same evidence always produces the same verdict.
+    """
+    grounds: list[str] = []
+
+    balance_bp = material.get("warrant_balance_bp")
+    cost_bp = material.get("authority_cost_bp")
+    if isinstance(balance_bp, int) and isinstance(cost_bp, int) and cost_bp > balance_bp:
+        grounds.append(
+            f"AUTHORITY EXCEEDS EVIDENCE: the proposal requests {cost_bp}bp of "
+            f"authority against a reported balance of {balance_bp}bp"
+        )
+
+    drift_band = str(material.get("drift_band", "")).upper()
+    requested_scope = material.get("requested_scope") or []
+    scope_text = " ".join(str(s).lower() for s in requested_scope)
+    mutating = any(marker in scope_text for marker in _MUTATING_SCOPE_MARKERS)
+    if drift_band in _UNRESOLVED_DRIFT_BANDS and mutating:
+        grounds.append(
+            f"UNRESOLVED DRIFT: behaviour is {drift_band} and the proposal still "
+            f"requests the mutating scope {sorted(requested_scope)!r}"
+        )
+
+    age = material.get("evidence_age_seconds")
+    if isinstance(age, (int, float)) and age > _STALE_EVIDENCE_SECONDS and mutating:
+        grounds.append(
+            f"STALE EVIDENCE: the evidence behind a mutating action is {age:.0f}s old, "
+            f"over the {_STALE_EVIDENCE_SECONDS}s floor"
+        )
+
+    completeness = material.get("evidence_completeness")
+    risk_level = str(material.get("risk_level", "")).upper()
+    if (
+        isinstance(completeness, (int, float))
+        and risk_level in {"HIGH", "CRITICAL"}
+        and completeness < _MIN_COMPLETENESS_FOR_HIGH_RISK
+    ):
+        grounds.append(
+            f"INCOMPLETE EVIDENCE: {risk_level}-risk proposal rests on "
+            f"{completeness:.0%} evidence coverage, under the "
+            f"{_MIN_COMPLETENESS_FOR_HIGH_RISK:.0%} floor"
+        )
+
+    if str(material.get("class", "")).lower() == "adversarial" or bool(material.get("forged")):
+        grounds.append("DECLARED ADVERSARIAL: material is explicitly labelled adversarial/forged")
+
+    agrees = not grounds
     ground = (
-        "material is labelled adversarial/forged; a scripted stand-in for an "
-        "independent reader catching it"
-        if flagged
-        else "scripted agreement: material carries no adversarial marker"
+        "; ".join(grounds)
+        if grounds
+        else (
+            "independent re-derivation from the presented evidence found no "
+            "unbacked authority, unresolved drift, staleness or coverage gap"
+        )
     )
     return CountersignOutcome(
         available=True,
@@ -206,15 +300,24 @@ def run_countersign(
     judging_family: str,
     judging_principal: str,
     principal: str = COUNTERSIGN_PRINCIPAL,
+    policy: SimulationPolicy | None = None,
 ) -> CountersignOutcome:
-    """The verb. Applies the collusion guard, then either runs the scripted
-    simulator or the real Gemma agent, and returns an outcome -- never
+    """The verb. Applies the collusion guard, then either runs the zero-model
+    challenger or the real Gemma agent, and returns an outcome -- never
     writes anywhere. `verify_and_record` (below) is what wires a returned
     outcome into the Memory Bank and the warrant ledger.
+
+    `policy` is EXPLICIT. It used to be read from `UNWIND_COUNTERSIGN_SIMULATED`
+    inside this function, which meant any caller that had mutated that
+    variable -- and `command_os/mission.py` mutated it on itself -- silently
+    changed what "independent verification" meant here. Passing it in makes
+    the mode a visible argument at every call site; `resolve_policy()` is the
+    default only when a caller genuinely has no opinion.
     """
     cfg = get_config()
+    policy = policy or resolve_policy()
 
-    if _simulation_enabled():
+    if policy.simulated_countersign:
         # Still checked: a simulated run that would have collided is not a
         # meaningful rehearsal of the real guard.
         assert_independent(
@@ -223,7 +326,7 @@ def run_countersign(
             judging_family=judging_family,
             judging_principal=judging_principal,
         )
-        return _simulated_outcome(case_id, material)
+        return _zero_model_challenge(case_id, material)
 
     if cfg.vertex_disabled:
         return CountersignOutcome(
@@ -297,6 +400,7 @@ def verify_and_record(
     judging_family: str,
     judging_principal: str,
     principal: str = COUNTERSIGN_PRINCIPAL,
+    policy: SimulationPolicy | None = None,
 ) -> CountersignOutcome:
     """Run Countersign and wire the result into the Memory Bank / warrant
     ledger. AGREE writes a countersign record and stops there -- `mint`
@@ -314,6 +418,7 @@ def verify_and_record(
         judging_family=judging_family,
         judging_principal=judging_principal,
         principal=principal,
+        policy=policy,
     )
     if not outcome.available:
         return outcome
@@ -340,9 +445,14 @@ def verify_and_record(
 
 __all__ = [
     "COUNTERSIGN_PRINCIPAL",
+    "CHALLENGER_FAMILY",
     "CollusionError",
     "CountersignOutcome",
     "assert_independent",
     "run_countersign",
     "verify_and_record",
 ]
+
+#: Public name for the zero-model challenger family, for callers that need
+#: to record or display it without importing a private symbol.
+CHALLENGER_FAMILY = _SIMULATED_FAMILY
