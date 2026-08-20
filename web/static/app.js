@@ -1531,8 +1531,77 @@
     renderAuthMode();
     renderFleet();
     renderEconomics();
+    renderConsequence();
     renderMediaLab();
   }
+
+  // ── CONSEQUENCE PREVIEW — the agent action simulator ──────────────────
+  //
+  // Reads the public, read-only preview endpoint. Every number rendered is a
+  // real reverse-index traversal over the committed corpus; nothing here can
+  // mutate anything, which is why it needs no credential.
+
+  const CQ_SEVERITY = { CRITICAL: "cmdos-unavailable", CAUTION: "cmdos-simulated", INFO: "cmdos-live" };
+
+  async function renderConsequence() {
+    const host = $("cq-out");
+    if (!host) return;
+    const [subject, predicate, value] = $("cq-premise").value.split("|");
+    const action = $("cq-action").value;
+    host.innerHTML = "<div class='cmdos-hint mono'>walking the reverse index…</div>";
+    let d;
+    try {
+      d = await (await fetch(
+        "/api/command-os/consequence-preview?subject=" + encodeURIComponent(subject) +
+        "&predicate=" + encodeURIComponent(predicate) +
+        "&value=" + encodeURIComponent(value) +
+        "&action_kind=" + encodeURIComponent(action)
+      )).json();
+    } catch (err) {
+      host.innerHTML = "<div class='cmdos-hint mono'>preview unavailable</div>";
+      return;
+    }
+
+    // UNKNOWN is not ZERO, and the UI must not let them look alike.
+    if (!d.resolved) {
+      host.innerHTML =
+        "<div class='cq-unknown'><span class='cmdos-tag cmdos-unavailable'>BLAST RADIUS UNKNOWN</span>" +
+        "<div class='cmdos-hint mono'>" + esc(d.reason_unresolved) + "</div></div>";
+      return;
+    }
+
+    const r = d.risk;
+    const dims = ["security", "data", "financial", "operational", "privilege", "irreversibility"];
+    host.innerHTML =
+      "<div class='cq-grid'>" +
+        "<div class='cq-graph'>" +
+          d.graph.map((n) =>
+            "<div class='cq-node cq-node-" + esc(n.kind) + "'>" +
+              "<span class='cmdos-tag " + (CQ_SEVERITY[n.severity] || "cmdos-live") + "'>" + esc(n.severity) + "</span>" +
+              "<span class='cq-label cond'>" + esc(n.label) + "</span>" +
+              (n.count ? "<span class='cq-count cond'>" + n.count.toLocaleString() + "</span>" : "") +
+              "<div class='cmdos-hint mono cq-detail'>" + esc(n.detail) + "</div>" +
+            "</div>"
+          ).join("<div class='cq-arrow' aria-hidden='true'>↓</div>") +
+        "</div>" +
+        "<div class='cq-risk'>" +
+          "<div class='cmdos-report-title cond'>UNWIND RISK INDEX</div>" +
+          "<div class='cq-total cond'>" + r.total + "<span class='cq-band'>" + esc(r.band) + "</span></div>" +
+          dims.map((k) =>
+            "<div class='cq-dim'><span class='cq-dim-k mono'>" + k + "</span>" +
+            "<span class='cq-dim-bar'><i style='width:" + r[k] + "%'></i></span>" +
+            "<span class='cq-dim-v mono'>" + r[k] + "</span></div>"
+          ).join("") +
+          "<div class='cmdos-hint mono cq-disclaim'>" + esc(r.disclaimer) + "</div>" +
+          "<div class='cmdos-hint mono'>reversible: <b>" + (d.reversible ? "yes" : "NO — consequences already escaped") + "</b></div>" +
+        "</div>" +
+      "</div>";
+  }
+
+  ["cq-premise", "cq-action"].forEach((id) => {
+    const el = $(id);
+    if (el) el.addEventListener("change", renderConsequence);
+  });
 
   // ── MISSION MEDIA LAB ────────────────────────────────────────────────
   //

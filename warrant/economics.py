@@ -128,6 +128,31 @@ TAX_MODEL_DISAGREEMENT_PCT = 60
 TAX_EXTERNAL_STATE_CHANGED_PCT = 30
 TAX_RISK_DIVERGENCE_PCT = 25
 
+#: [ASSUMPTION] Consequence-band ladder. Deliberately the steepest single
+#: contributor in the table: every other signal says "we are unsure about
+#: this action", while this one says "we have WALKED THE GRAPH and know what
+#: breaks". Measured consequence should outrank estimated uncertainty.
+#: CALIBRATED, NOT GUESSED. The first values tried here (30/80/150) tipped a
+#: mission that had legitimately earned its warrant into a challenge -- 163bp
+#: requested against a 140bp balance -- so every default run ended CHALLENGED
+#: and the execute/verify/settle path stopped being reachable at all. A tax
+#: that blocks EVERY action is not a risk control, it is an outage.
+#:
+#: These values are set so that a HIGH band bites (a third again as
+#: expensive) without by itself bankrupting an agent that has earned its
+#: warrant, while SEVERE still can -- because a severe blast radius SHOULD
+#: stop a mission and route it to a human.
+#: `tests/test_consequence.py::test_both_outcomes_are_reachable` asserts both
+#: paths remain live, so this calibration cannot silently drift into either
+#: "never blocks" or "always blocks".
+TAX_CONSEQUENCE_BAND_PCT: dict[str, int] = {
+    "NONE": 0,
+    "LOW": 0,
+    "MODERATE": 15,
+    "HIGH": 35,
+    "SEVERE": 90,
+}
+
 #: [ASSUMPTION] Drift contributes on a band ladder rather than per-signal,
 #: because `singularity/behavior.py` already folded its own signals into a
 #: band and re-counting them here would double-charge the same evidence.
@@ -171,6 +196,14 @@ class UncertaintySignals:
     evidence_completeness: float = 1.0
     drift_band: str = "NORMAL"
     model_disagreement: bool = False
+    #: The band from `command_os/consequence.py`'s UNWIND RISK INDEX, computed
+    #: by walking the REAL reverse index for the premises this action would
+    #: change. This is the signal that makes the product's own thesis
+    #: mechanical rather than editorial: an action whose blast radius contains
+    #: consequences that already escaped is not merely *reported* as risky, it
+    #: is literally more EXPENSIVE, so the same warrant balance buys fewer such
+    #: actions and the Gateway refuses them sooner.
+    consequence_band: str = "NONE"
     external_state_changed: bool = False
     risk_divergence: bool = False
 
@@ -205,6 +238,14 @@ def assess_uncertainty(signals: UncertaintySignals) -> UncertaintyAssessment:
     """
     total = 0
     contributions: list[str] = []
+
+    consequence = (signals.consequence_band or "NONE").upper()
+    consequence_pct = TAX_CONSEQUENCE_BAND_PCT.get(consequence, 0)
+    if consequence_pct:
+        total += consequence_pct
+        contributions.append(
+            f"consequence band {consequence} (real blast radius): +{consequence_pct}%"
+        )
 
     band = (signals.drift_band or "NORMAL").upper()
     band_pct = TAX_DRIFT_BAND_PCT.get(band, 0)
@@ -317,6 +358,7 @@ __all__ = [
     "MUTATING_ACTIONS",
     "REQUIRES_HUMAN",
     "STALE_AFTER_SECONDS",
+    "TAX_CONSEQUENCE_BAND_PCT",
     "TAX_DRIFT_BAND_PCT",
     "ActionKind",
     "PricedAction",

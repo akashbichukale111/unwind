@@ -70,6 +70,8 @@ from command_os import checkpoint
 from command_os.schema import MissionReport, MissionResult, MissionStage
 from lib.simulation import SimulationPolicy, resolve_policy
 from warrant.economics import (
+    BASE_COST_BP,
+    MUTATING_ACTIONS,
     ActionKind,
     UncertaintySignals,
     parse_action_kind,
@@ -159,6 +161,7 @@ def _signals(ctx: dict[str, Any]) -> UncertaintySignals:
         model_disagreement=bool(ctx.get("challenger_disagreed", False)),
         external_state_changed=bool(ctx.get("external_state_changed", False)),
         risk_divergence=bool(ctx.get("risk_divergence", False)),
+        consequence_band=str(ctx.get("consequence_band", "NONE")),
     )
 
 
@@ -520,6 +523,12 @@ def _phase_step(ctx: dict[str, Any], phase: str) -> MissionStage:
         ctx["recon"] = output
         ctx["evidence_completeness"] = float(output.get("completeness", 1.0))
         ctx["evidence_age_seconds"] = float(output.get("newest_age_seconds", 0.0))
+        # THE SECOND CAUSAL SEAM, and the one the product is named after.
+        # Recon parsed real premises out of messy evidence; before anything
+        # acts on them, ask UNWIND's own engine what breaks if it does. The
+        # phase exists only because premises were actually extracted.
+        if output.get("claims"):
+            _append_phase(ctx, "CONSEQUENCE")
     elif step.tool == "risk.probe":
         ctx["risk"] = output
         ctx["risk_divergence"] = output.get("verdict") == "ESCALATION_FOUND"
@@ -1210,9 +1219,75 @@ def _phase_report(ctx: dict[str, Any], phase: str) -> MissionStage:
     )
 
 
+def _phase_consequence(ctx: dict[str, Any], phase: str) -> MissionStage:
+    """Ask the REAL consequence engine what executing here would break.
+
+    This is the phase that makes the repository's name true of its flagship
+    feature. `spine/` has always been able to answer "which committed
+    decisions rested on this premise?" -- until this phase, the agent layer
+    never asked it. See `command_os/consequence.py`'s module docstring.
+
+    Zero model calls: a reverse-index traversal and integer arithmetic. The
+    resulting band is written into `ctx` and priced by
+    `warrant/economics.py`, so a severe blast radius does not merely appear
+    on screen -- it makes the next action cost more, which is the difference
+    between a warning and a control.
+    """
+    from command_os.consequence import preview
+
+    recon = ctx.get("recon") or {}
+    plan = _plan(ctx)
+    # Price against the most privileged action the remaining plan still
+    # intends. Previewing the cheapest step would understate what this
+    # mission is actually about to do.
+    remaining = [s for s in plan.steps if s.seq >= int(ctx.get("cursor", 1))]
+    action_kind = "ANALYZE"
+    scope: list[str] = []
+    if remaining:
+        worst_step = max(
+            remaining, key=lambda s: BASE_COST_BP.get(parse_action_kind(s.action_kind), 0)
+        )
+        action_kind = worst_step.action_kind
+        scope = list(worst_step.requested_scope)
+
+    result = preview(
+        claims=recon.get("claims", []),
+        action_kind=action_kind,
+        requested_scope=scope,
+        mutating=parse_action_kind(action_kind) in MUTATING_ACTIONS,
+    )
+    ctx["consequence"] = result.as_record()
+    ctx["consequence_band"] = result.risk.band if result.risk else "NONE"
+
+    if not result.resolved:
+        return MissionStage(
+            n=0,
+            name="CONSEQUENCE — blast radius UNKNOWN",
+            status="LIVE (ZERO-MODEL)",
+            summary=result.reason_unresolved,
+            detail=result.as_record(),
+        )
+
+    risk = result.risk
+    escaped = result.regimes.get("material_escaped", 0)
+    return MissionStage(
+        n=0,
+        name=f"CONSEQUENCE — {result.radius} dependent decisions",
+        status="LIVE (ZERO-MODEL)",
+        summary=(
+            f"UNWIND RISK INDEX {risk.total} ({risk.band}); "
+            f"{result.radius} decisions rest on the premises this action would change; "
+            f"{result.regimes.get('material_contained', 0)} still correctable, "
+            f"{escaped} ALREADY ESCAPED and un-recallable"
+        ),
+        detail=result.as_record(),
+    )
+
+
 _HANDLERS = {
     "PLAN": _phase_plan,
     "STEP": _phase_step,
+    "CONSEQUENCE": _phase_consequence,
     "CONTAIN": _phase_contain,
     "REPLAN": _phase_replan,
     "CHALLENGE": _phase_challenge,

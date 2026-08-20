@@ -87,6 +87,52 @@ with sync_playwright() as pw:
     )
     p.screenshot(path="evidence/browser/media-lab.png", full_page=True)
 
+    print("\n== CONSEQUENCE PREVIEW (the agent action simulator) ==")
+    p.evaluate("document.getElementById('cq-out').scrollIntoView()")
+    p.wait_for_timeout(2500)
+    ck(
+        "consequence graph renders",
+        p.locator(".cq-node").count() > 0,
+        f"{p.locator('.cq-node').count()} nodes",
+    )
+    ck("risk index renders", p.is_visible(".cq-risk"))
+    cq = p.inner_text("#cq-out")
+    ck("shows the real 2,594 radius", "2,594" in cq or "2594" in cq)
+    ck("names the escaped consequences", "ESCAPED" in cq.upper())
+    ck(
+        "risk index is decomposed",
+        all(
+            d in cq
+            for d in [
+                "security",
+                "data",
+                "financial",
+                "operational",
+                "privilege",
+                "irreversibility",
+            ]
+        ),
+    )
+    ck("labelled a heuristic, not a certified score", "not an industry-certified" in cq)
+    # Changing the proposed action must CHANGE the answer -- otherwise it is a picture.
+    before = p.inner_text(".cq-total")
+    p.select_option("#cq-action", "SECRET_ACCESS")
+    p.wait_for_timeout(2500)
+    after = p.inner_text(".cq-total")
+    ck(
+        "changing the action changes the risk",
+        before != after,
+        f"{before.strip()} -> {after.strip()}",
+    )
+    # An untraceable premise must say UNKNOWN, never a safe-looking zero.
+    p.select_option("#cq-premise", "nonexistent|premise|1")
+    p.wait_for_timeout(2500)
+    unknown = p.inner_text("#cq-out")
+    ck("untraceable premise says UNKNOWN not zero", "UNKNOWN" in unknown.upper())
+    p.select_option("#cq-premise", "supplier_K|lead_time_days|20")
+    p.wait_for_timeout(2000)
+    p.screenshot(path="evidence/browser/consequence-preview.png", full_page=False)
+
     print("\n== MISSION TIME MACHINE (the reported bug) ==")
     p.click("#cmdos-open-timemachine")
     p.wait_for_timeout(4500)

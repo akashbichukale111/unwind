@@ -292,6 +292,34 @@
     </div>
   </div>
 
+  <h3 class="mono cmdos-h">Consequence preview — what breaks if this executes</h3>
+  <p class="cmdos-hint mono">the question this product is named after, asked of an AGENT ACTION.
+    Every number below is a real traversal of the committed reverse index
+    (<span class="cond">spine/cascade.py</span>) over the premises the recon agent actually parsed —
+    zero model calls. Drive it yourself:
+    <span class="cond">GET /api/command-os/consequence-preview?subject=supplier_K&amp;predicate=lead_time_days&amp;value=20</span></p>
+  <div class="cq-controls mono">
+    <label>premise
+      <select id="cq-premise">
+        <option value="supplier_K|lead_time_days|20">supplier_K.lead_time_days 11 → 20</option>
+        <option value="tariff|hs_8536.rate_pct|9.5">tariff.hs_8536.rate_pct → 9.5</option>
+        <option value="fx|eur_usd.rate|1.21">fx.eur_usd.rate → 1.21</option>
+        <option value="nonexistent|premise|1">an untraceable premise</option>
+      </select>
+    </label>
+    <label>proposed action
+      <select id="cq-action">
+        <option value="READ_PUBLIC">READ_PUBLIC</option>
+        <option value="READ_INTERNAL">READ_INTERNAL</option>
+        <option value="WRITE_SANDBOX" selected>WRITE_SANDBOX</option>
+        <option value="CREATE_PR">CREATE_PR</option>
+        <option value="PRODUCTION_MUTATION">PRODUCTION_MUTATION</option>
+        <option value="SECRET_ACCESS">SECRET_ACCESS</option>
+      </select>
+    </label>
+  </div>
+  <div id="cq-out" class="cq-out mono"></div>
+
   <h3 class="mono cmdos-h">Mission Media Lab</h3>
   <p class="cmdos-hint mono">one mission. three AI modalities. one machine-verifiable source of
     truth — all three read the same grounded brief, built from the checkpoints this mission

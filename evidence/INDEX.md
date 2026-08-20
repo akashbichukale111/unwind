@@ -297,3 +297,36 @@ make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
 Set `UNWIND_TRUST_IAP_HEADER=1` or `UNWIND_OPERATOR_TOKENS` first: with
 `UNWIND_ENV=production` and neither set, every mutating endpoint refuses all
 callers — fail-closed and intended.
+
+---
+
+## 12. The consequence engine, joined to the agent layer (2026-08-20)
+
+The repository is named *Consequence Clearing*, and until this pass the agent
+layer never asked the consequence engine anything. Full account:
+`command_os/consequence.py`'s module docstring.
+
+| Claim | Source | Command / test | Result | Environment | Status |
+| --- | --- | --- | --- | --- | --- |
+| The agent layer now reaches the consequence engine | `command_os/consequence.py` | `tests/test_consequence.py::test_the_agent_layer_actually_imports_the_consequence_engine` | `command_os/` imports `spine/`; fails if removed | local | **LIVE** |
+| An agent action produces the product's headline numbers | `command_os/consequence.py:preview` | `consequence-engine-20260820T151509Z.log` | radius **2,594**, material **78** (30 + 48) | local | **VERIFIED** |
+| Premise resolution is exact, never fuzzy | same | `::test_resolution_is_exact_never_fuzzy` | `supplier_K.lead_time` does NOT match `…lead_time_days` | local | VERIFIED |
+| An untraceable premise reports UNKNOWN, not zero | same | `::test_unresolvable_premises_report_unknown_not_zero` | `resolved: false`, risk `None` | local | VERIFIED |
+| Consequence makes no model call | same | `::test_the_consequence_engine_makes_no_model_call` | import graph clean | local | VERIFIED |
+| The band PRICES the action (a control, not a warning) | `warrant/economics.py` | `::test_consequence_band_raises_the_price_of_an_action` | WRITE_SANDBOX 25bp → 48bp at SEVERE | local | **LIVE** |
+| Both outcomes stay reachable (calibration guard) | same | `::test_both_outcomes_are_reachable` | default mission completes; SEVERE still bites ≥1.5× | local + emulator | VERIFIED |
+| Secret disclosure outranks a sandbox write | `command_os/consequence.py` | `::test_secret_disclosure_outranks_a_sandbox_write` | 75 vs 68; irreversibility floored at 90 | local | **BUG FIXED** |
+| Risk index is decomposable and labelled a heuristic | same | `::test_risk_index_is_decomposable_and_labelled_a_heuristic` | 6 dimensions + disclaimer | local | VERIFIED |
+| Agent Action Simulator is publicly drivable | `GET /api/command-os/consequence-preview` | `curl …?action_kind=SECRET_ACCESS` | real traversal, no auth, no mutation | local | **LIVE** |
+| The consequence graph renders and reacts | `web/static/app.js` | `verify_timemachine_and_media.py` | **41/41**; changing the action changes the index | local + emulator | VERIFIED |
+| Full suite | `pytest` | staged, = what CI scans | **625 passed, 1 skipped** | local + emulator | VERIFIED |
+
+### Calibration, stated rather than hidden
+
+The first consequence-tax weights tried (MODERATE 30 / HIGH 80 / SEVERE 150)
+tipped a mission that had legitimately earned its warrant into a challenge —
+**163bp requested against a 140bp balance** — so every default run ended
+`CHALLENGED` and the execute/verify/settle path stopped being reachable at
+all. That is an outage wearing a risk control's clothes. Recalibrated to
+15/35/90, and `::test_both_outcomes_are_reachable` now guards both halves so
+the tax can never silently drift into "never blocks" or "always blocks".

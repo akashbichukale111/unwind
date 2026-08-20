@@ -993,6 +993,44 @@ html, body {
 .cmdos-gate-title { color: var(--bone); font-size: 15px; margin-bottom: 10px; }
 .cmdos-gate-body { color: var(--bone); opacity: 0.78; line-height: 1.7; margin: 0 0 16px; max-width: 68ch; }
 
+/* ── CONSEQUENCE PREVIEW ─────────────────────────────────────────────
+ * A vertical chain (action -> premise -> radius -> regimes) beside the
+ * decomposed risk index. Same seven tokens; the only colour that carries
+ * meaning is --amber for the counts and the CRITICAL badge. */
+.cq-controls { display: flex; gap: 24px; flex-wrap: wrap; margin: 14px 0 18px; }
+.cq-controls label { display: flex; flex-direction: column; gap: 5px; color: var(--bone); opacity: 0.72; }
+.cq-controls select {
+  background: var(--ink); color: var(--bone); border: 1px solid var(--slate);
+  font-family: var(--mono); font-size: 11px; padding: 6px 8px; border-radius: 2px;
+}
+.cq-out { margin-bottom: 26px; }
+.cq-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; align-items: start; }
+.cq-graph { display: flex; flex-direction: column; gap: 2px; }
+.cq-node {
+  border: 1px solid var(--slate); padding: 9px 12px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+}
+.cq-node-action { border-color: var(--amber); }
+.cq-label { font-size: 12px; letter-spacing: 0.04em; color: var(--bone); }
+.cq-count { font-size: 17px; color: var(--amber); font-variant-numeric: tabular-nums; }
+.cq-detail { grid-column: 1 / -1; margin-top: 2px; opacity: 0.62; }
+.cq-arrow { color: var(--bone); opacity: 0.58; font-size: 11px; text-align: center; line-height: 1; }
+.cq-risk { border: 1px solid var(--slate); padding: 16px 18px; }
+.cq-total {
+  font-size: 46px; line-height: 1; color: var(--amber);
+  font-variant-numeric: tabular-nums; margin: 6px 0 16px;
+  display: flex; align-items: baseline; gap: 12px;
+}
+.cq-band { font-size: 13px; letter-spacing: 0.1em; color: var(--bone); opacity: 0.78; }
+.cq-dim { display: grid; grid-template-columns: 10ch 1fr 4ch; gap: 10px; align-items: center; margin-bottom: 6px; }
+.cq-dim-k { color: var(--bone); opacity: 0.72; }
+.cq-dim-bar { height: 5px; background: var(--slate); display: block; }
+.cq-dim-bar i { display: block; height: 100%; background: var(--amber); }
+.cq-dim-v { color: var(--bone); text-align: right; font-variant-numeric: tabular-nums; }
+.cq-disclaim { margin-top: 14px; opacity: 0.58; line-height: 1.5; }
+.cq-unknown { border: 1px solid var(--slate); padding: 14px 16px; }
+@media (max-width: 1100px) { .cq-grid { grid-template-columns: 1fr; } }
+
 /* ── MISSION MEDIA LAB ───────────────────────────────────────────────
  * Three cards, one row. Same seven tokens, same thin borders, same badge
  * vocabulary as every other panel -- this is part of the instrument, not a

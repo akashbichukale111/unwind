@@ -1456,6 +1456,60 @@ async def command_os_concept_map() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+@app.get("/api/command-os/mission/{mission_id}/consequence")
+async def command_os_consequence(
+    mission_id: str, caller: Principal = Depends(require_principal)
+) -> dict[str, Any]:
+    """What the mission's own consequence phase computed.
+
+    Served from the persisted checkpoint, not recomputed: the answer a judge
+    reads must be the answer the mission actually priced its actions against.
+    """
+    if not _firestore_available():
+        raise HTTPException(503, "Firestore not reachable.")
+    from command_os.checkpoint import list_checkpoints
+
+    checkpoints = list_checkpoints(mission_id)
+    if not checkpoints:
+        raise HTTPException(404, f"no mission {mission_id!r} found")
+    consequence = (checkpoints[-1].ctx or {}).get("consequence")
+    return {
+        "mission_id": mission_id,
+        "available": consequence is not None,
+        "consequence": consequence,
+    }
+
+
+@app.get("/api/command-os/consequence-preview")
+async def command_os_consequence_preview(
+    subject: str = Query("supplier_K"),
+    predicate: str = Query("lead_time_days"),
+    value: float = Query(20.0),
+    action_kind: str = Query("WRITE_SANDBOX"),
+) -> dict[str, Any]:
+    """THE AGENT ACTION SIMULATOR: "what would happen if an agent did this?"
+
+    Public and read-only on purpose. It runs the real reverse-index traversal
+    over the COMMITTED corpus -- no mission state, no Firestore, no model, no
+    mutation of anything -- so a judge can drive the core idea directly from
+    a URL and watch the blast radius change with the premise.
+    """
+    from command_os.consequence import preview
+    from warrant.economics import MUTATING_ACTIONS, parse_action_kind
+
+    try:
+        kind = parse_action_kind(action_kind)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    result = preview(
+        claims=[{"subject": subject, "predicate": predicate, "value": value}],
+        action_kind=kind.value,
+        requested_scope=["sandbox.write"] if kind in MUTATING_ACTIONS else ["evidence.read"],
+        mutating=kind in MUTATING_ACTIONS,
+    )
+    return result.as_record()
+
+
 @app.get("/api/media/status")
 async def media_lab_status() -> dict[str, Any]:
     """What each modality will actually do if its button is pressed, right now.

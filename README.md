@@ -260,12 +260,80 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
+## The question every other agent platform skips
+
+Every agent-governance product asks **"is this agent permitted to act?"** —
+scope, budget, policy, identity. UNWIND asks that too (Control Tower, Warrant,
+Hyperion-Zero). But the question the product is *named* after is the other one:
+
+> **Not "may I execute this?" — "what breaks downstream if I do?"**
+
+`spine/` has always been able to answer it for a *claim*: walk the reverse
+index, find the committed decisions that rested on it, cull them by
+materiality. **Until `command_os/consequence.py`, the agent layer never asked
+it anything** — an authority layer and a consequence engine sharing a
+repository and never speaking.
+
+That join now exists, and a test fails if it is ever removed
+(`tests/test_consequence.py::test_the_agent_layer_actually_imports_the_consequence_engine`).
+
+```
+proposed agent action
+  → premises it would change        parsed by the recon agent from messy evidence
+  → resolved to corpus claims       exact canonical match, never fuzzy
+  → run_cascade()                   the unmodified engine, zero model calls
+  → 2,594 dependent decisions       a real traversal
+  → four-regime materiality cull    real arithmetic
+  → UNWIND RISK INDEX               six named dimensions, stated as a heuristic
+  → PRICED into the action's cost   warrant/economics.py
+```
+
+**The last line is what makes it a control rather than a warning.** The
+consequence band feeds `warrant/economics.py`'s uncertainty tax, so an action
+whose blast radius contains consequences that already escaped is not merely
+*reported* as risky — it is literally **more expensive**, the same balance
+buys fewer such actions, and the Gateway refuses them sooner.
+
+Try it yourself, no credentials and no mission required — it is a public,
+read-only endpoint over the committed corpus:
+
+```bash
+curl "$URL/api/command-os/consequence-preview?subject=supplier_K&predicate=lead_time_days&value=20&action_kind=SECRET_ACCESS"
+```
+
+| Proposed action | UNWIND Risk Index | Irreversibility |
+| --- | --- | --- |
+| `READ_PUBLIC` | 48 MODERATE | 32 |
+| `WRITE_SANDBOX` | 68 HIGH | 80 |
+| `CREATE_PR` | 71 HIGH | 80 |
+| `SECRET_ACCESS` | **75 SEVERE** | **90** — a disclosed secret cannot be un-disclosed |
+| `PRODUCTION_MUTATION` | **77 SEVERE** | 80 |
+
+**UNWIND RISK INDEX is an application-specific heuristic, not an
+industry-certified score.** Every weight is a chosen constant, stated in
+`command_os/consequence.py`, and all six dimensions are returned alongside the
+total so a reader can disagree with the weighting and still use the evidence.
+
+**"Unknown" is never reported as "zero."** A premise that resolves to no
+corpus claim returns `resolved: false` with the blast radius explicitly
+*unknown* — because a safe-looking zero for something the system merely
+failed to look up is the exact failure this product exists to prevent.
+
 ## Live Product Evidence
 
 Every screenshot below is a real capture of the running system
 (`evidence/browser/capture_product_shots.py`, real Chromium). Nothing is
 mocked or retouched — where a capability is genuinely unavailable here, the
 screenshot shows that honest state rather than a staged success.
+
+**The consequence preview** — the whole product in one screen. A proposed
+agent action, the premise it would change, and the **real** 2,594-decision
+blast radius culled into four regimes: 1,468 immaterial, 874 already closed
+out, 174 handed to judgement, and **78 material — 30 still correctable, 48
+already escaped and un-recallable.** Zero model calls; it is a reverse-index
+traversal and integer arithmetic.
+
+![Consequence preview](docs/shots/10-consequence-graph.png)
 
 **Agentic Command OS** — the master control layer, before a mission runs.
 

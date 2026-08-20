@@ -59,6 +59,14 @@ def main() -> int:
         page.wait_for_timeout(600)
         shot(page, "04-mission-success.png")
 
+        # 10 — THE CONSEQUENCE PREVIEW. The product's thesis in one screen:
+        # a proposed agent action, the premise it would change, and the real
+        # 2,594-decision blast radius culled into four regimes, with 48
+        # consequences that already escaped and cannot be recalled.
+        page.evaluate("document.getElementById('cq-out').scrollIntoView()")
+        page.wait_for_timeout(2500)
+        shot(page, "10-consequence-graph.png", full=False)
+
         # 05 — Mission Media Lab.
         page.evaluate("document.getElementById('media-lab').scrollIntoView()")
         page.wait_for_timeout(600)
