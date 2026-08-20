@@ -1014,6 +1014,7 @@ html, body {
 }
 .media-model { color: var(--bone); opacity: 0.62; }
 .media-model b { color: var(--amber); font-weight: 500; }
+.media-why { opacity: 0.62; line-height: 1.5; }
 .media-out { width: 100%; }
 .media-result-head { display: flex; gap: 10px; align-items: center; margin: 8px 0 6px; }
 .media-text {

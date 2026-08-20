@@ -12,8 +12,9 @@ exists at.
 
 WHAT "NOT CONFIGURED" MEANS, PRECISELY
 -----------------------------------------
-It means `_availability()` found no usable Vertex configuration -- no
-credentials, or `UNWIND_VERTEX_DISABLED=1`. It does NOT mean the feature is
+It means `_availability()` found no usable credential FOR THAT MODALITY --
+neither a Gemini API key (`GEMINI_API_KEY` / `GOOGLE_API_KEY`) nor a Vertex
+service account -- or `UNWIND_VERTEX_DISABLED=1`. It does NOT mean the feature is
 unbuilt: the request builders below are complete, the model IDs are current
 (see `lib/config.py` on why Veo 3.0 would have been wrong), and the call code
 is the code that runs when credentials appear. The honest label for that
@@ -103,27 +104,103 @@ def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
-def _availability() -> tuple[bool, str]:
-    """Is a real Vertex call possible right now? Never optimistic.
+#: Which auth modes each modality can ACTUALLY use. Not decoration --
+#: `_availability` refuses a mode a model does not support rather than
+#: letting the call fail confusingly at the API.
+#:
+#: Gemini and Veo are served by BOTH the Gemini Developer API (API key) and
+#: Vertex AI (service account). `lyria-002` is a Vertex Model Garden model
+#: and is NOT reachable with a bare Gemini API key, so an API key alone
+#: leaves Lyria honestly unavailable rather than pretending otherwise.
+SUPPORTED_AUTH: dict[str, frozenset[str]] = {
+    "gemini": frozenset({"api_key", "vertex"}),
+    "veo": frozenset({"api_key", "vertex"}),
+    "lyria": frozenset({"vertex"}),
+}
 
-    Returns (available, reason_if_not). Checks the same signals
-    `lib/vertex.py` and `lib/config.py` already use, so the Media Lab's
-    status cannot disagree with what an actual call would do.
+
+def _api_key() -> str:
+    """The Gemini Developer API key, if one is configured.
+
+    Both names the google-genai SDK itself reads, checked here so the Media
+    Lab's status agrees with what the SDK would do rather than guessing.
+    """
+    return (
+        os.environ.get("GEMINI_API_KEY", "").strip() or os.environ.get("GOOGLE_API_KEY", "").strip()
+    )
+
+
+def _availability(modality: str = "gemini") -> tuple[bool, str, str]:
+    """Can THIS modality make a real call right now? Never optimistic.
+
+    Returns `(available, auth_mode, reason_if_not)` where `auth_mode` is
+    `"api_key"`, `"vertex"` or `""`.
+
+    TWO REAL PATHS, NOT ONE
+    --------------------------
+    An earlier version only recognised a Vertex service account, so a
+    perfectly usable `GEMINI_API_KEY` would still have reported NOT
+    CONFIGURED. That was a false negative -- the honest-status discipline
+    cuts both ways, and under-reporting a capability that genuinely works is
+    as wrong as over-reporting one that does not.
+
+    Order matters: an explicit API key wins, because it is the cheapest
+    thing for a reader to supply to make this live, and because a Vertex
+    service account may be present for Firestore alone without any
+    aiplatform grant.
     """
     cfg = get_config()
     if cfg.vertex_disabled:
-        return False, "UNWIND_VERTEX_DISABLED=1"
-    if not cfg.has_gcp_credentials:
-        return False, (
-            "no Google Cloud credentials in this environment "
-            "(GOOGLE_APPLICATION_CREDENTIALS / GOOGLE_APPLICATION_CREDENTIALS_JSON / "
-            "an attached service account are all absent)"
+        return False, "", "UNWIND_VERTEX_DISABLED=1"
+
+    supported = SUPPORTED_AUTH.get(modality, frozenset({"vertex"}))
+    key = _api_key()
+    if key and "api_key" in supported:
+        return True, "api_key", ""
+    if cfg.has_gcp_credentials and "vertex" in supported:
+        return True, "vertex", ""
+
+    if key and "api_key" not in supported:
+        return (
+            False,
+            "",
+            (
+                f"a Gemini API key is configured, but {modality} is served only by "
+                "Vertex AI (a Model Garden model), which needs a Google Cloud "
+                "service account -- set GOOGLE_APPLICATION_CREDENTIALS"
+            ),
         )
-    return True, ""
+    return (
+        False,
+        "",
+        (
+            "no Google credentials in this environment: set GEMINI_API_KEY (or "
+            "GOOGLE_API_KEY) for the Gemini Developer API, or "
+            "GOOGLE_APPLICATION_CREDENTIALS / an attached service account for Vertex AI"
+        ),
+    )
+
+
+def _client(modality: str):
+    """Build the google-genai client for whichever auth mode is available.
+
+    One place decides, so the client a call uses can never disagree with the
+    mode `media_status()` advertised.
+    """
+    from google import genai  # noqa: PLC0415
+
+    _, mode, _ = _availability(modality)
+    if mode == "api_key":
+        return genai.Client(api_key=_api_key())
+    from lib.vertex import configure_vertex_backend  # noqa: PLC0415
+
+    configure_vertex_backend()
+    cfg = get_config()
+    return genai.Client(vertexai=True, project=cfg.project_id, location=cfg.vertex_location)
 
 
 def _unconfigured(modality: str, model: str, brief: MissionBrief, prompt: str) -> MediaResult:
-    _, reason = _availability()
+    _, _, reason = _availability(modality)
     return MediaResult(
         modality=modality,
         model=model,
@@ -168,7 +245,7 @@ def synthesize_mission(brief: MissionBrief) -> MediaResult:
     """Gemini explains the mission from its own checkpoints. Real call or NOT_CONFIGURED."""
     cfg = get_config()
     prompt = brief.as_grounding_block()
-    available, _ = _availability()
+    available, mode, _ = _availability("gemini")
     if not available:
         return _unconfigured("gemini", cfg.model_deep, brief, prompt)
 
@@ -185,7 +262,7 @@ def synthesize_mission(brief: MissionBrief) -> MediaResult:
             text=text,
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
-            detail={"grounded_on_checkpoints": brief.checkpoint_count},
+            detail={"grounded_on_checkpoints": brief.checkpoint_count, "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001 -- reported verbatim, never swallowed
         return MediaResult(
@@ -214,9 +291,15 @@ def _run_gemini(prompt: str) -> str:
     from google.adk.workflow import START, Edge, Workflow  # noqa: PLC0415
     from google.genai import types  # noqa: PLC0415
 
-    from lib.vertex import configure_vertex_backend  # noqa: PLC0415
+    # ADK resolves its backend from the environment. With an API key present
+    # the SDK's own GEMINI_API_KEY path is used and Vertex must NOT be pinned,
+    # or ADK would look for a service account that does not exist. With no key,
+    # pin Vertex exactly as `countersign/agent.py` does.
+    _, mode, _ = _availability("gemini")
+    if mode != "api_key":
+        from lib.vertex import configure_vertex_backend  # noqa: PLC0415
 
-    configure_vertex_backend()
+        configure_vertex_backend()
     cfg = get_config()
     agent = Agent(
         model=cfg.model_deep,
@@ -298,7 +381,7 @@ def generate_replay(brief: MissionBrief) -> MediaResult:
     """Veo turns the real mission arc into a visual. Real call or NOT_CONFIGURED."""
     cfg = get_config()
     prompt = build_veo_prompt(brief)
-    available, _ = _availability()
+    available, mode, _ = _availability("veo")
     if not available:
         return _unconfigured("veo", cfg.veo_model, brief, prompt)
 
@@ -315,7 +398,7 @@ def generate_replay(brief: MissionBrief) -> MediaResult:
             artifact_path=str(path),
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
-            detail={"beats": list(brief.arc)},
+            detail={"beats": list(brief.arc), "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001
         return MediaResult(
@@ -333,13 +416,8 @@ def generate_replay(brief: MissionBrief) -> MediaResult:
 
 def _run_veo(prompt: str, mission_id: str) -> Path:
     """Real Veo call via google-genai. Long-running operation, polled to completion."""
-    from google import genai  # noqa: PLC0415
-
-    from lib.vertex import configure_vertex_backend  # noqa: PLC0415
-
-    configure_vertex_backend()
     cfg = get_config()
-    client = genai.Client(vertexai=True, project=cfg.project_id, location=cfg.vertex_location)
+    client = _client("veo")
     operation = client.models.generate_videos(model=cfg.veo_model, prompt=prompt)
     # Veo is a long-running operation: poll rather than assume immediacy.
     deadline = time.monotonic() + 600
@@ -402,7 +480,7 @@ def generate_signal(brief: MissionBrief) -> MediaResult:
     """Lyria turns the mission's state transitions into audio. Real call or NOT_CONFIGURED."""
     cfg = get_config()
     prompt = build_lyria_prompt(brief)
-    available, _ = _availability()
+    available, mode, _ = _availability("lyria")
     if not available:
         return _unconfigured("lyria", cfg.lyria_model, brief, prompt)
 
@@ -419,7 +497,7 @@ def generate_signal(brief: MissionBrief) -> MediaResult:
             artifact_path=str(path),
             latency_ms=int((time.monotonic() - started) * 1000),
             requested_at=datetime.now(UTC).isoformat(),
-            detail={"max_seconds": cfg.lyria_max_seconds},
+            detail={"max_seconds": cfg.lyria_max_seconds, "auth_mode": mode},
         )
     except Exception as exc:  # noqa: BLE001
         return MediaResult(
@@ -437,13 +515,8 @@ def generate_signal(brief: MissionBrief) -> MediaResult:
 
 def _run_lyria(prompt: str, mission_id: str) -> Path:
     """Real Lyria call via google-genai. Returns 48kHz WAV, per the model card."""
-    from google import genai  # noqa: PLC0415
-
-    from lib.vertex import configure_vertex_backend  # noqa: PLC0415
-
-    configure_vertex_backend()
     cfg = get_config()
-    client = genai.Client(vertexai=True, project=cfg.project_id, location=cfg.vertex_location)
+    client = _client("lyria")
     response = client.models.generate_music(
         model=cfg.lyria_model,
         prompt=prompt,
@@ -466,39 +539,61 @@ def _run_lyria(prompt: str, mission_id: str) -> Path:
 def media_status() -> dict[str, Any]:
     """What the Media Lab will actually do if each button is pressed, right now.
 
-    The UI renders this verbatim. It must never be more optimistic than
-    `_availability()`, because these are the same function.
+    The UI renders this verbatim. It can never be more optimistic than a real
+    call, because it asks the SAME `_availability()` each call asks -- and it
+    asks it PER MODALITY, so an API-key-only environment correctly shows
+    Gemini and Veo as configured while Lyria stays honestly unavailable.
     """
     cfg = get_config()
-    available, reason = _availability()
-    label = "CONFIGURED_NOT_EXERCISED" if not available else "CONFIGURED"
+    specs = [
+        (
+            "gemini",
+            "MISSION INTELLIGENCE",
+            "Explain the mission from its own checkpoints.",
+            cfg.model_deep,
+        ),
+        (
+            "veo",
+            "MISSION VISUAL REPLAY",
+            "Turn the mission timeline into a cinematic evidence narrative.",
+            cfg.veo_model,
+        ),
+        (
+            "lyria",
+            "MISSION SIGNAL",
+            "Turn mission state transitions into an adaptive audio signal.",
+            cfg.lyria_model,
+        ),
+    ]
+    modalities = []
+    for modality, title, purpose, model in specs:
+        available, mode, reason = _availability(modality)
+        modalities.append(
+            {
+                "modality": modality,
+                "title": title,
+                "purpose": purpose,
+                "model": model,
+                # CONFIGURED means "a real call is possible", never "a real
+                # call has happened". Only a successful call produces
+                # GENERATED, and only `MediaResult` can say that.
+                "status": "CONFIGURED" if available else "CONFIGURED_NOT_EXERCISED",
+                "auth_mode": mode,
+                "supported_auth": sorted(SUPPORTED_AUTH.get(modality, frozenset())),
+                "reason": reason,
+            }
+        )
+    any_available = any(m["status"] == "CONFIGURED" for m in modalities)
+    _, _, gemini_reason = _availability("gemini")
     return {
-        "available": available,
-        "reason": reason,
+        "available": any_available,
+        "reason": "" if any_available else gemini_reason,
         "artifact_dir": str(ARTIFACT_DIR),
-        "modalities": [
-            {
-                "modality": "gemini",
-                "title": "MISSION INTELLIGENCE",
-                "purpose": "Explain the mission from its own checkpoints.",
-                "model": cfg.model_deep,
-                "status": label,
-            },
-            {
-                "modality": "veo",
-                "title": "MISSION VISUAL REPLAY",
-                "purpose": "Turn the mission timeline into a cinematic evidence narrative.",
-                "model": cfg.veo_model,
-                "status": label,
-            },
-            {
-                "modality": "lyria",
-                "title": "MISSION SIGNAL",
-                "purpose": "Turn mission state transitions into an adaptive audio signal.",
-                "model": cfg.lyria_model,
-                "status": label,
-            },
-        ],
+        "auth_modes_detected": {
+            "api_key": bool(_api_key()),
+            "vertex_service_account": get_config().has_gcp_credentials,
+        },
+        "modalities": modalities,
     }
 
 

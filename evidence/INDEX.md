@@ -245,3 +245,55 @@ Full root-cause account:
 | Model IDs are current, not deprecated | `lib/config.py` | `tests/test_media.py::test_model_ids_are_current_not_deprecated` | `veo-3.1-generate-001` (3.0 shut down 2026-06-30), `lyria-002` GA | local | VERIFIED |
 | Seven cards still intact | all | `verify_timemachine_and_media.py` | **33/33 checks** | local + emulator | VERIFIED |
 | Full suite after these changes | `pytest` | `FIRESTORE_EMULATOR_HOST=… make test` | **603 passed, 1 skipped** | local + emulator | VERIFIED |
+
+---
+
+## 11. Live model paths, screenshots and final deployment state (2026-08-20)
+
+| Claim | Source | Command / test | Result | Environment | Status |
+| --- | --- | --- | --- | --- | --- |
+| Google model APIs are REACHABLE from this session | network | `curl https://generativelanguage.googleapis.com/v1beta/models` | **403 PERMISSION_DENIED** — a real Google API response | sandbox | **REACHABLE** |
+| The API-key request path reaches Google | `media/adapters.py` | `api-key-path-reaches-google-20260820T101022Z.log` | **400 API_KEY_INVALID** from `generativelanguage.googleapis.com` | invalid key on purpose | **PATH VERIFIED** |
+| Gemini goes live on an API key | `media/adapters.py:_availability` | `tests/test_media.py::test_an_api_key_makes_gemini_and_veo_available` | `CONFIGURED`, `auth_mode=api_key` | local | VERIFIED |
+| Lyria does NOT go live on an API key | same | `::test_an_api_key_does_not_make_lyria_available` | stays `CONFIGURED_NOT_EXERCISED`, reason names Vertex | local | VERIFIED |
+| The disable flag beats any credential | same | `::test_disable_flag_overrides_a_present_api_key` | all three unavailable | local | VERIFIED |
+| Gemini real call | `media/adapters.py:_run_gemini` | real ADK Runner, invalid key | **FAILED**, Google's verbatim message, no text produced | no valid credential | **CONFIGURED_NOT_EXERCISED** |
+| Gemma real call | `countersign/verify.py` | `evidence/adk/merged-live-attempt-*.log` | `available=False, agrees=None` — never a silent AGREE | no credential | **CONFIGURED_NOT_EXERCISED** |
+| Veo real call | `media/adapters.py:_run_veo` | `replay-attempt-*.json` | `NOT_CONFIGURED`, **no video exists** | no credential | **CONFIGURED_NOT_EXERCISED** |
+| Lyria real call | `media/adapters.py:_run_lyria` | `signal-attempt-*.json` | `NOT_CONFIGURED`, **no audio exists** | no credential | **CONFIGURED_NOT_EXERCISED** |
+| Nine product screenshots are real captures | `evidence/browser/capture_product_shots.py` | `python evidence/browser/capture_product_shots.py` | 9 files, 93KB–182KB, all embedded in README | local + emulator | VERIFIED |
+| Time Machine + Media Lab + seven cards | `evidence/browser/verify_timemachine_and_media.py` | same | **33/33 checks** | local + emulator | VERIFIED |
+| Full suite | `pytest` | staged, = what CI scans | **608 passed, 1 skipped** | local + emulator | VERIFIED |
+| `gcloud` present | — | `command -v gcloud` | **absent** | sandbox | **BLOCKER** |
+| Cloud Run URL reachable | — | `curl .../api/healthz` | **HTTP 000** (proxy 403 on `*.a.run.app`) | sandbox | **BLOCKER** |
+| Deployment of this commit | `infra/deploy.sh` | not run | **NOT DEPLOYED** — see below | sandbox | **NOT DEPLOYED** |
+
+### Why deployment could not happen, precisely
+
+Two independent, verified blockers — neither is a missing step I skipped:
+
+1. **No `gcloud` binary.** `infra/deploy.sh` exits 2 by its own guard.
+   `docker` exists, but Cloud Run deployment still needs `gcloud run deploy`
+   (or an authenticated Artifact Registry push, which also needs credentials).
+2. **The egress proxy returns 403 for `*.a.run.app`.** Even a completed
+   deploy could not be verified from here, and this project does not claim a
+   deployment it cannot verify.
+
+There are also **no Google Cloud credentials** of any kind — no
+`GOOGLE_APPLICATION_CREDENTIALS`, no ADC file, no metadata server, no
+`UNWIND_PROJECT_ID`.
+
+**Exact command to deploy this commit**, from an environment with `gcloud`
+and credentials:
+
+```bash
+git checkout claude/unwind-hackathon-foundation-s36wdi && git pull
+UNWIND_PROJECT_ID=project-895d4ca8-d301-447d-916 \
+UNWIND_RUN_REGION=us-central1 UNWIND_VERTEX_LOCATION=global \
+  ./infra/deploy.sh                     # SAME service, SAME URL, no new resource
+make deploy-verify URL=https://unwind-hgeodtazqq-uc.a.run.app
+```
+
+Set `UNWIND_TRUST_IAP_HEADER=1` or `UNWIND_OPERATOR_TOKENS` first: with
+`UNWIND_ENV=production` and neither set, every mutating endpoint refuses all
+callers — fail-closed and intended.

@@ -1565,7 +1565,10 @@
           "</div>" +
           "<div class='media-title cond'>" + esc(m.title) + "</div>" +
           "<div class='cmdos-hint mono'>" + esc(m.purpose) + "</div>" +
-          "<div class='media-model mono'>model <b>" + esc(m.model) + "</b></div>" +
+          "<div class='media-model mono'>model <b>" + esc(m.model) + "</b>" +
+          (m.auth_mode ? " · auth <b>" + esc(m.auth_mode) + "</b>" : "") + "</div>" +
+          (m.reason && m.status !== "CONFIGURED"
+            ? "<div class='cmdos-hint mono media-why'>" + esc(m.reason) + "</div>" : "") +
           "<button type='button' class='btn btn-quiet media-go' data-modality='" +
           esc(m.modality) + "'>" + (m.modality === "gemini" ? "Synthesize" :
             m.modality === "veo" ? "Generate replay" : "Generate signal") + "</button>" +
@@ -1576,11 +1579,21 @@
 
     // The note is the honest part: it says why the buttons will fail-closed
     // BEFORE anyone presses one, rather than after.
+    // Two credential paths, reported separately -- an API key makes Gemini and
+    // Veo live but cannot reach Lyria, and saying otherwise would be exactly
+    // the over-reporting this panel exists to prevent.
+    const modes = d.auth_modes_detected || {};
+    const live = d.modalities.filter((m) => m.status === "CONFIGURED").length;
     $("media-note").textContent = d.available
-      ? "credentials present — pressing a button makes a real model call"
+      ? "credentials detected (" +
+        (modes.api_key ? "Gemini API key" : "") +
+        (modes.api_key && modes.vertex_service_account ? " + " : "") +
+        (modes.vertex_service_account ? "Vertex service account" : "") +
+        ") — " + live + " of 3 modalities can make a real call now"
       : "NOT CONFIGURED — " + d.reason +
-        ". The adapters, prompts and model IDs are complete; pressing a button " +
-        "returns NOT_CONFIGURED with this reason rather than a fabricated artefact.";
+        ". The adapters, prompts and model IDs are complete and the request path is " +
+        "verified to reach Google; pressing a button returns NOT_CONFIGURED with this " +
+        "reason rather than a fabricated artefact.";
 
     host.querySelectorAll(".media-go").forEach((btn) => {
       btn.addEventListener("click", () => runMedia(btn.dataset.modality, btn));

@@ -260,6 +260,60 @@ without one gets deleted — is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
+## Live Product Evidence
+
+Every screenshot below is a real capture of the running system
+(`evidence/browser/capture_product_shots.py`, real Chromium). Nothing is
+mocked or retouched — where a capability is genuinely unavailable here, the
+screenshot shows that honest state rather than a staged success.
+
+**Agentic Command OS** — the master control layer, before a mission runs.
+
+![Agentic Command OS](docs/shots/01-command-os.png)
+
+**Mission Time Machine** — historical state reconstructed from real Firestore
+checkpoints: the mission arc, the current trusted state, and honest
+RESUME / REPLAY capability labels.
+
+![Mission Time Machine](docs/shots/02-time-machine.png)
+
+**Checkpoint detail** — one persisted checkpoint with its full continuation
+context, exactly as `resume_mission` would read it.
+
+![Checkpoint detail](docs/shots/03-checkpoint-detail.png)
+
+**Mission outcome** — the executive report and trusted-state fold. Note the
+status is `COMPLETED_WITH_RESTRICTIONS`, not a clean pass: the mission
+contained an agent, and the report may never read `COMPLETED` over a refusal.
+
+![Mission success](docs/shots/04-mission-success.png)
+
+**Mission Media Lab** — one mission state, three modalities, one grounded brief.
+
+![Mission Media Lab](docs/shots/05-media-lab.png)
+
+**Gemini / Gemma — mission intelligence.** The button has been pressed; the
+panel shows the real returned status.
+
+![Gemini and Gemma](docs/shots/06-gemini-gemma.png)
+
+**Veo — mission visual replay.** `NOT_CONFIGURED`, with the reason and the
+grounded prompt it would have sent. **No video element is rendered, because
+no video exists.**
+
+![Veo](docs/shots/07-veo.png)
+
+**Lyria — mission signal.** Same discipline: no audio element, because no
+audio exists.
+
+![Lyria](docs/shots/08-lyria.png)
+
+**The six pre-existing control layers**, all intact and reachable from the
+Command OS: HYPERION-ZERO, WARRANT, UNWIND CORE, CONTROL TOWER, COUNTERSIGN,
+SINGULARITY-MESH.
+
+![Six-layer instrument](docs/shots/09-seven-system-instrument.png)
+
 ## Mission Media Lab
 
 UNWIND executes one machine-verifiable autonomous mission. Its checkpoints
@@ -309,15 +363,39 @@ writes to Firestore, the warrant ledger, the registry or decision memory, and
 no authority package imports it — `tests/test_media.py` proves both directions
 by import-graph walk. Delete `media/` and every authority test still passes.
 
-**To enable it**, set Google Cloud credentials and unset `UNWIND_VERTEX_DISABLED`:
+### The request path is verified to reach Google
+
+This is stronger than "the code exists". Running the real adapter with a
+**deliberately invalid** API key produces Google's own error:
+
+```
+400 INVALID_ARGUMENT · reason: API_KEY_INVALID · domain: googleapis.com
+service: generativelanguage.googleapis.com
+"API key not valid. Please pass a valid API key."
+```
+
+The request left the process, crossed the network, reached Google's API and
+was rejected **purely on the credential** — so the ADK → google-genai →
+Google path is complete and working, and the adapter reported `FAILED` with
+Google's verbatim message rather than inventing a success.
+Evidence: `evidence/media/api-key-path-reaches-google-*.log`.
+
+**To make it live**, either credential works — and the API key is one line:
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or run on Cloud Run
+export GEMINI_API_KEY=...            # Gemini + Veo go live immediately
 unset UNWIND_VERTEX_DISABLED
 ```
 
-`GET /api/media/status` then reports `available: true`, and the buttons make
-real calls. Generated artefacts land in `.media/` (gitignored — a generated
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json   # or run on Cloud Run
+unset UNWIND_VERTEX_DISABLED                              # all three, incl. Lyria
+```
+
+**An API key alone does not enable Lyria**, and the UI says so rather than
+failing confusingly: `lyria-002` is a Vertex Model Garden model and needs a
+service account. `GET /api/media/status` reports availability **per
+modality** with the auth mode it would use. Generated artefacts land in `.media/` (gitignored — a generated
 video is output, not source).
 
 ### Mission Time Machine

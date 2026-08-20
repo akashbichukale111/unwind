@@ -261,3 +261,83 @@ def test_model_ids_are_current_not_deprecated() -> None:
     assert cfg.veo_model.startswith("veo-")
     assert cfg.lyria_model.startswith("lyria-")
     assert cfg.lyria_max_seconds <= 32, "Lyria 2's published ceiling is 32.8s per clip"
+
+
+# ---------------------------------------------------------------------------
+# Two auth paths, honestly distinguished
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _api_key_only(monkeypatch: pytest.MonkeyPatch):
+    """A Gemini Developer API key and nothing else -- the cheapest way a
+    reader can make this live, and the case an earlier version got wrong by
+    reporting NOT_CONFIGURED for a credential that genuinely works."""
+    monkeypatch.delenv("UNWIND_VERTEX_DISABLED", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSyTEST_KEY_NOT_REAL_0000000000000000")
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    from lib.config import reset_config_cache
+
+    reset_config_cache()
+    yield
+    reset_config_cache()
+
+
+def test_an_api_key_makes_gemini_and_veo_available(_api_key_only: None) -> None:
+    from media.adapters import media_status
+
+    status = media_status()
+    by = {m["modality"]: m for m in status["modalities"]}
+    assert status["auth_modes_detected"]["api_key"] is True
+    assert by["gemini"]["status"] == "CONFIGURED"
+    assert by["gemini"]["auth_mode"] == "api_key"
+    assert by["veo"]["status"] == "CONFIGURED"
+
+
+def test_an_api_key_does_not_make_lyria_available(_api_key_only: None) -> None:
+    """`lyria-002` is a Vertex Model Garden model. An API key cannot reach it,
+    and claiming otherwise would be the exact over-reporting this project
+    refuses -- so the status stays honest AND explains what is needed."""
+    from media.adapters import media_status
+
+    lyria = {m["modality"]: m for m in media_status()["modalities"]}["lyria"]
+    assert lyria["status"] == "CONFIGURED_NOT_EXERCISED"
+    assert lyria["auth_mode"] == ""
+    assert lyria["supported_auth"] == ["vertex"]
+    assert "Vertex" in lyria["reason"]
+
+
+def test_lyria_refuses_to_run_on_an_api_key(_api_key_only: None) -> None:
+    from media.adapters import MediaStatus, generate_signal
+    from media.grounding import build_brief
+
+    result = generate_signal(build_brief("m1", _checkpoints(), _Rec("COMPLETED", "x")))
+    assert result.status is MediaStatus.NOT_CONFIGURED
+    assert not result.artifact_path
+
+
+def test_disable_flag_overrides_a_present_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """UNWIND_VERTEX_DISABLED=1 is the repository's total-outage switch. It
+    must win over any credential, or the zero-model guarantee has a hole."""
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSyTEST_KEY_NOT_REAL_0000000000000000")
+    monkeypatch.setenv("UNWIND_VERTEX_DISABLED", "1")
+    from lib.config import reset_config_cache
+
+    reset_config_cache()
+    try:
+        from media.adapters import media_status
+
+        status = media_status()
+        assert status["available"] is False
+        assert all(m["status"] == "CONFIGURED_NOT_EXERCISED" for m in status["modalities"])
+    finally:
+        reset_config_cache()
+
+
+def test_status_never_says_generated(_api_key_only: None) -> None:
+    """CONFIGURED means "a real call is possible", never "a call happened".
+    Only a successful call may produce GENERATED, and only on a MediaResult."""
+    from media.adapters import media_status
+
+    assert all(m["status"] != "GENERATED" for m in media_status()["modalities"])
