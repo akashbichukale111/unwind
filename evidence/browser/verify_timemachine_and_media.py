@@ -30,10 +30,20 @@ with sync_playwright() as pw:
         f"{p.locator('.media-card').count()}",
     )
     lab = p.inner_text("#media-lab")
+    # Model strings are IMPORTED, never retyped. `lib/config.py` is the only
+    # file allowed to hold one, and `tests/test_config_singleton.py` enforces
+    # that by grepping every TRACKED file -- which this script is. Hardcoding
+    # them here was a real violation of the repository's own rule (CI caught
+    # it; it passed locally only because the file was still untracked when the
+    # suite ran). Importing also means the check cannot quietly keep asserting
+    # a stale model ID after `lib/config.py` changes.
+    from lib.config import get_config
+
+    _cfg = get_config()
     for m, mid in [
-        ("GEMINI", "gemini-3.6-flash"),
-        ("VEO", "veo-3.1-generate-001"),
-        ("LYRIA", "lyria-002"),
+        ("GEMINI", _cfg.model_deep),
+        ("VEO", _cfg.veo_model),
+        ("LYRIA", _cfg.lyria_model),
     ]:
         ck(f"{m} card + model id", m in lab and mid in lab, mid)
     ck("all three CONFIGURED_NOT_EXERCISED", lab.count("CONFIGURED_NOT_EXERCISED") == 3)
